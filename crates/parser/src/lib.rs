@@ -6,11 +6,11 @@ pub mod prelude;
 pub mod utils;
 use crate::prelude::*;
 
-use element::Element;
+use element::{Element, ElementKind};
 use error::Error;
 
 pub struct Netlist {
-    pub elements: Vec<Element>,
+    pub elements: Vec<ElementKind>,
     pub title: String,
 }
 
@@ -46,9 +46,35 @@ pub fn parse_netlist(spice_deck: &str) -> Result<Netlist> {
 
     for line in lines {
         if line.starts_with('C') {
-            let capacitor = line.parse::<element::capacitor::Capacitor>()?;
-            elements.push(Element::Capacitor(capacitor));
-            continue;
+            elements.push(element::capacitor::Capacitor(
+                line.parse::<element::capacitor::Capacitor>()?,
+            ));
+        } else if line.starts_with('R') {
+            elements.push(Element::Resistor(
+                line.parse::<element::resistor::Resistor>()?,
+            ));
+        } else if line.starts_with('L') {
+            elements.push(Element::Inductor(
+                line.parse::<element::inductor::Inductor>()?,
+            ));
+        } else if line.starts_with('V') {
+            elements.push(Element::VoltageSource(
+                line.parse::<element::voltage_source::VoltageSource>()?,
+            ));
+        } else if line.starts_with('I') {
+            elements.push(Element::CurrentSource(
+                line.parse::<element::current_source::CurrentSource>()?,
+            ));
+        } else if line.starts_with('D') {
+            elements.push(Element::Diode(line.parse::<element::diode::Diode>()?));
+        } else if line.starts_with('Q') {
+            elements.push(Element::BipolarJunctionTransistor(
+                line.parse::<element::bipolar_junction_transistor::BipolarJunctionTransistor>()?,
+            ));
+        } else if line.starts_with('M') {
+            elements.push(Element::Mosfet(line.parse::<element::mosfet::Mosfet>()?));
+        } else {
+            return Err(Error::UnknownElement(line.to_string()));
         }
     }
 

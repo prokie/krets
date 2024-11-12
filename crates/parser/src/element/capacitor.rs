@@ -2,7 +2,7 @@ use crate::{prelude::*, utils::parse_value};
 use std::str::FromStr;
 
 pub struct Capacitor {
-    name: String,
+    pub name: String,
     value: f64,
     node1: String,
     node2: String,
