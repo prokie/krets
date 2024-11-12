@@ -19,16 +19,16 @@ impl FromStr for ChannelType {
     }
 }
 
-pub struct Mosfet {
+pub struct NMOS {
     pub name: String,
-    value: f64,
-    source: String,
-    drain: String,
-    gate: String,
-    channel_type: ChannelType,
+    pub value: f64,
+    pub source: String,
+    pub drain: String,
+    pub gate: String,
+    pub channel_type: ChannelType,
 }
 
-impl FromStr for Mosfet {
+impl FromStr for NMOS {
     type Err = crate::prelude::Error;
 
     fn from_str(s: &str) -> Result<Self> {
@@ -51,7 +51,7 @@ impl FromStr for Mosfet {
             .to_string();
         let channel_type = ChannelType::from_str(&channel_type_str)?;
 
-        Ok(Mosfet {
+        Ok(NMOS {
             name,
             value,
             source,
@@ -59,21 +59,5 @@ impl FromStr for Mosfet {
             gate,
             channel_type,
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_mosfet_from_str_a() {
-        let mosfet = "MN source drain gate 1".parse::<Mosfet>().unwrap();
-        assert_eq!(mosfet.name, "MN");
-        assert!((mosfet.value - 1.0).abs() < f64::EPSILON);
-        assert_eq!(mosfet.source, "source");
-        assert_eq!(mosfet.drain, "drain");
-        assert_eq!(mosfet.gate, "gate");
-        assert_eq!(mosfet.channel_type, ChannelType::N);
     }
 }

@@ -3,9 +3,9 @@ use std::str::FromStr;
 
 pub struct Resistor {
     pub name: String,
-    value: f64,
-    node1: String,
-    node2: String,
+    pub value: f64,
+    pub node1: String,
+    pub node2: String,
 }
 
 impl FromStr for Resistor {

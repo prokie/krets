@@ -2,9 +2,9 @@ use crate::{prelude::*, utils::parse_value};
 use std::str::FromStr;
 pub struct Inductor {
     pub name: String,
-    value: f64,
-    node1: String,
-    node2: String,
+    pub value: f64,
+    pub node1: String,
+    pub node2: String,
 }
 
 impl FromStr for Inductor {

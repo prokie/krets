@@ -6,11 +6,11 @@ pub mod prelude;
 pub mod utils;
 use crate::prelude::*;
 
-use element::{Element, ElementKind};
+use element::Element;
 use error::Error;
 
 pub struct Netlist {
-    pub elements: Vec<ElementKind>,
+    pub elements: Vec<Element>,
     pub title: String,
 }
 
@@ -46,38 +46,27 @@ pub fn parse_netlist(spice_deck: &str) -> Result<Netlist> {
 
     for line in lines {
         if line.starts_with('C') {
-            elements.push(element::capacitor::Capacitor(
-                line.parse::<element::capacitor::Capacitor>()?,
-            ));
+            elements.push(Element::Capacitor(line.parse()?));
         } else if line.starts_with('R') {
-            elements.push(Element::Resistor(
-                line.parse::<element::resistor::Resistor>()?,
-            ));
+            elements.push(Element::Resistor(line.parse()?));
         } else if line.starts_with('L') {
-            elements.push(Element::Inductor(
-                line.parse::<element::inductor::Inductor>()?,
-            ));
+            elements.push(Element::Inductor(line.parse()?));
         } else if line.starts_with('V') {
-            elements.push(Element::VoltageSource(
-                line.parse::<element::voltage_source::VoltageSource>()?,
-            ));
+            elements.push(Element::VoltageSource(line.parse()?));
         } else if line.starts_with('I') {
-            elements.push(Element::CurrentSource(
-                line.parse::<element::current_source::CurrentSource>()?,
-            ));
+            elements.push(Element::CurrentSource(line.parse()?));
         } else if line.starts_with('D') {
-            elements.push(Element::Diode(line.parse::<element::diode::Diode>()?));
+            elements.push(Element::Diode(line.parse()?));
         } else if line.starts_with('Q') {
-            elements.push(Element::BipolarJunctionTransistor(
-                line.parse::<element::bipolar_junction_transistor::BipolarJunctionTransistor>()?,
-            ));
-        } else if line.starts_with('M') {
-            elements.push(Element::Mosfet(line.parse::<element::mosfet::Mosfet>()?));
+            elements.push(Element::BipolarJunctionTransistor(line.parse()?));
+        } else if line.starts_with("QN") {
+            elements.push(Element::NMOS(line.parse()?));
+        } else if line.starts_with("QP") {
+            elements.push(Element::PMOS(line.parse()?));
         } else {
             return Err(Error::UnknownElement(line.to_string()));
         }
     }
-
     let netlist = Netlist { elements, title };
 
     Ok(netlist)

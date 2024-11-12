@@ -3,9 +3,10 @@ use std::str::FromStr;
 
 pub struct BipolarJunctionTransistor {
     pub name: String,
-    value: f64,
-    node1: String,
-    node2: String,
+    pub value: f64,
+    pub collector: String,
+    pub base: String,
+    pub emitter: String,
 }
 
 impl FromStr for BipolarJunctionTransistor {
@@ -21,14 +22,16 @@ impl FromStr for BipolarJunctionTransistor {
         }
 
         let name = parts[0].to_string();
-        let node1 = parts[1].to_string();
-        let node2 = parts[2].to_string();
+        let collector = parts[1].to_string();
+        let base = parts[2].to_string();
+        let emitter = parts[2].to_string();
         let value = parse_value(parts[3])?;
         Ok(BipolarJunctionTransistor {
             name,
             value,
-            node1,
-            node2,
+            collector,
+            base,
+            emitter,
         })
     }
 }
