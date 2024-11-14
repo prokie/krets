@@ -29,3 +29,20 @@ pub enum Element {
     /// A PMOS transistor.
     PMOS(pmos::PMOS),
 }
+
+impl Element {
+    /// Returns the name of the element as a string slice.
+    pub fn name(&self) -> &str {
+        match self {
+            Element::Capacitor(capacitor) => capacitor.name.as_str(),
+            Element::Resistor(resistor) => resistor.name.as_str(),
+            Element::Inductor(inductor) => inductor.name.as_str(),
+            Element::VoltageSource(voltage_source) => voltage_source.name.as_str(),
+            Element::CurrentSource(current_source) => current_source.name.as_str(),
+            Element::Diode(diode) => diode.name.as_str(),
+            Element::BipolarJunctionTransistor(bjt) => bjt.name.as_str(),
+            Element::NMOS(nmos) => nmos.name.as_str(),
+            Element::PMOS(pmos) => pmos.name.as_str(),
+        }
+    }
+}
