@@ -18,7 +18,13 @@ impl FromStr for Resistor {
             return Err(Error::InvalidFormat("Invalid resistor format".to_string()));
         }
 
-        let name = parts[0].to_string();
+        if parts[0].len() <= 1 {
+            return Err(Error::InvalidFormat(
+                "Resistor name is too short".to_string(),
+            ));
+        }
+
+        let name = parts[0].chars().skip(1).collect();
         let node1 = parts[1].to_string();
         let node2 = parts[2].to_string();
         let value = parse_value(parts[3])?;
