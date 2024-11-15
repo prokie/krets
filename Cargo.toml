@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/parser"]
+members = ["crates/cli", "crates/parser"]
 resolver = "2"
 
 
@@ -9,4 +9,6 @@ pedantic = { level = "warn", priority = -1 }
 
 
 [workspace.dependencies]
-thiserror = "2.0.2"
+thiserror = "2.0.3"
+cli = { path = "crates/cli" }
+parser = { path = "crates/parser" }
