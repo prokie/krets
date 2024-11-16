@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use faer::Mat;
 use parser::{
-    element::{resistor, Element, Nodes},
+    element::{Element, Nodes},
     Netlist,
 };
 pub struct Solver {
