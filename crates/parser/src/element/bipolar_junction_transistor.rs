@@ -1,3 +1,4 @@
+use super::Nodes;
 use crate::{prelude::*, utils::parse_value};
 use std::str::FromStr;
 
@@ -35,5 +36,11 @@ impl FromStr for BipolarJunctionTransistor {
             node3,
             value,
         })
+    }
+}
+
+impl Nodes for BipolarJunctionTransistor {
+    fn nodes(&self) -> Vec<&String> {
+        vec![&self.node1, &self.node2, &self.node3]
     }
 }

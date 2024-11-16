@@ -45,6 +45,10 @@ pub fn parse_netlist(spice_deck: &str) -> Result<Netlist> {
     let mut elements: Vec<Element> = Vec::new();
 
     for line in lines {
+        if line.is_empty() {
+            continue;
+        }
+
         if line.starts_with('C') {
             elements.push(Element::Capacitor(line.parse()?));
         } else if line.starts_with('R') {
@@ -67,6 +71,7 @@ pub fn parse_netlist(spice_deck: &str) -> Result<Netlist> {
             return Err(Error::UnknownElement(line.to_string()));
         }
     }
+
     let netlist = Netlist { elements, title };
 
     Ok(netlist)

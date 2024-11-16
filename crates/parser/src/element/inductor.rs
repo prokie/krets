@@ -1,3 +1,4 @@
+use super::Nodes;
 use crate::{prelude::*, utils::parse_value};
 use std::str::FromStr;
 
@@ -34,5 +35,11 @@ impl FromStr for Inductor {
             node1,
             node2,
         })
+    }
+}
+
+impl Nodes for Inductor {
+    fn nodes(&self) -> Vec<&String> {
+        vec![&self.node1, &self.node2]
     }
 }

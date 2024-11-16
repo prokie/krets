@@ -1,6 +1,8 @@
 use crate::{prelude::*, utils::parse_value};
 use std::str::FromStr;
 
+use super::Nodes;
+
 pub struct Resistor {
     pub name: String,
     pub value: f64,
@@ -34,5 +36,11 @@ impl FromStr for Resistor {
             node1,
             node2,
         })
+    }
+}
+
+impl Nodes for Resistor {
+    fn nodes(&self) -> Vec<&String> {
+        vec![&self.node1, &self.node2]
     }
 }

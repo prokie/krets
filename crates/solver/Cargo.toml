@@ -1,0 +1,10 @@
+[package]
+name = "solver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+faer = "0.19.4"
+parser = { path = "../parser" }
+[lints]
+workspace = true

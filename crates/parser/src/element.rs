@@ -46,3 +46,23 @@ impl Element {
         }
     }
 }
+
+impl Nodes for Element {
+    fn nodes(&self) -> Vec<&String> {
+        match self {
+            Element::Capacitor(capacitor) => capacitor.nodes(),
+            Element::Resistor(resistor) => resistor.nodes(),
+            Element::Inductor(inductor) => inductor.nodes(),
+            Element::VoltageSource(voltage_source) => voltage_source.nodes(),
+            Element::CurrentSource(current_source) => current_source.nodes(),
+            Element::Diode(diode) => diode.nodes(),
+            Element::BipolarJunctionTransistor(bjt) => bjt.nodes(),
+            Element::NMOS(nmos) => nmos.nodes(),
+            Element::PMOS(pmos) => pmos.nodes(),
+        }
+    }
+}
+
+pub trait Nodes {
+    fn nodes(&self) -> Vec<&String>;
+}

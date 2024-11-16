@@ -1,3 +1,4 @@
+use super::Nodes;
 use crate::{prelude::*, utils::parse_value};
 use std::str::FromStr;
 
@@ -33,5 +34,11 @@ impl FromStr for Diode {
             node2,
             value,
         })
+    }
+}
+
+impl Nodes for Diode {
+    fn nodes(&self) -> Vec<&String> {
+        vec![&self.node1, &self.node2]
     }
 }

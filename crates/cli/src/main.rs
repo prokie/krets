@@ -1,6 +1,7 @@
 use parser::parse_netlist;
 
 use clap::Parser;
+use solver::Solver;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -14,4 +15,6 @@ fn main() {
     let args = Args::parse();
 
     let netlist = parse_netlist(args.netlist.as_str()).unwrap();
+
+    let solver = Solver::new(netlist);
 }
