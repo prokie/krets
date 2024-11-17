@@ -1,3 +1,5 @@
+use std::clone;
+
 pub mod bipolar_junction_transistor;
 pub mod capacitor;
 pub mod current_source;
@@ -9,6 +11,7 @@ pub mod resistor;
 pub mod voltage_source;
 
 /// Represents different types of elements in a netlist.
+#[derive(Clone)]
 pub enum Element {
     /// A capacitor element.
     Capacitor(capacitor::Capacitor),
@@ -48,7 +51,7 @@ impl Element {
 }
 
 impl Nodes for Element {
-    fn nodes(&self) -> Vec<&String> {
+    fn nodes(&self) -> Vec<String> {
         match self {
             Element::Capacitor(capacitor) => capacitor.nodes(),
             Element::Resistor(resistor) => resistor.nodes(),
@@ -64,5 +67,5 @@ impl Nodes for Element {
 }
 
 pub trait Nodes {
-    fn nodes(&self) -> Vec<&String>;
+    fn nodes(&self) -> Vec<String>;
 }

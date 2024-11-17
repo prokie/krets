@@ -6,12 +6,13 @@ pub mod prelude;
 pub mod utils;
 use crate::prelude::*;
 
-use element::Element;
+use element::{Element, Nodes};
 use error::Error;
 
 pub struct Netlist {
     pub elements: Vec<Element>,
     pub title: String,
+    pub nodes: Vec<String>,
 }
 
 /// Parses a netlist string and returns a list of elements.
@@ -43,6 +44,7 @@ pub fn parse_netlist(spice_deck: &str) -> Result<Netlist> {
     let title = lines.remove(0).to_string();
 
     let mut elements: Vec<Element> = Vec::new();
+    let mut nodes: Vec<String> = Vec::new();
 
     for line in lines {
         if line.is_empty() {
@@ -50,9 +52,13 @@ pub fn parse_netlist(spice_deck: &str) -> Result<Netlist> {
         }
 
         if line.starts_with('C') {
-            elements.push(Element::Capacitor(line.parse()?));
+            let capacitor = Element::Capacitor(line.parse()?);
+            elements.push(capacitor.clone());
+            // add the nodes of the capacitor to the list of nodes
+            nodes.extend(capacitor.nodes());
         } else if line.starts_with('R') {
-            elements.push(Element::Resistor(line.parse()?));
+            let resistor = Element::Resistor(line.parse()?);
+            elements.push(resistor);
         } else if line.starts_with('L') {
             elements.push(Element::Inductor(line.parse()?));
         } else if line.starts_with('V') {
@@ -72,7 +78,11 @@ pub fn parse_netlist(spice_deck: &str) -> Result<Netlist> {
         }
     }
 
-    let netlist = Netlist { elements, title };
+    let netlist = Netlist {
+        elements,
+        title,
+        nodes,
+    };
 
     Ok(netlist)
 }

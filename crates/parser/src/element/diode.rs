@@ -1,7 +1,7 @@
 use super::Nodes;
 use crate::{prelude::*, utils::parse_value};
 use std::str::FromStr;
-
+#[derive(Clone)]
 pub struct Diode {
     pub name: String,
     pub node1: String,
@@ -38,7 +38,7 @@ impl FromStr for Diode {
 }
 
 impl Nodes for Diode {
-    fn nodes(&self) -> Vec<&String> {
-        vec![&self.node1, &self.node2]
+    fn nodes(&self) -> Vec<String> {
+        vec![self.node1.clone(), self.node2.clone()]
     }
 }

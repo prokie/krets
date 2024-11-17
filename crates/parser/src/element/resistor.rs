@@ -2,7 +2,7 @@ use crate::{prelude::*, utils::parse_value};
 use std::str::FromStr;
 
 use super::Nodes;
-
+#[derive(Clone)]
 pub struct Resistor {
     pub name: String,
     pub value: f64,
@@ -40,7 +40,7 @@ impl FromStr for Resistor {
 }
 
 impl Nodes for Resistor {
-    fn nodes(&self) -> Vec<&String> {
-        vec![&self.node1, &self.node2]
+    fn nodes(&self) -> Vec<String> {
+        vec![self.node1.clone(), self.node2.clone()]
     }
 }

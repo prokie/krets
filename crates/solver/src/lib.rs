@@ -23,7 +23,7 @@ impl Solver {
 
         for element in &netlist.elements {
             for node in element.nodes() {
-                if !nodes.contains(node) {
+                if !nodes.contains(&node) {
                     nodes.push(node.clone());
                 }
             }
@@ -96,7 +96,22 @@ impl Solver {
             })
             .count();
 
-        let mut matrix_b = Mat::<f64>::zeros(1, 1);
+        let mut matrix_b = Mat::<f64>::zeros(number_of_voltage_sources, number_of_voltage_sources);
+
+        for (index, element) in self.netlist.elements.iter().enumerate() {
+            if let Element::VoltageSource(voltage_source) = element {
+                let node1_index = self.node_map[&voltage_source.node1];
+                let node2_index = self.node_map[&voltage_source.node2];
+
+                if node1_index != 0 {
+                    matrix_b[(index, node1_index - 1)] = 1.0;
+                }
+
+                if node2_index != 0 {
+                    matrix_b[(index, node2_index - 1)] = -1.0;
+                }
+            }
+        }
 
         matrix_b
     }

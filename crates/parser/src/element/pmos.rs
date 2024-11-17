@@ -1,7 +1,7 @@
 use super::Nodes;
 use crate::{prelude::*, utils::parse_value};
 use std::str::FromStr;
-
+#[derive(Clone)]
 pub struct PMOS {
     pub name: String,
     pub node1: String,
@@ -40,7 +40,7 @@ impl FromStr for PMOS {
 }
 
 impl Nodes for PMOS {
-    fn nodes(&self) -> Vec<&String> {
-        vec![&self.node1, &self.node2, &self.node3]
+    fn nodes(&self) -> Vec<String> {
+        vec![self.node1.clone(), self.node2.clone(), self.node3.clone()]
     }
 }
