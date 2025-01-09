@@ -1,5 +1,3 @@
-use std::clone;
-
 pub mod bipolar_junction_transistor;
 pub mod capacitor;
 pub mod current_source;
