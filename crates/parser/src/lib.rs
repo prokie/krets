@@ -23,6 +23,10 @@ pub fn parse_circuit_description(input: &str) -> Result<Netlist> {
             continue;
         }
 
+        if line.starts_with('%') {
+            continue;
+        }
+
         if line.starts_with("V") {
             elements.push(Element::VoltageSource(line.parse()?));
         }
