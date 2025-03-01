@@ -12,8 +12,8 @@ pub struct CurrentSource {
     pub plus: String,
     /// The negative node of the current source.
     pub minus: String,
-    // The element group this current source belongs to.
-    pub g2: Option<u32>,
+    // If the current source is G2.
+    pub g2: bool,
 }
 
 impl FromStr for CurrentSource {
@@ -43,15 +43,7 @@ impl FromStr for CurrentSource {
             .parse::<f64>()
             .map_err(|_| Error::InvalidFloatValue("Invalid current source value".to_string()))?;
 
-        let g2 = if parts.len() == 5 {
-            Some(
-                parts[4][1..]
-                    .parse::<u32>()
-                    .map_err(|_| Error::InvalidFloatValue("Invalid group value".to_string()))?,
-            )
-        } else {
-            None
-        };
+        let g2 = parts.len() == 5 && parts[4] == "G2";
 
         Ok(CurrentSource {
             name,
@@ -76,7 +68,7 @@ mod tests {
         assert_eq!(current_source.plus, "1");
         assert_eq!(current_source.minus, "0");
         assert_eq!(current_source.value, 0.001);
-        assert_eq!(current_source.g2, None);
+        assert!(!current_source.g2);
     }
 
     #[test]
@@ -88,7 +80,7 @@ mod tests {
         assert_eq!(current_source.plus, "1");
         assert_eq!(current_source.minus, "0");
         assert_eq!(current_source.value, 0.001);
-        assert_eq!(current_source.g2, Some(2));
+        assert!(current_source.g2);
     }
 
     #[test]

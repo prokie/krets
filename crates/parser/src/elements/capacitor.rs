@@ -12,8 +12,8 @@ pub struct Capacitor {
     pub plus: String,
     /// Negative node of the capacitor.
     pub minus: String,
-    /// Group of the capacitor.
-    pub g2: Option<u32>,
+    /// If the capacitor is G2.
+    pub g2: bool,
 }
 
 impl FromStr for Capacitor {
@@ -49,15 +49,7 @@ impl FromStr for Capacitor {
         let value = parts[3]
             .parse::<f64>()
             .map_err(|_| Error::InvalidFloatValue(format!("Invalid capacitor value: '{}'", s)))?;
-        let g2 = if parts.len() == 5 {
-            Some(
-                parts[4][1..]
-                    .parse::<u32>()
-                    .map_err(|_| Error::InvalidFloatValue("Invalid group value".to_string()))?,
-            )
-        } else {
-            None
-        };
+        let g2 = parts.len() == 5 && parts[4] == "G2";
 
         Ok(Capacitor {
             name,
@@ -82,7 +74,7 @@ mod tests {
         assert_eq!(capacitor.plus, "1");
         assert_eq!(capacitor.minus, "0");
         assert_eq!(capacitor.value, 0.000001);
-        assert_eq!(capacitor.g2, None);
+        assert!(!capacitor.g2);
     }
 
     #[test]
@@ -94,7 +86,7 @@ mod tests {
         assert_eq!(capacitor.plus, "1");
         assert_eq!(capacitor.minus, "0");
         assert_eq!(capacitor.value, 0.000001);
-        assert_eq!(capacitor.g2, Some(2));
+        assert!(capacitor.g2);
     }
 
     #[test]
@@ -106,7 +98,7 @@ mod tests {
         assert_eq!(capacitor.plus, "1");
         assert_eq!(capacitor.minus, "0");
         assert_eq!(capacitor.value, 0.000001);
-        assert_eq!(capacitor.g2, None);
+        assert!(!capacitor.g2);
     }
 
     #[test]

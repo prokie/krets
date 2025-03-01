@@ -1,6 +1,6 @@
 pub mod error;
+pub mod matrix;
 pub mod prelude;
-
 use crate::prelude::*;
 use faer::Mat;
 use parser::circuit::Circuit;
@@ -69,7 +69,7 @@ mod tests {
 
     #[test]
     fn test_incident_matrix() {
-        // This is taken from Figure 2.13 in the book.
+        // This is taken from Figure 2.12 in the book.
         let circuit_description = "
 R1 0 1 1000
 R2 1 3 2000

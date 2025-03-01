@@ -12,8 +12,8 @@ pub struct Resistor {
     pub plus: String,
     /// Negative node of the resistor.
     pub minus: String,
-    /// Group of the resistor.
-    pub g2: Option<u32>,
+    /// If the resistor is G2.
+    pub g2: bool,
 }
 
 impl FromStr for Resistor {
@@ -49,15 +49,7 @@ impl FromStr for Resistor {
         let value = parts[3]
             .parse::<f64>()
             .map_err(|_| Error::InvalidFloatValue(format!("Invalid resistor value: '{}'", s)))?;
-        let g2 = if parts.len() == 5 {
-            Some(
-                parts[4][1..]
-                    .parse::<u32>()
-                    .map_err(|_| Error::InvalidFloatValue("Invalid group value".to_string()))?,
-            )
-        } else {
-            None
-        };
+        let g2 = parts.len() == 5 && parts[4] == "G2";
 
         Ok(Resistor {
             name,
@@ -82,7 +74,7 @@ mod tests {
         assert_eq!(resistor.plus, "1");
         assert_eq!(resistor.minus, "0");
         assert_eq!(resistor.value, 1000.0);
-        assert_eq!(resistor.g2, None);
+        assert!(!resistor.g2);
     }
 
     #[test]
@@ -94,7 +86,7 @@ mod tests {
         assert_eq!(resistor.plus, "1");
         assert_eq!(resistor.minus, "0");
         assert_eq!(resistor.value, 1000.0);
-        assert_eq!(resistor.g2, Some(2));
+        assert!(resistor.g2);
     }
 
     #[test]
@@ -106,7 +98,7 @@ mod tests {
         assert_eq!(resistor.plus, "1");
         assert_eq!(resistor.minus, "0");
         assert_eq!(resistor.value, 1000.0);
-        assert_eq!(resistor.g2, None);
+        assert!(!resistor.g2);
     }
 
     #[test]
