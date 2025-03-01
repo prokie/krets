@@ -1,11 +1,17 @@
 use crate::prelude::*;
 use std::str::FromStr;
 
+#[derive(Debug)]
+/// Represents a voltage source in a circuit.
 pub struct VoltageSource {
+    /// Name of the voltage source.
     pub name: u32,
+    /// Value of the voltage source.
     pub value: f64,
-    pub node_plus: String,
-    pub node_minus: String,
+    /// Positive node of the voltage source.
+    pub plus: String,
+    /// Negative node of the voltage source.
+    pub minus: String,
 }
 
 impl FromStr for VoltageSource {
@@ -28,17 +34,17 @@ impl FromStr for VoltageSource {
 
         let name = parts[0][1..]
             .parse::<u32>()
-            .map_err(|_| Error::InvalidFormat("Invalid voltage source name".to_string()))?;
-        let node_plus = parts[1].to_string();
-        let node_minus = parts[2].to_string();
+            .map_err(|_| Error::InvalidNodeName("Invalid voltage source name".to_string()))?;
+        let plus = parts[1].to_string();
+        let minus = parts[2].to_string();
         let value = parts[3]
             .parse::<f64>()
-            .map_err(|_| Error::InvalidFormat("Invalid voltage source value".to_string()))?;
+            .map_err(|_| Error::InvalidFloatValue("Invalid voltage source value".to_string()))?;
         Ok(VoltageSource {
             name,
             value,
-            node_plus,
-            node_minus,
+            plus,
+            minus,
         })
     }
 }
