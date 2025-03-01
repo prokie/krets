@@ -1,7 +1,12 @@
 [package]
-name = "parser"
+name = "solver"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+faer = "0.21.4"
+parser = { path = "../parser" }
 thiserror = { workspace = true }
+
+[lints]
+workspace = true
