@@ -38,3 +38,19 @@ pub enum Element {
     /// Metal-Oxide-Semiconductor Field-Effect Transistor (MOSFET) element.
     MOSFET(mosfet::MOSFET),
 }
+
+impl Element {
+    /// Retrieves the nodes associated with the element.
+    pub fn nodes(&self) -> Vec<String> {
+        match self {
+            Element::VoltageSource(v) => vec![v.plus.clone(), v.minus.clone()],
+            Element::CurrentSource(i) => vec![i.plus.clone(), i.minus.clone()],
+            Element::Resistor(r) => vec![r.plus.clone(), r.minus.clone()],
+            Element::Capacitor(c) => vec![c.plus.clone(), c.minus.clone()],
+            Element::Inductor(l) => vec![l.plus.clone(), l.minus.clone()],
+            Element::Diode(d) => vec![d.plus.clone(), d.minus.clone()],
+            Element::BJT(b) => vec![b.collector.clone(), b.emitter.clone(), b.base.clone()],
+            Element::MOSFET(m) => vec![m.drain.clone(), m.gate.clone(), m.source.clone()],
+        }
+    }
+}

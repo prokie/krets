@@ -1,11 +1,11 @@
+pub mod circuit;
 pub mod elements;
 pub mod error;
-pub mod netlist;
 pub mod prelude;
 
 use crate::prelude::*;
+use circuit::Circuit;
 use elements::Element;
-use netlist::Netlist;
 
 /// Parses a SPICE-like netlist and extracts circuit elements into structured data.
 ///
@@ -53,7 +53,7 @@ use netlist::Netlist;
 /// - Returns an error if a line has an invalid format.
 /// - Returns an error if a node name is not a non-negative integer.
 /// - Returns an error if a component type is unrecognized.
-pub fn parse_circuit_description(input: &str) -> Result<Netlist> {
+pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
     let lines: Vec<&str> = input.lines().collect();
 
     let mut elements: Vec<Element> = Vec::new();
@@ -104,7 +104,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Netlist> {
         return Err(Error::EmptyNetlist);
     }
 
-    let netlist = Netlist { elements };
+    let netlist = Circuit::new(elements);
 
     Ok(netlist)
 }

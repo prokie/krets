@@ -32,10 +32,10 @@ mod tests {
     #[test]
     fn test_parse_with_comment_line() {
         let netlist = "% This is a comment\nV1 1 0 5";
-        let result = parse_circuit_description(netlist);
-        assert!(result.is_ok());
+        let circuit = parse_circuit_description(netlist);
+        assert!(circuit.is_ok());
 
-        let netlist = result.unwrap();
+        let netlist = circuit.unwrap();
         assert_eq!(netlist.elements.len(), 1);
 
         match &netlist.elements[0] {
@@ -52,10 +52,10 @@ mod tests {
     #[test]
     fn test_parse_case_insensitive() {
         let netlist = "v1 1 0 5";
-        let result = parse_circuit_description(netlist);
-        assert!(result.is_ok());
+        let circuit = parse_circuit_description(netlist);
+        assert!(circuit.is_ok());
 
-        let netlist = result.unwrap();
+        let netlist = circuit.unwrap();
         assert_eq!(netlist.elements.len(), 1);
 
         match &netlist.elements[0] {
@@ -72,17 +72,17 @@ mod tests {
     #[test]
     fn test_parse_invalid_format() {
         let netlist = "V1 1 0";
-        let result = parse_circuit_description(netlist);
-        assert!(matches!(result, Err(Error::InvalidFormat(_))));
+        let circuit = parse_circuit_description(netlist);
+        assert!(matches!(circuit, Err(Error::InvalidFormat(_))));
     }
 
     #[test]
     fn test_parse_current_source() {
         let netlist = "i1 1 0 5";
-        let result = parse_circuit_description(netlist);
-        assert!(result.is_ok());
+        let circuit = parse_circuit_description(netlist);
+        assert!(circuit.is_ok());
 
-        let netlist = result.unwrap();
+        let netlist = circuit.unwrap();
         assert_eq!(netlist.elements.len(), 1);
 
         match &netlist.elements[0] {
@@ -111,7 +111,11 @@ R5 2 6 1.5
 R6 3 4 0.1
 R7 8 0 1e3
 R8 4 0 10 G2 % this is a group 2 element";
-        let result = parse_circuit_description(netlist);
-        assert!(result.is_ok());
+        let circuit = parse_circuit_description(netlist);
+        assert!(circuit.is_ok());
+
+        let circuit = circuit.unwrap();
+        assert_eq!(circuit.elements.len(), 13);
+        assert_eq!(circuit.nodes.len(), 9);
     }
 }
