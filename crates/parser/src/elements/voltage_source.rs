@@ -18,7 +18,12 @@ impl FromStr for VoltageSource {
     type Err = crate::prelude::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let parts: Vec<&str> = s.split_whitespace().collect();
+        let mut parts: Vec<&str> = s.split_whitespace().collect();
+
+        if parts.iter().any(|&x| x == "%") {
+            let index = parts.iter().position(|&x| x == "%").unwrap();
+            parts.truncate(index);
+        }
 
         if parts.len() != 4 {
             return Err(Error::InvalidFormat(
@@ -46,5 +51,53 @@ impl FromStr for VoltageSource {
             plus,
             minus,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_voltage_source() {
+        let voltage_source_str = "V1 1 0 5";
+        let voltage_source = voltage_source_str.parse::<VoltageSource>().unwrap();
+
+        assert_eq!(voltage_source.name, 1);
+        assert_eq!(voltage_source.plus, "1");
+        assert_eq!(voltage_source.minus, "0");
+        assert_eq!(voltage_source.value, 5.0);
+    }
+
+    #[test]
+    fn test_parse_voltage_source_with_comment() {
+        let voltage_source_str = "V1 1 0 5 % This is a comment";
+        let voltage_source = voltage_source_str.parse::<VoltageSource>().unwrap();
+
+        assert_eq!(voltage_source.name, 1);
+        assert_eq!(voltage_source.plus, "1");
+        assert_eq!(voltage_source.minus, "0");
+        assert_eq!(voltage_source.value, 5.0);
+    }
+
+    #[test]
+    fn test_invalid_voltage_source_format() {
+        let voltage_source_str = "V1 1 0";
+        let result = voltage_source_str.parse::<VoltageSource>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_voltage_source_name() {
+        let voltage_source_str = "V 1 0 5";
+        let result = voltage_source_str.parse::<VoltageSource>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_voltage_source_value() {
+        let voltage_source_str = "V1 1 0 abc";
+        let result = voltage_source_str.parse::<VoltageSource>();
+        assert!(result.is_err());
     }
 }

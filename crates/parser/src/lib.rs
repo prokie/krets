@@ -74,6 +74,30 @@ pub fn parse_circuit_description(input: &str) -> Result<Netlist> {
         if line.starts_with("I") || line.starts_with("i") {
             elements.push(Element::CurrentSource(line.parse()?));
         }
+
+        if line.starts_with("R") || line.starts_with("r") {
+            elements.push(Element::Resistor(line.parse()?));
+        }
+
+        if line.starts_with("C") || line.starts_with("c") {
+            elements.push(Element::Capacitor(line.parse()?));
+        }
+
+        if line.starts_with("L") || line.starts_with("l") {
+            elements.push(Element::Inductor(line.parse()?));
+        }
+
+        if line.starts_with("D") || line.starts_with("d") {
+            elements.push(Element::Diode(line.parse()?));
+        }
+
+        if line.starts_with("Q") || line.starts_with("q") {
+            elements.push(Element::BJT(line.parse()?));
+        }
+
+        if line.starts_with("M") || line.starts_with("m") {
+            elements.push(Element::MOSFET(line.parse()?));
+        }
     }
 
     if elements.is_empty() {

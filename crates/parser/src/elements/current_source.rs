@@ -12,8 +12,8 @@ pub struct CurrentSource {
     pub plus: String,
     /// The negative node of the current source.
     pub minus: String,
-    // The transconductance value for the current source.
-    pub g2: Option<f64>,
+    // The element group this current source belongs to.
+    pub g2: Option<u32>,
 }
 
 impl FromStr for CurrentSource {
@@ -44,9 +44,11 @@ impl FromStr for CurrentSource {
             .map_err(|_| Error::InvalidFloatValue("Invalid current source value".to_string()))?;
 
         let g2 = if parts.len() == 5 {
-            Some(parts[4].parse::<f64>().map_err(|_| {
-                Error::InvalidFloatValue("Invalid transconductance value".to_string())
-            })?)
+            Some(
+                parts[4][1..]
+                    .parse::<u32>()
+                    .map_err(|_| Error::InvalidFloatValue("Invalid group value".to_string()))?,
+            )
         } else {
             None
         };
@@ -58,5 +60,55 @@ impl FromStr for CurrentSource {
             minus,
             g2,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_current_source() {
+        let current_source_str = "I1 1 0 0.001";
+        let current_source = current_source_str.parse::<CurrentSource>().unwrap();
+
+        assert_eq!(current_source.name, 1);
+        assert_eq!(current_source.plus, "1");
+        assert_eq!(current_source.minus, "0");
+        assert_eq!(current_source.value, 0.001);
+        assert_eq!(current_source.g2, None);
+    }
+
+    #[test]
+    fn test_parse_current_source_with_group() {
+        let current_source_str = "I1 1 0 0.001 G2";
+        let current_source = current_source_str.parse::<CurrentSource>().unwrap();
+
+        assert_eq!(current_source.name, 1);
+        assert_eq!(current_source.plus, "1");
+        assert_eq!(current_source.minus, "0");
+        assert_eq!(current_source.value, 0.001);
+        assert_eq!(current_source.g2, Some(2));
+    }
+
+    #[test]
+    fn test_invalid_current_source_format() {
+        let current_source_str = "I1 1 0";
+        let result = current_source_str.parse::<CurrentSource>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_current_source_name() {
+        let current_source_str = "I 1 0 0.001";
+        let result = current_source_str.parse::<CurrentSource>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_current_source_value() {
+        let current_source_str = "I1 1 0 abc";
+        let result = current_source_str.parse::<CurrentSource>();
+        assert!(result.is_err());
     }
 }

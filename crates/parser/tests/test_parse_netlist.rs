@@ -80,7 +80,6 @@ mod tests {
     fn test_parse_current_source() {
         let netlist = "i1 1 0 5";
         let result = parse_circuit_description(netlist);
-        dbg!(&result);
         assert!(result.is_ok());
 
         let netlist = result.unwrap();
@@ -95,5 +94,24 @@ mod tests {
             }
             _ => panic!("Expected a current source element"),
         }
+    }
+
+    #[test]
+    fn test_parse_netlist() {
+        let netlist = "V1 5 0 2
+V2 3 2 0.2
+V3 7 6 2
+I1 4 8 1e-3
+I2 0 6 1e-3
+R1 1 5 1.5
+R2 1 2 1
+R3 5 2 50 G2 % this is a group 2 element
+R4 5 6 0.1
+R5 2 6 1.5
+R6 3 4 0.1
+R7 8 0 1e3
+R8 4 0 10 G2 % this is a group 2 element";
+        let result = parse_circuit_description(netlist);
+        assert!(result.is_ok());
     }
 }
