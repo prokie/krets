@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use std::fmt;
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -19,6 +20,20 @@ pub struct Resistor {
 impl Resistor {
     pub fn stamp(&self) -> f64 {
         1.0 / self.value
+    }
+}
+
+impl fmt::Display for Resistor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "R{} {} {} {}{}",
+            self.name,
+            self.plus,
+            self.minus,
+            self.value,
+            if self.g2 { " G2" } else { "" }
+        )
     }
 }
 
