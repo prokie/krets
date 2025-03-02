@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use std::fmt;
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -17,6 +18,16 @@ pub struct VoltageSource {
 impl VoltageSource {
     pub fn stamp(&self) -> f64 {
         self.value
+    }
+}
+
+impl fmt::Display for VoltageSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "V{} {} {} {}",
+            self.name, self.plus, self.minus, self.value,
+        )
     }
 }
 
