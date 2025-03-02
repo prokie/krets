@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::elements::{
-    Element, current_source::CurrentSource, resistor::Resistor, voltage_source::VoltageSource,
+    current_source::CurrentSource, resistor::Resistor, voltage_source::VoltageSource, Element,
 };
 
 #[derive(Debug)]
@@ -24,10 +24,10 @@ impl Circuit {
             .map(|s| s.to_string())
             .collect();
 
-        Circuit {
-            elements,
-            nodes: nodes.into_iter().collect(),
-        }
+        let mut nodes: Vec<String> = nodes.into_iter().collect();
+        nodes.sort();
+
+        Circuit { elements, nodes }
     }
 
     pub fn get_g2_elements(&self) -> Vec<&Element> {
@@ -47,6 +47,34 @@ impl Circuit {
             })
             .collect();
         resistors
+    }
+
+    pub fn get_g1_resistors(&self) -> Vec<&Resistor> {
+        self.elements
+            .iter()
+            .filter_map(|e| {
+                if let Element::Resistor(r) = e {
+                    if !r.g2 {
+                        return Some(r);
+                    }
+                }
+                None
+            })
+            .collect()
+    }
+
+    pub fn get_g2_resistors(&self) -> Vec<&Resistor> {
+        self.elements
+            .iter()
+            .filter_map(|e| {
+                if let Element::Resistor(r) = e {
+                    if r.g2 {
+                        return Some(r);
+                    }
+                }
+                None
+            })
+            .collect()
     }
 
     pub fn get_voltage_sources(&self) -> Vec<&VoltageSource> {
