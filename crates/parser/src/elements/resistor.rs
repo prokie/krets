@@ -16,6 +16,12 @@ pub struct Resistor {
     pub g2: bool,
 }
 
+impl Resistor {
+    pub fn stamp(&self) -> f64 {
+        1.0 / self.value
+    }
+}
+
 impl FromStr for Resistor {
     type Err = crate::prelude::Error;
 

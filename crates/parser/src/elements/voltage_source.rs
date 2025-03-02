@@ -14,6 +14,12 @@ pub struct VoltageSource {
     pub minus: String,
 }
 
+impl VoltageSource {
+    pub fn stamp(&self) -> f64 {
+        self.value
+    }
+}
+
 impl FromStr for VoltageSource {
     type Err = crate::prelude::Error;
 

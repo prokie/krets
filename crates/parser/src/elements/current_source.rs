@@ -16,6 +16,13 @@ pub struct CurrentSource {
     pub g2: bool,
 }
 
+impl CurrentSource {
+    /// Stamp the current source into the MNA matrix.
+    pub fn stamp(&self) -> f64 {
+        self.value
+    }
+}
+
 impl FromStr for CurrentSource {
     type Err = crate::prelude::Error;
 

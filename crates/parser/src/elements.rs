@@ -53,4 +53,32 @@ impl Element {
             Element::MOSFET(m) => vec![m.drain.clone(), m.gate.clone(), m.source.clone()],
         }
     }
+
+    pub fn is_g2(&self) -> bool {
+        match self {
+            Element::VoltageSource(_) => true,
+            Element::CurrentSource(e) => e.g2,
+            Element::Resistor(e) => e.g2,
+            Element::Capacitor(e) => e.g2,
+            Element::Inductor(_) => false,
+            Element::Diode(_) => false,
+            Element::BJT(_) => false,
+            Element::MOSFET(_) => false,
+        }
+    }
+}
+
+impl std::fmt::Display for Element {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Element::VoltageSource(v) => write!(f, "V{}", v.name),
+            Element::CurrentSource(i) => write!(f, "I{}", i.name),
+            Element::Resistor(r) => write!(f, "R{}", r.name),
+            Element::Capacitor(c) => write!(f, "C{}", c.name),
+            Element::Inductor(l) => write!(f, "L{}", l.name),
+            Element::Diode(d) => write!(f, "D{}", d.name),
+            Element::BJT(b) => write!(f, "Q{}", b.name),
+            Element::MOSFET(m) => write!(f, "M{}", m.name),
+        }
+    }
 }
