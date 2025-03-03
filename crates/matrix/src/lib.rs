@@ -9,7 +9,7 @@ pub struct Matrix {
     cols: usize,
     data: HashMap<(usize, usize), f64>,
 }
-use faer::sparse::*;
+use faer::sparse::Triplet;
 
 impl Matrix {
     pub fn new(rows: usize, cols: usize) -> Self {

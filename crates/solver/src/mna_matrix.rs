@@ -1,5 +1,5 @@
 use faer::Mat;
-use faer::sparse::*;
+use faer::sparse::SparseColMat;
 use std::fmt;
 
 pub struct MNAMatrix {

@@ -1,4 +1,7 @@
+use matrix::Matrix;
+
 use crate::prelude::*;
+use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
@@ -18,8 +21,27 @@ pub struct Resistor {
 }
 
 impl Resistor {
-    pub fn stamp(&self) -> f64 {
-        1.0 / self.value
+    /// Adds the resistor's stamp to the given matrix.
+    ///
+    /// # Parameters
+    /// - `conductance_matrix`: The conducatance matrix to update.
+    /// - `node_map`: A map from node names to matrix indices.
+    pub fn add_stamp(&self, conductance_matrix: &mut Matrix, node_map: &HashMap<String, usize>) {
+        let index_plus = node_map.get(&self.plus);
+        let index_minus = node_map.get(&self.minus);
+
+        if let Some(&index_plus) = index_plus {
+            conductance_matrix[(index_plus, index_plus)] += 1. / self.value;
+        }
+
+        if let Some(&index_minus) = index_minus {
+            conductance_matrix[(index_minus, index_minus)] += 1. / self.value;
+        }
+
+        if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
+            conductance_matrix[(index_plus, index_minus)] -= 1. / self.value;
+            conductance_matrix[(index_minus, index_plus)] -= 1. / self.value;
+        }
     }
 }
 

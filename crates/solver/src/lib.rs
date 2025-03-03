@@ -1,39 +1,18 @@
 pub mod error;
-pub mod matrix;
 pub mod mna_matrix;
 pub mod prelude;
 use crate::prelude::*;
 use faer::Mat;
 use matrix::Matrix;
 use parser::circuit::Circuit;
-use std::collections::HashMap;
 
 pub struct Solver {
     circuit: Circuit,
-
-    node_to_index: HashMap<String, usize>,
 }
 
 impl Solver {
     pub fn new(circuit: Circuit) -> Self {
-        // Create a mapping from node name to index in the MNA matrix.
-        let mut node_to_index = HashMap::new();
-
-        let mut index = 0;
-        for node in &circuit.nodes {
-            // Skip the ground node.
-            if node == "0" {
-                continue;
-            }
-
-            node_to_index.insert(node.clone(), index);
-            index += 1;
-        }
-
-        Self {
-            circuit,
-            node_to_index,
-        }
+        Self { circuit }
     }
 
     pub fn assemble_mna_system(self) {
@@ -45,7 +24,8 @@ impl Solver {
         // excluding ground node.
         let size = number_of_nodes + g2_elements.len() - 1;
         let mut x_nodes: Vec<String> = self
-            .node_to_index
+            .circuit
+            .node_map
             .keys()
             .map(|key| format!("V({key})"))
             .collect();
@@ -62,8 +42,8 @@ impl Solver {
         // };
 
         for current_source in self.circuit.get_current_sources() {
-            let index_plus = self.node_to_index.get(&current_source.plus);
-            let index_minus = self.node_to_index.get(&current_source.minus);
+            let index_plus = self.circuit.node_map.get(&current_source.plus);
+            let index_minus = self.circuit.node_map.get(&current_source.minus);
 
             if let Some(&index_plus) = index_plus {
                 matrix_b[(index_plus, 0)] -= current_source.stamp();
@@ -74,26 +54,26 @@ impl Solver {
         }
 
         for resistor in self.circuit.get_g1_resistors() {
-            let index_plus = self.node_to_index.get(&resistor.plus);
-            let index_minus = self.node_to_index.get(&resistor.minus);
+            let index_plus = self.circuit.node_map.get(&resistor.plus);
+            let index_minus = self.circuit.node_map.get(&resistor.minus);
 
             if let Some(&index_plus) = index_plus {
-                matrix_a[(index_plus, index_plus)] += resistor.stamp();
+                matrix_a[(index_plus, index_plus)] += 1. / resistor.value;
             }
 
             if let Some(&index_minus) = index_minus {
-                matrix_a[(index_minus, index_minus)] += resistor.stamp();
+                matrix_a[(index_minus, index_minus)] += 1. / resistor.value;
             }
 
             if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-                matrix_a[(index_plus, index_minus)] -= resistor.stamp();
-                matrix_a[(index_minus, index_plus)] -= resistor.stamp();
+                matrix_a[(index_plus, index_minus)] -= 1. / resistor.value;
+                matrix_a[(index_minus, index_plus)] -= 1. / resistor.value;
             }
         }
 
         for (offset, voltage_source) in self.circuit.get_voltage_sources().iter().enumerate() {
-            let index_plus = self.node_to_index.get(&voltage_source.plus);
-            let index_minus = self.node_to_index.get(&voltage_source.minus);
+            let index_plus = self.circuit.node_map.get(&voltage_source.plus);
+            let index_minus = self.circuit.node_map.get(&voltage_source.minus);
 
             if let Some(&index_plus) = index_plus {
                 matrix_a[(index_plus, offset + number_of_nodes - 1)] += 1.0;

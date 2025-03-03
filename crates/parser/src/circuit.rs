@@ -1,7 +1,7 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 use crate::elements::{
-    current_source::CurrentSource, resistor::Resistor, voltage_source::VoltageSource, Element,
+    Element, current_source::CurrentSource, resistor::Resistor, voltage_source::VoltageSource,
 };
 
 #[derive(Debug)]
@@ -10,24 +10,25 @@ pub struct Circuit {
     /// A list of circuit elements.
     pub elements: Vec<Element>,
 
+    /// A hashmap mapping node names to node indexes.
+    pub node_map: HashMap<String, usize>,
+
     /// A list of nodes in the circuit.
     pub nodes: Vec<String>,
 }
 
 impl Circuit {
     /// Create a new circuit
-    pub fn new(elements: Vec<Element>) -> Self {
-        // Collect all nodes from the elements into a HashSet to remove duplicates.
-        let nodes: HashSet<String> = elements
-            .iter()
-            .flat_map(|x| x.nodes())
-            .map(|s| s.to_string())
-            .collect();
-
-        let mut nodes: Vec<String> = nodes.into_iter().collect();
-        nodes.sort();
-
-        Circuit { elements, nodes }
+    pub fn new(
+        elements: Vec<Element>,
+        node_map: HashMap<String, usize>,
+        nodes: Vec<String>,
+    ) -> Self {
+        Circuit {
+            elements,
+            node_map,
+            nodes,
+        }
     }
 
     pub fn get_g2_elements(&self) -> Vec<&Element> {
