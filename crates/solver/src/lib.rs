@@ -1,17 +1,118 @@
 pub mod error;
 pub mod matrix;
+pub mod mna_matrix;
 pub mod prelude;
 use crate::prelude::*;
 use faer::Mat;
+use matrix::Matrix;
 use parser::circuit::Circuit;
+use std::collections::HashMap;
 
 pub struct Solver {
     circuit: Circuit,
+
+    node_to_index: HashMap<String, usize>,
 }
 
 impl Solver {
     pub fn new(circuit: Circuit) -> Self {
-        Self { circuit }
+        // Create a mapping from node name to index in the MNA matrix.
+        let mut node_to_index = HashMap::new();
+
+        let mut index = 0;
+        for node in &circuit.nodes {
+            // Skip the ground node.
+            if node == "0" {
+                continue;
+            }
+
+            node_to_index.insert(node.clone(), index);
+            index += 1;
+        }
+
+        Self {
+            circuit,
+            node_to_index,
+        }
+    }
+
+    pub fn assemble_mna_system(self) {
+        println!("Assembling MNA system...");
+        let number_of_nodes = self.circuit.nodes.len();
+        let g2_elements = self.circuit.get_g2_elements();
+
+        // The size of the MNA matrix is the number of nodes plus the number of group 2 elements
+        // excluding ground node.
+        let size = number_of_nodes + g2_elements.len() - 1;
+        let mut x_nodes: Vec<String> = self
+            .node_to_index
+            .keys()
+            .map(|key| format!("V({key})"))
+            .collect();
+        x_nodes.sort();
+        x_nodes.extend(g2_elements.iter().map(|key| format!("I({key})")));
+
+        let mut matrix_a = Matrix::new_empty(size, size);
+        let mut matrix_b = Matrix::new_empty(size, 1);
+
+        // let mut matrix = MNAMatrix {
+        //     a: SparseColMat::<usize, f64>::new(size, size),
+        //     z: Mat::<f64>::zeros(size, 1),
+        //     nodes: x_nodes,
+        // };
+
+        for current_source in self.circuit.get_current_sources() {
+            let index_plus = self.node_to_index.get(&current_source.plus);
+            let index_minus = self.node_to_index.get(&current_source.minus);
+
+            if let Some(&index_plus) = index_plus {
+                matrix_b[(index_plus, 0)] -= current_source.stamp();
+            }
+            if let Some(&index_minus) = index_minus {
+                matrix_b[(index_minus, 0)] += current_source.stamp();
+            }
+        }
+
+        for resistor in self.circuit.get_g1_resistors() {
+            let index_plus = self.node_to_index.get(&resistor.plus);
+            let index_minus = self.node_to_index.get(&resistor.minus);
+
+            if let Some(&index_plus) = index_plus {
+                matrix_a[(index_plus, index_plus)] += resistor.stamp();
+            }
+
+            if let Some(&index_minus) = index_minus {
+                matrix_a[(index_minus, index_minus)] += resistor.stamp();
+            }
+
+            if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
+                matrix_a[(index_plus, index_minus)] -= resistor.stamp();
+                matrix_a[(index_minus, index_plus)] -= resistor.stamp();
+            }
+        }
+
+        for (offset, voltage_source) in self.circuit.get_voltage_sources().iter().enumerate() {
+            let index_plus = self.node_to_index.get(&voltage_source.plus);
+            let index_minus = self.node_to_index.get(&voltage_source.minus);
+
+            if let Some(&index_plus) = index_plus {
+                matrix_a[(index_plus, offset + number_of_nodes - 1)] += 1.0;
+                matrix_a[(offset + number_of_nodes - 1, index_plus)] += 1.0;
+
+                matrix_b[(offset + number_of_nodes - 1, 0)] = voltage_source.value;
+            }
+
+            if let Some(&index_minus) = index_minus {
+                matrix_a[(index_minus, offset + number_of_nodes - 1)] -= 1.0;
+                matrix_a[(offset + number_of_nodes - 1, index_minus)] -= 1.0;
+            }
+        }
+        println!("{matrix_a}");
+        println!("{matrix_b}");
+
+        let lu = matrix_a.to_sparse_col_mat().sp_lu().unwrap();
+        let x = faer::linalg::solvers::Solve::solve(&lu, &matrix_b.to_dense_mat());
+        println!("Solution x = {x:?}");
     }
 
     /// Generates the incidence matrix of the circuit.
@@ -81,5 +182,55 @@ R6 3 0 6000
         let circuit = parser::parse_circuit_description(circuit_description).unwrap();
         let solver = Solver::new(circuit);
         solver.incident_matrix().unwrap();
+    }
+
+    #[test]
+    fn test_assemble_mna_system() {
+        // This is taken from Figure 2.35 in the book.
+        let circuit_description = "
+V1 5 0 2
+V2 3 2 0.2
+V3 7 6 2
+I1 4 8 1e-3
+I2 0 6 1e-3
+R1 1 5 1.5
+R2 1 2 1
+R3 5 2 50 G2 % this is a group 2 element
+R4 5 6 0.1
+R5 2 6 1.5
+R6 3 4 0.1
+R7 8 0 1e3
+R8 4 0 10 G2 % this is a group 2 element
+";
+        let circuit = parser::parse_circuit_description(circuit_description).unwrap();
+        let solver = Solver::new(circuit);
+        solver.assemble_mna_system();
+    }
+
+    #[test]
+    fn test_case_1() {
+        // This is taken from website.
+        let circuit_description = "
+V1 2 1 32
+R1 1 0 2
+R2 2 3 4
+R3 2 0 8
+V2 3 0 20
+";
+        let circuit = parser::parse_circuit_description(circuit_description).unwrap();
+        let solver = Solver::new(circuit);
+        solver.assemble_mna_system();
+    }
+
+    #[test]
+    fn test_voltage_divider() {
+        let circuit_description = "
+V1 in 0 1
+R1 in out 1000
+R2 out 0 2000
+";
+        let circuit = parser::parse_circuit_description(circuit_description).unwrap();
+        let solver = Solver::new(circuit);
+        solver.assemble_mna_system();
     }
 }
