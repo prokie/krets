@@ -1,3 +1,5 @@
+use matrix::mna_matrix::MnaMatrix;
+
 pub mod bjt;
 pub mod capacitor;
 pub mod current_source;
@@ -66,6 +68,26 @@ impl Element {
             Element::MOSFET(_) => false,
         }
     }
+
+    pub fn add_stamp(&self, mna_matrix: &mut MnaMatrix) {
+        match self {
+            Element::VoltageSource(e) => e.add_stamp(mna_matrix),
+            Element::CurrentSource(_) => todo!(),
+            Element::Resistor(e) => e.add_stamp(mna_matrix),
+            Element::Capacitor(_) => todo!(),
+            Element::Inductor(_) => todo!(),
+            Element::Diode(_) => todo!(),
+            Element::BJT(_) => todo!(),
+            Element::MOSFET(_) => todo!(),
+        }
+    }
+}
+
+pub trait Identifiable {
+    fn identifier(&self) -> String;
+}
+pub trait Stampable {
+    fn add_stamp(&self, mna_matrix: &mut MnaMatrix);
 }
 
 impl std::fmt::Display for Element {
@@ -73,7 +95,7 @@ impl std::fmt::Display for Element {
         match self {
             Element::VoltageSource(v) => write!(f, "V{}", v.name),
             Element::CurrentSource(i) => write!(f, "I{}", i.name),
-            Element::Resistor(r) => write!(f, "R{}", r.name),
+            Element::Resistor(r) => write!(f, "{}", r.identifier()),
             Element::Capacitor(c) => write!(f, "C{}", c.name),
             Element::Inductor(l) => write!(f, "L{}", l.name),
             Element::Diode(d) => write!(f, "D{}", d.name),

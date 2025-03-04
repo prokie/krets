@@ -1,3 +1,5 @@
+pub mod mna_matrix;
+
 use faer::mat::Mat;
 use faer::sparse::SparseColMat;
 use std::collections::HashMap;

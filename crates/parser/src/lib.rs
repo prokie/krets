@@ -115,7 +115,6 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
     if elements.is_empty() {
         return Err(Error::EmptyNetlist);
     }
-    dbg!(&index_map);
     let netlist = Circuit::new(elements, index_map, nodes);
 
     Ok(netlist)

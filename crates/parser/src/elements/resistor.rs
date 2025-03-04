@@ -1,9 +1,10 @@
-use matrix::Matrix;
+use matrix::mna_matrix::MnaMatrix;
 
 use crate::prelude::*;
-use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
+
+use super::{Identifiable, Stampable};
 
 #[derive(Debug)]
 /// Represents a resistor in a circuit.
@@ -20,28 +21,35 @@ pub struct Resistor {
     pub g2: bool,
 }
 
-impl Resistor {
+impl Stampable for Resistor {
     /// Adds the resistor's stamp to the given matrix.
     ///
     /// # Parameters
     /// - `conductance_matrix`: The conducatance matrix to update.
     /// - `node_map`: A map from node names to matrix indices.
-    pub fn add_stamp(&self, conductance_matrix: &mut Matrix, node_map: &HashMap<String, usize>) {
-        let index_plus = node_map.get(&self.plus);
-        let index_minus = node_map.get(&self.minus);
+    fn add_stamp(&self, mna_matrix: &mut MnaMatrix) {
+        let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
+        let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
 
         if let Some(&index_plus) = index_plus {
-            conductance_matrix[(index_plus, index_plus)] += 1. / self.value;
+            mna_matrix.conductance_matrix[(index_plus, index_plus)] += 1. / self.value;
         }
 
         if let Some(&index_minus) = index_minus {
-            conductance_matrix[(index_minus, index_minus)] += 1. / self.value;
+            mna_matrix.conductance_matrix[(index_minus, index_minus)] += 1. / self.value;
         }
 
         if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-            conductance_matrix[(index_plus, index_minus)] -= 1. / self.value;
-            conductance_matrix[(index_minus, index_plus)] -= 1. / self.value;
+            mna_matrix.conductance_matrix[(index_plus, index_minus)] -= 1. / self.value;
+            mna_matrix.conductance_matrix[(index_minus, index_plus)] -= 1. / self.value;
         }
+    }
+}
+
+impl Identifiable for Resistor {
+    /// Returns the identifier of the resistor in the format `R{name}`.
+    fn identifier(&self) -> String {
+        format!("R{}", self.name)
     }
 }
 
