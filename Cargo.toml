@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/matrix", "crates/parser", "crates/solver"]
+members = ["crates/matrix", "crates/parser", "crates/result", "crates/solver"]
 resolver = "2"
 
 
@@ -7,11 +7,11 @@ resolver = "2"
 must_use_candidate = "allow"
 float_cmp = "allow"
 # pedantic = { level = "warn", priority = -1 }
-nursery = { level = "warn", priority = -1 }
+# nursery = { level = "warn", priority = -1 }
 
 [workspace.dependencies]
 thiserror = "2"
-faer = "0.21.5"
+faer = "0.21.7"
 parser = { path = "crates/parser" }
 solver = { path = "crates/solver" }
 matrix = { path = "crates/matrix" }

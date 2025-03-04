@@ -1,0 +1,11 @@
+[package]
+name = "result"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+parquet = "54.2.1"
+polars = { version = "0.46.0", features = ["parquet"] }
+
+[lints]
+workspace = true
