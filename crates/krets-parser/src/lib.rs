@@ -1,8 +1,8 @@
+pub mod analyses;
 pub mod circuit;
 pub mod elements;
 pub mod error;
 pub mod prelude;
-
 use std::collections::HashMap;
 
 use crate::prelude::*;
