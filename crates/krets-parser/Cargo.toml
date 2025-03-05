@@ -1,8 +1,8 @@
 [package]
-name = "parser"
+name = "krets-parser"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 thiserror = { workspace = true }
-matrix = { path = "../matrix" }
+krets-matrix = { path = "../krets-matrix" }

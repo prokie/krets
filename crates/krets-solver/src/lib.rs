@@ -4,8 +4,8 @@ pub mod prelude;
 
 use std::collections::HashMap;
 
-use matrix::{Matrix, mna_matrix::MnaMatrix};
-use parser::circuit::Circuit;
+use krets_matrix::{Matrix, mna_matrix::MnaMatrix};
+use krets_parser::circuit::Circuit;
 
 pub struct Solver {
     circuit: Circuit,
@@ -82,7 +82,7 @@ V1 in 0 1
 R1 in out 1000
 R2 out 0 2000
 ";
-        let circuit = parser::parse_circuit_description(circuit_description).unwrap();
+        let circuit = krets_parser::parse_circuit_description(circuit_description).unwrap();
         let solver = Solver::new(circuit);
         let solution = solver.solve();
 

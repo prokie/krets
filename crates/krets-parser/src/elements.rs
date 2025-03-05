@@ -1,4 +1,4 @@
-use matrix::mna_matrix::MnaMatrix;
+use krets_matrix::mna_matrix::MnaMatrix;
 
 pub mod bjt;
 pub mod capacitor;

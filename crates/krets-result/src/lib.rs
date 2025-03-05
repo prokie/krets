@@ -10,7 +10,7 @@ use std::fs::File;
 ///
 /// # Example
 /// ```rust
-/// use result::write_dict_to_parquet;
+/// use krets_result::write_dict_to_parquet;
 /// use std::collections::HashMap;
 /// let mut data = HashMap::new();
 /// data.insert("V1".to_string(), 3.0);

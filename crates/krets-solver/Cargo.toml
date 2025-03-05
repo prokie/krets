@@ -1,11 +1,11 @@
 [package]
-name = "solver"
+name = "krets-solver"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-parser = { path = "../parser" }
-matrix = { path = "../matrix" }
+krets-parser = { path = "../krets-parser" }
+krets-matrix = { path = "../krets-matrix" }
 
 faer = { workspace = true }
 thiserror = { workspace = true }

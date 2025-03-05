@@ -26,7 +26,7 @@ impl fmt::Display for MnaMatrix {
             for col in 0..self.conductance_matrix.cols {
                 write!(f, "{:7.3} ", self.conductance_matrix[(row, col)])?;
             }
-            write!(f, "| {:5} ", index)?;
+            write!(f, "| {index:5} ")?;
             writeln!(f, "|{:7.3}", self.excitation_vector[(row, 0)])?;
         }
         Ok(())

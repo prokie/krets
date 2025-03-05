@@ -1,4 +1,4 @@
-use matrix::mna_matrix::MnaMatrix;
+use krets_matrix::mna_matrix::MnaMatrix;
 
 use crate::prelude::*;
 use std::fmt;

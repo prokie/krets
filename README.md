@@ -1,3 +1,14 @@
-# Circuit-Simulation
+# krets
 
-Read the book Circuit Simulation by Farid N. Najm and do the problems.
+My SPICE circuit simulator written in rust.
+
+I am doing this project to learn rust.
+
+## Supported simulations
+
+The simulations types I plan to support.
+
+- [ ] DC
+- [ ] AC
+- [ ] Transient
+- [ ] Harmonic Balance

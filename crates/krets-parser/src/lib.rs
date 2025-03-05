@@ -46,7 +46,7 @@ use elements::Element;
 ///
 /// # Example
 /// ```
-/// use crate::parser::parse_circuit_description;
+/// use crate::krets_parser::parse_circuit_description;
 /// let circuit_description = "V1 1 2 1000\n";
 /// let netlist = parse_circuit_description(circuit_description).unwrap();
 /// ```

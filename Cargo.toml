@@ -1,17 +1,25 @@
 [workspace]
-members = ["crates/matrix", "crates/parser", "crates/result", "crates/solver"]
+members = [
+    "crates/krets-matrix",
+    "crates/krets-parser",
+    "crates/krets-result",
+    "crates/krets-solver",
+]
 resolver = "2"
 
 
 [workspace.lints.clippy]
 must_use_candidate = "allow"
 float_cmp = "allow"
-# pedantic = { level = "warn", priority = -1 }
+missing_panics_doc = "allow"
+pedantic = { level = "warn", priority = -1 }
 # nursery = { level = "warn", priority = -1 }
 
 [workspace.dependencies]
 thiserror = "2"
 faer = "0.21.7"
-parser = { path = "crates/parser" }
-solver = { path = "crates/solver" }
-matrix = { path = "crates/matrix" }
+
+krets-parser = { path = "crates/krets-parser" }
+krets-solver = { path = "crates/krets-solver" }
+krets-matrix = { path = "crates/krets-matrix" }
+krets-result = { path = "crates/krets-result" }
