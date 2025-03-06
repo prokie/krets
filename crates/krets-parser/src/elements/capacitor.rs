@@ -1,7 +1,9 @@
 use crate::prelude::*;
 use std::str::FromStr;
 
-#[derive(Debug)]
+use super::Identifiable;
+
+#[derive(Debug, Clone)]
 /// Represents a capacitor in a circuit.
 pub struct Capacitor {
     /// Name of the capacitor.
@@ -14,6 +16,12 @@ pub struct Capacitor {
     pub minus: String,
     /// If the capacitor is G2.
     pub g2: bool,
+}
+
+impl Identifiable for Capacitor {
+    fn identifier(&self) -> String {
+        format!("C{}", self.name)
+    }
 }
 
 impl FromStr for Capacitor {

@@ -14,7 +14,7 @@ pub mod voltage_source;
 /// # Element Groups
 /// Definition 2.6. (Element Groups) All elements whose currents are to be eliminated will be
 /// referred to as being in group 1, while all other elements will be referred to as group 2.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Element {
     /// A voltage source element.
     VoltageSource(voltage_source::VoltageSource),
@@ -56,6 +56,19 @@ impl Element {
         }
     }
 
+    pub fn set_value(&mut self, value: f64) {
+        match self {
+            Element::VoltageSource(e) => e.value = value,
+            Element::CurrentSource(e) => e.value = value,
+            Element::Resistor(e) => e.value = value,
+            Element::Capacitor(e) => e.value = value,
+            Element::Inductor(e) => e.value = value,
+            Element::Diode(_) => todo!(),
+            Element::BJT(_) => todo!(),
+            Element::MOSFET(_) => todo!(),
+        }
+    }
+
     pub fn is_g2(&self) -> bool {
         match self {
             Element::VoltageSource(_) => true,
@@ -81,6 +94,19 @@ impl Element {
             Element::MOSFET(_) => todo!(),
         }
     }
+
+    pub fn identifier(&self) -> String {
+        match self {
+            Element::VoltageSource(e) => e.identifier(),
+            Element::CurrentSource(e) => e.identifier(),
+            Element::Resistor(e) => e.identifier(),
+            Element::Capacitor(e) => e.identifier(),
+            Element::Inductor(e) => e.identifier(),
+            Element::Diode(e) => e.identifier(),
+            Element::BJT(e) => e.identifier(),
+            Element::MOSFET(e) => e.identifier(),
+        }
+    }
 }
 
 pub trait Identifiable {
@@ -93,14 +119,14 @@ pub trait Stampable {
 impl std::fmt::Display for Element {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Element::VoltageSource(v) => write!(f, "V{}", v.name),
-            Element::CurrentSource(i) => write!(f, "I{}", i.name),
+            Element::VoltageSource(v) => write!(f, "{}", v.identifier()),
+            Element::CurrentSource(i) => write!(f, "{}", i.identifier()),
             Element::Resistor(r) => write!(f, "{}", r.identifier()),
-            Element::Capacitor(c) => write!(f, "C{}", c.name),
-            Element::Inductor(l) => write!(f, "L{}", l.name),
-            Element::Diode(d) => write!(f, "D{}", d.name),
-            Element::BJT(b) => write!(f, "Q{}", b.name),
-            Element::MOSFET(m) => write!(f, "M{}", m.name),
+            Element::Capacitor(c) => write!(f, "{}", c.identifier()),
+            Element::Inductor(l) => write!(f, "{}", l.identifier()),
+            Element::Diode(d) => write!(f, "{}", d.identifier()),
+            Element::BJT(b) => write!(f, "{}", b.identifier()),
+            Element::MOSFET(m) => write!(f, "{}", m.identifier()),
         }
     }
 }

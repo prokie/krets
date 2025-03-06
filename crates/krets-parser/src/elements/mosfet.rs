@@ -1,7 +1,9 @@
 use crate::prelude::*;
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq)]
+use super::Identifiable;
+
+#[derive(Debug, PartialEq, Clone)]
 /// Represents the type of a MOSFET (Metal-Oxide-Semiconductor Field-Effect Transistor).
 /// A MOSFET can be either an N-Channel or a P-Channel.
 pub enum MosfetType {
@@ -11,7 +13,7 @@ pub enum MosfetType {
     PChannel,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Represents a MOSFET (Metal-Oxide-Semiconductor Field-Effect Transistor) in a circuit.
 pub struct MOSFET {
     /// Name of the MOSFET.
@@ -26,6 +28,13 @@ pub struct MOSFET {
     pub value: Option<f64>,
     /// Type of the MOSFET.
     pub mosfet_type: MosfetType,
+}
+
+impl Identifiable for MOSFET {
+    /// Returns the identifier of the resistor in the format `R{name}`.
+    fn identifier(&self) -> String {
+        format!("M{}", self.name)
+    }
 }
 
 impl FromStr for MOSFET {

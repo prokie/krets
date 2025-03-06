@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use super::{Identifiable, Stampable};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Represents a resistor in a circuit.
 pub struct Resistor {
     /// Name of the resistor.

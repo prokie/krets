@@ -1,7 +1,9 @@
 use crate::prelude::*;
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq)]
+use super::Identifiable;
+
+#[derive(Debug, PartialEq, Clone)]
 /// Represents the type of a BJT (Bipolar Junction Transistor).
 pub enum BjtType {
     /// NPN BJT.
@@ -10,7 +12,7 @@ pub enum BjtType {
     PNP,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Represents a BJT (Bipolar Junction Transistor) in a circuit.
 pub struct BJT {
     /// Name of the BJT.
@@ -25,6 +27,13 @@ pub struct BJT {
     pub value: Option<f64>,
     /// Type of the BJT.
     pub bjt_type: BjtType,
+}
+
+impl Identifiable for BJT {
+    /// Returns the identifier of the resistor in the format `R{name}`.
+    fn identifier(&self) -> String {
+        format!("Q{}", self.name)
+    }
 }
 
 impl FromStr for BJT {

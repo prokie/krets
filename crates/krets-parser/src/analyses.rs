@@ -7,4 +7,14 @@ pub enum Analyses {
 
     // Transient Analysis
     Transient,
+
+    // Operating Point
+    OP,
+}
+
+pub struct DcAnalysis {
+    pub element: String,
+    pub start: f64,
+    pub stop: f64,
+    pub step_size: f64,
 }

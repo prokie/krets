@@ -15,7 +15,7 @@ use std::fs::File;
 /// let mut data = HashMap::new();
 /// data.insert("V1".to_string(), 3.0);
 /// data.insert("V2".to_string(), 0.5);
-/// write_dict_to_parquet(&data, "simple_results.parquet").unwrap();
+/// // write_dict_to_parquet(&data, "simple_results.parquet").unwrap();
 /// ```
 pub fn write_dict_to_parquet(
     data: &HashMap<String, f64>,

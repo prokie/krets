@@ -34,7 +34,7 @@ impl fmt::Display for MnaMatrix {
 }
 
 impl MnaMatrix {
-    pub fn solve(self) -> HashMap<String, f64> {
+    pub fn solve(&self) -> HashMap<String, f64> {
         let lu = self.conductance_matrix.to_sparse_col_mat().sp_lu().unwrap();
 
         let x = faer::linalg::solvers::Solve::solve(&lu, &self.excitation_vector.to_dense_mat());

@@ -1,7 +1,9 @@
 use crate::prelude::*;
 use std::str::FromStr;
 
-#[derive(Debug)]
+use super::Identifiable;
+
+#[derive(Debug, Clone)]
 /// Represents a capacitor in a circuit.
 pub struct Diode {
     /// Name of the capacitor.
@@ -12,6 +14,12 @@ pub struct Diode {
     pub plus: String,
     /// Negative node of the capacitor.
     pub minus: String,
+}
+
+impl Identifiable for Diode {
+    fn identifier(&self) -> String {
+        format!("D{}", self.name)
+    }
 }
 
 impl FromStr for Diode {

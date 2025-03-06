@@ -1,7 +1,9 @@
 use crate::prelude::*;
 use std::str::FromStr;
 
-#[derive(Debug)]
+use super::Identifiable;
+
+#[derive(Debug, Clone)]
 /// Represents a current source in a circuit.
 pub struct CurrentSource {
     /// The name of the current source.
@@ -20,6 +22,12 @@ impl CurrentSource {
     /// Stamp the current source into the MNA matrix.
     pub fn stamp(&self) -> f64 {
         self.value
+    }
+}
+
+impl Identifiable for CurrentSource {
+    fn identifier(&self) -> String {
+        format!("I{}", self.name)
     }
 }
 

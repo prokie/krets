@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use super::{Identifiable, Stampable};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Represents a voltage source in a circuit.
 pub struct VoltageSource {
     /// Name of the voltage source.
@@ -34,13 +34,13 @@ impl Stampable for VoltageSource {
             .get(&format!("I({})", self.identifier()));
 
         if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-            mna_matrix.conductance_matrix[(index_plus, index_current)] += 1.0;
-            mna_matrix.conductance_matrix[(index_current, index_plus)] += 1.0;
+            mna_matrix.conductance_matrix[(index_plus, index_current)] = 1.0;
+            mna_matrix.conductance_matrix[(index_current, index_plus)] = 1.0;
         }
 
         if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-            mna_matrix.conductance_matrix[(index_minus, index_current)] -= 1.0;
-            mna_matrix.conductance_matrix[(index_current, index_minus)] -= 1.0;
+            mna_matrix.conductance_matrix[(index_minus, index_current)] = -1.0;
+            mna_matrix.conductance_matrix[(index_current, index_minus)] = -1.0;
         }
 
         if let Some(&index_current) = index_current {
