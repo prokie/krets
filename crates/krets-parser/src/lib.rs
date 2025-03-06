@@ -3,7 +3,12 @@ pub mod circuit;
 pub mod elements;
 pub mod error;
 pub mod prelude;
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{BufReader, Read},
+    path::Path,
+};
 
 use crate::prelude::*;
 use circuit::Circuit;
@@ -118,4 +123,14 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
     let netlist = Circuit::new(elements, index_map, nodes);
 
     Ok(netlist)
+}
+
+pub fn parse_circuit_description_file(file_path: &Path) -> Result<Circuit> {
+    let file = File::open(file_path).map_err(|e| Error::Unexpected(e.to_string()))?;
+    let mut reader = BufReader::new(file);
+    let mut contents = String::new();
+    reader
+        .read_to_string(&mut contents)
+        .map_err(|e| Error::Unexpected(e.to_string()))?;
+    parse_circuit_description(&contents)
 }
