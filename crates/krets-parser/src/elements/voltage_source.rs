@@ -26,7 +26,7 @@ impl Identifiable for VoltageSource {
 }
 
 impl Stampable for VoltageSource {
-    fn add_stamp(&self, mna_matrix: &mut MnaMatrix) {
+    fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
         let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
         let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
         let index_current = mna_matrix

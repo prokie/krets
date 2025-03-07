@@ -82,13 +82,13 @@ impl Element {
         }
     }
 
-    pub fn add_stamp(&self, mna_matrix: &mut MnaMatrix) {
+    pub fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
         match self {
-            Element::VoltageSource(e) => e.add_stamp(mna_matrix),
+            Element::VoltageSource(e) => e.add_dc_stamp(mna_matrix),
             Element::CurrentSource(_) => todo!(),
-            Element::Resistor(e) => e.add_stamp(mna_matrix),
+            Element::Resistor(e) => e.add_dc_stamp(mna_matrix),
             Element::Capacitor(_) => todo!(),
-            Element::Inductor(_) => todo!(),
+            Element::Inductor(e) => e.add_dc_stamp(mna_matrix),
             Element::Diode(_) => todo!(),
             Element::BJT(_) => todo!(),
             Element::MOSFET(_) => todo!(),
@@ -113,7 +113,7 @@ pub trait Identifiable {
     fn identifier(&self) -> String;
 }
 pub trait Stampable {
-    fn add_stamp(&self, mna_matrix: &mut MnaMatrix);
+    fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix);
 }
 
 impl std::fmt::Display for Element {

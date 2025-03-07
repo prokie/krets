@@ -6,7 +6,7 @@ use crate::prelude::*;
 use std::collections::HashMap;
 
 use krets_matrix::{Matrix, mna_matrix::MnaMatrix};
-use krets_parser::{analyses::DcAnalysis, circuit::Circuit};
+use krets_parser::{analyses::DcAnalysis, circuit::Circuit, elements::Element};
 
 pub struct Solver {
     circuit: Circuit,
@@ -37,14 +37,18 @@ impl Solver {
         let mut results: Vec<HashMap<String, f64>> = vec![];
 
         for element in &self.circuit.elements {
-            element.add_stamp(&mut mna_matrix);
+            if matches!(element, Element::Capacitor(_)) {
+                continue;
+            }
+
+            element.add_dc_stamp(&mut mna_matrix);
         }
 
         let mut current = dc_analysis.start;
 
         while current <= dc_analysis.stop {
             dc_sweep_element.set_value(current);
-            dc_sweep_element.add_stamp(&mut mna_matrix);
+            dc_sweep_element.add_dc_stamp(&mut mna_matrix);
             current += dc_analysis.step_size;
             results.push(mna_matrix.solve())
         }
@@ -62,7 +66,10 @@ impl Solver {
         };
 
         for element in self.circuit.elements {
-            element.add_stamp(&mut mna_matrix);
+            if matches!(element, Element::Capacitor(_)) {
+                continue;
+            }
+            element.add_dc_stamp(&mut mna_matrix);
         }
 
         mna_matrix.solve()

@@ -1,7 +1,9 @@
+use krets_matrix::mna_matrix::MnaMatrix;
+
 use crate::prelude::*;
 use std::str::FromStr;
 
-use super::Identifiable;
+use super::{Identifiable, Stampable};
 
 #[derive(Debug, Clone)]
 /// Represents a capacitor in a circuit.
@@ -19,6 +21,30 @@ pub struct Inductor {
 impl Identifiable for Inductor {
     fn identifier(&self) -> String {
         format!("I{}", self.name)
+    }
+}
+
+impl Stampable for Inductor {
+    fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
+        let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
+        let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
+        let index_current = mna_matrix
+            .index_map
+            .get(&format!("I({})", self.identifier()));
+
+        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
+            mna_matrix.conductance_matrix[(index_plus, index_current)] = 1.0;
+            mna_matrix.conductance_matrix[(index_current, index_plus)] = 1.0;
+        }
+
+        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
+            mna_matrix.conductance_matrix[(index_minus, index_current)] = -1.0;
+            mna_matrix.conductance_matrix[(index_current, index_minus)] = -1.0;
+        }
+
+        if let Some(&index_current) = index_current {
+            mna_matrix.excitation_vector[(index_current, 0)] = self.value;
+        }
     }
 }
 

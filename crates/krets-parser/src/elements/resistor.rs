@@ -27,7 +27,7 @@ impl Stampable for Resistor {
     /// # Parameters
     /// - `conductance_matrix`: The conducatance matrix to update.
     /// - `node_map`: A map from node names to matrix indices.
-    fn add_stamp(&self, mna_matrix: &mut MnaMatrix) {
+    fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
         let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
         let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
 
