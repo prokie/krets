@@ -4,7 +4,7 @@ mod tests {
     use std::{env, path::Path};
 
     use krets_parser::analyses::DcAnalysis;
-    use krets_solver::Solver;
+    use krets_solver::solver::Solver;
 
     // Function to get the project root path at runtime
     fn get_manifest_dir() -> String {

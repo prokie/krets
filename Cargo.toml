@@ -18,6 +18,7 @@ missing_panics_doc = "allow"
 [workspace.dependencies]
 thiserror = "2"
 faer = "0.21.7"
+tracing = "0.1.41"
 
 krets-parser = { path = "crates/krets-parser" }
 krets-solver = { path = "crates/krets-solver" }

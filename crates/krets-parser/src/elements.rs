@@ -85,7 +85,7 @@ impl Element {
     pub fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
         match self {
             Element::VoltageSource(e) => e.add_dc_stamp(mna_matrix),
-            Element::CurrentSource(_) => todo!(),
+            Element::CurrentSource(e) => e.add_dc_stamp(mna_matrix),
             Element::Resistor(e) => e.add_dc_stamp(mna_matrix),
             Element::Capacitor(_) => todo!(),
             Element::Inductor(e) => e.add_dc_stamp(mna_matrix),

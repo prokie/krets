@@ -1,7 +1,9 @@
+use krets_matrix::mna_matrix::MnaMatrix;
+
 use crate::prelude::*;
 use std::str::FromStr;
 
-use super::Identifiable;
+use super::{Identifiable, Stampable};
 
 #[derive(Debug, Clone)]
 /// Represents a current source in a circuit.
@@ -18,16 +20,35 @@ pub struct CurrentSource {
     pub g2: bool,
 }
 
-impl CurrentSource {
-    /// Stamp the current source into the MNA matrix.
-    pub fn stamp(&self) -> f64 {
-        self.value
-    }
-}
-
 impl Identifiable for CurrentSource {
     fn identifier(&self) -> String {
         format!("I{}", self.name)
+    }
+}
+
+impl Stampable for CurrentSource {
+    fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
+        let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
+        let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
+        let index_current = mna_matrix
+            .index_map
+            .get(&format!("I({})", self.identifier()));
+
+        if let Some(&index_plus) = index_plus {
+            mna_matrix.excitation_vector[(index_plus, 0)] = -self.value;
+        }
+
+        if let Some(&index_minus) = index_minus {
+            mna_matrix.excitation_vector[(index_minus, 0)] = self.value;
+        }
+
+        if let (Some(&index_plus), Some(&index_minus), Some(&index_current)) =
+            (index_plus, index_minus, index_current)
+        {
+            mna_matrix.excitation_vector[(index_current, 0)] = self.value;
+            mna_matrix.conductance_matrix[(index_plus, index_current)] = 1.0;
+            mna_matrix.conductance_matrix[(index_minus, index_current)] = -1.0;
+        }
     }
 }
 

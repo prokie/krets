@@ -3,7 +3,7 @@ mod tests {
 
     use std::{env, path::Path};
 
-    use krets_solver::Solver;
+    use krets_solver::solver::Solver;
 
     // Function to get the project root path at runtime
     fn get_manifest_dir() -> String {
@@ -89,5 +89,17 @@ V2 3 0 20
 
         assert!((solution.get("V(in)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(out)").unwrap() - 1.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_basic_001_op() {
+        let path = Path::new(&get_manifest_dir()).join("../../circuits/basic_001/basic_001.cir");
+        let circuit = krets_parser::parse_circuit_description_file(&path).unwrap();
+        let solver = Solver::new(circuit);
+        let solution = solver.solve();
+
+        assert!((solution.get("V(1)").unwrap() - 3.0).abs() < 1e-3);
+        assert!((solution.get("V(2)").unwrap() - 0.5).abs() < 1e-3);
+        assert!((solution.get("I(V4)").unwrap() - (-0.5)).abs() < 1e-3);
     }
 }
