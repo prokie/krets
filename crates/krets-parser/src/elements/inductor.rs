@@ -43,7 +43,7 @@ impl Stampable for Inductor {
         }
 
         if let Some(&index_current) = index_current {
-            mna_matrix.excitation_vector[(index_current, 0)] = self.value;
+            mna_matrix.excitation_vector[(index_current, 0)] = 0.0;
         }
     }
 }

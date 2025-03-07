@@ -75,7 +75,7 @@ impl Element {
             Element::CurrentSource(e) => e.g2,
             Element::Resistor(e) => e.g2,
             Element::Capacitor(e) => e.g2,
-            Element::Inductor(_) => false,
+            Element::Inductor(_) => true,
             Element::Diode(_) => false,
             Element::BJT(_) => false,
             Element::MOSFET(_) => false,

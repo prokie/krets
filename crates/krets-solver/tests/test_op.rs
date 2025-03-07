@@ -78,4 +78,16 @@ V2 3 0 20
         assert!((solution.get("V(in)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(out)").unwrap() - 1.0).abs() < 1e-3);
     }
+
+    #[test]
+    fn test_high_pass_filter_op() {
+        let path = Path::new(&get_manifest_dir())
+            .join("../../circuits/high_pass_filter/high_pass_filter.cir");
+        let circuit = krets_parser::parse_circuit_description_file(&path).unwrap();
+        let solver = Solver::new(circuit);
+        let solution = solver.solve();
+
+        assert!((solution.get("V(in)").unwrap() - 1.0).abs() < 1e-3);
+        assert!((solution.get("V(out)").unwrap() - 1.0).abs() < 1e-3);
+    }
 }
