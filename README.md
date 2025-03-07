@@ -1,6 +1,6 @@
 # krets
 
-My SPICE circuit simulator written in rust.
+My SPICE circuit simulator called `krets` written in rust.
 
 I am doing this project to learn rust.
 

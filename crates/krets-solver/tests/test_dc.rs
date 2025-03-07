@@ -15,7 +15,7 @@ mod tests {
     fn test_voltage_divider_dc() {
         let path = Path::new(&get_manifest_dir())
             .join("../../circuits/voltage_divider/voltage_divider.cir");
-        let circuit = krets_parser::parse_circuit_description_file(&path).unwrap();
+        let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
 
         let dc_analysis = DcAnalysis {

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use krets_parser::{elements::Element, parse_circuit_description, prelude::*};
+    use krets_parser::{elements::Element, parser::parse_circuit_description, prelude::*};
 
     #[test]
     fn test_parse_empty_netlist() {
