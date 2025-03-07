@@ -7,14 +7,14 @@ mod tests {
     use krets_solver::solver::Solver;
 
     // Function to get the project root path at runtime
-    fn get_manifest_dir() -> String {
+    fn manifest_dir() -> String {
         env::var("CARGO_MANIFEST_DIR").unwrap()
     }
 
     #[test]
     fn test_voltage_divider_dc() {
-        let path = Path::new(&get_manifest_dir())
-            .join("../../circuits/voltage_divider/voltage_divider.cir");
+        let path =
+            Path::new(&manifest_dir()).join("../../circuits/voltage_divider/voltage_divider.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
 
@@ -27,9 +27,9 @@ mod tests {
 
         let solution = solver.solve_dc(dc_analysis).unwrap();
 
-        assert!((solution.get(0).unwrap().get("V(in)").unwrap() - 0.0).abs() < 1e-3);
-        assert!((solution.get(0).unwrap().get("V(out)").unwrap() - 0.0).abs() < 1e-3);
-        assert!((solution.get(0).unwrap().get("I(V1)").unwrap() - 0.0).abs() < 1e-3);
+        assert!((solution.first().unwrap().get("V(in)").unwrap() - 0.0).abs() < 1e-3);
+        assert!((solution.first().unwrap().get("V(out)").unwrap() - 0.0).abs() < 1e-3);
+        assert!((solution.first().unwrap().get("I(V1)").unwrap() - 0.0).abs() < 1e-3);
 
         assert!((solution.get(1).unwrap().get("V(in)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get(1).unwrap().get("V(out)").unwrap() - 2.0 / 3.0).abs() < 1e-3);

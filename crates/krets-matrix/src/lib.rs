@@ -48,13 +48,6 @@ impl Matrix {
             *self.data.get(&(row, col)).unwrap_or(&0.0)
         })
     }
-    // pub fn to_dense_mat(&self) -> Mat<f64> {
-    //     let mut mat = Mat::<f64>::zeros(self.rows, self.cols);
-    //     for ((row, col), &value) in &self.data {
-    //         mat[(row, col)] = value;
-    //     }
-    //     mat
-    // }
 
     pub fn new_empty(rows: usize, cols: usize) -> Self {
         let mut data = HashMap::new();

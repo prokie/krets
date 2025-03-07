@@ -6,7 +6,7 @@ mod tests {
     use krets_solver::solver::Solver;
 
     // Function to get the project root path at runtime
-    fn get_manifest_dir() -> String {
+    fn manifest_dir() -> String {
         env::var("CARGO_MANIFEST_DIR").unwrap()
     }
 
@@ -56,8 +56,8 @@ V2 3 0 20
 
     #[test]
     fn test_voltage_divider() {
-        let path = Path::new(&get_manifest_dir())
-            .join("../../circuits/voltage_divider/voltage_divider.cir");
+        let path =
+            Path::new(&manifest_dir()).join("../../circuits/voltage_divider/voltage_divider.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
         let solution = solver.solve();
@@ -69,8 +69,8 @@ V2 3 0 20
 
     #[test]
     fn test_low_pass_filter_op() {
-        let path = Path::new(&get_manifest_dir())
-            .join("../../circuits/low_pass_filter/low_pass_filter.cir");
+        let path =
+            Path::new(&manifest_dir()).join("../../circuits/low_pass_filter/low_pass_filter.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
         let solution = solver.solve();
@@ -81,8 +81,8 @@ V2 3 0 20
 
     #[test]
     fn test_high_pass_filter_op() {
-        let path = Path::new(&get_manifest_dir())
-            .join("../../circuits/high_pass_filter/high_pass_filter.cir");
+        let path =
+            Path::new(&manifest_dir()).join("../../circuits/high_pass_filter/high_pass_filter.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
         let solution = solver.solve();
@@ -93,7 +93,7 @@ V2 3 0 20
 
     #[test]
     fn test_basic_001_op() {
-        let path = Path::new(&get_manifest_dir()).join("../../circuits/basic_001/basic_001.cir");
+        let path = Path::new(&manifest_dir()).join("../../circuits/basic_001/basic_001.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
         let solution = solver.solve();
