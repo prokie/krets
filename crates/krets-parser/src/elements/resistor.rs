@@ -31,17 +31,37 @@ impl Stampable for Resistor {
         let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
         let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
 
-        if let Some(&index_plus) = index_plus {
-            mna_matrix.conductance_matrix[(index_plus, index_plus)] += 1. / self.value;
-        }
+        if !self.g2 {
+            if let Some(&index_plus) = index_plus {
+                mna_matrix.conductance_matrix[(index_plus, index_plus)] += 1. / self.value;
+            }
 
-        if let Some(&index_minus) = index_minus {
-            mna_matrix.conductance_matrix[(index_minus, index_minus)] += 1. / self.value;
-        }
+            if let Some(&index_minus) = index_minus {
+                mna_matrix.conductance_matrix[(index_minus, index_minus)] += 1. / self.value;
+            }
 
-        if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-            mna_matrix.conductance_matrix[(index_plus, index_minus)] -= 1. / self.value;
-            mna_matrix.conductance_matrix[(index_minus, index_plus)] -= 1. / self.value;
+            if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
+                mna_matrix.conductance_matrix[(index_plus, index_minus)] -= 1. / self.value;
+                mna_matrix.conductance_matrix[(index_minus, index_plus)] -= 1. / self.value;
+            }
+        } else {
+            let index_current = mna_matrix
+                .index_map
+                .get(&format!("I({})", self.identifier()));
+
+            if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
+                mna_matrix.conductance_matrix[(index_plus, index_current)] = 1.0;
+                mna_matrix.conductance_matrix[(index_current, index_plus)] = 1.0;
+            }
+
+            if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
+                mna_matrix.conductance_matrix[(index_minus, index_current)] = -1.0;
+                mna_matrix.conductance_matrix[(index_current, index_minus)] = -1.0;
+            }
+
+            if let Some(&index_current) = index_current {
+                mna_matrix.conductance_matrix[(index_current, index_current)] = -self.value;
+            }
         }
     }
 }

@@ -10,28 +10,29 @@ mod tests {
         env::var("CARGO_MANIFEST_DIR").unwrap()
     }
 
-    //     #[test]
-    //     fn test_assemble_mna_system() {
-    //         // This is taken from Figure 2.35 in the book.
-    //         let circuit_description = "
-    // V1 5 0 2
-    // V2 3 2 0.2
-    // V3 7 6 2
-    // I1 4 8 1e-3
-    // I2 0 6 1e-3
-    // R1 1 5 1.5
-    // R2 1 2 1
-    // R3 5 2 50 G2 % this is a group 2 element
-    // R4 5 6 0.1
-    // R5 2 6 1.5
-    // R6 3 4 0.1
-    // R7 8 0 1e3
-    // R8 4 0 10 G2 % this is a group 2 element
-    // ";
-    //         let circuit = parser::parse_circuit_description(circuit_description).unwrap();
-    //         let solver = Solver::new(circuit);
-    //         solver.assemble_mna_system();
-    //     }
+    #[test]
+    fn test_circuit_simulation_farid_n_najm() {
+        let path = Path::new(&manifest_dir()).join(
+            "../../circuits/circuit_simulation_farid_n_najm/circuit_simulation_farid_n_najm.cir",
+        );
+        let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
+
+        let solver = Solver::new(circuit);
+        let solution = solver.solve();
+        assert!((solution.get("V(4)").unwrap() - 1.9888).abs() < 1e-3);
+        assert!((solution.get("V(8)").unwrap() - 1.0).abs() < 1e-3);
+        assert!((solution.get("V(3)").unwrap() - 2.00879).abs() < 1e-3);
+        assert!((solution.get("V(2)").unwrap() - 1.80879).abs() < 1e-3);
+        assert!((solution.get("V(6)").unwrap() - 1.98814).abs() < 1e-3);
+        assert!((solution.get("V(5)").unwrap() - 2.0).abs() < 1e-3);
+        assert!((solution.get("V(1)").unwrap() - 1.88527).abs() < 1e-3);
+        assert!((solution.get("V(7)").unwrap() - 3.98814).abs() < 1e-3);
+        assert!((solution.get("I(R8)").unwrap() - 198.88e-3).abs() < 1e-3);
+        assert!((solution.get("I(R3)").unwrap() - 3.82e-3).abs() < 1e-3);
+        assert!((solution.get("I(V3)").unwrap() - 0.0).abs() < 1e-3);
+        assert!((solution.get("I(V2)").unwrap() - (-199.88e-3)).abs() < 1e-3);
+        assert!((solution.get("I(V1)").unwrap() - (-198.88e-3)).abs() < 1e-3);
+    }
 
     #[test]
     fn test_case_1() {
