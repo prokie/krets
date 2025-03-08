@@ -10,11 +10,19 @@ mod tests {
         env::var("CARGO_MANIFEST_DIR").unwrap()
     }
 
+    // Function to get the circuits directory path
+    fn circuits_dir() -> String {
+        Path::new(&manifest_dir())
+            .join("../../circuits/")
+            .to_str()
+            .unwrap()
+            .to_string()
+    }
+
     #[test]
     fn test_circuit_simulation_farid_n_najm() {
-        let path = Path::new(&manifest_dir()).join(
-            "../../circuits/circuit_simulation_farid_n_najm/circuit_simulation_farid_n_najm.cir",
-        );
+        let path = Path::new(&circuits_dir())
+            .join("circuit_simulation_farid_n_najm/circuit_simulation_farid_n_najm.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
 
         let solver = Solver::new(circuit);
@@ -57,8 +65,8 @@ V2 3 0 20
 
     #[test]
     fn test_voltage_divider() {
-        let path =
-            Path::new(&manifest_dir()).join("../../circuits/voltage_divider/voltage_divider.cir");
+        let path = Path::new(&circuits_dir()).join("voltage_divider/voltage_divider.cir");
+        dbg!(&path);
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
         let solution = solver.solve();
@@ -70,8 +78,7 @@ V2 3 0 20
 
     #[test]
     fn test_low_pass_filter_op() {
-        let path =
-            Path::new(&manifest_dir()).join("../../circuits/low_pass_filter/low_pass_filter.cir");
+        let path = Path::new(&circuits_dir()).join("low_pass_filter/low_pass_filter.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
         let solution = solver.solve();
@@ -82,8 +89,7 @@ V2 3 0 20
 
     #[test]
     fn test_high_pass_filter_op() {
-        let path =
-            Path::new(&manifest_dir()).join("../../circuits/high_pass_filter/high_pass_filter.cir");
+        let path = Path::new(&circuits_dir()).join("high_pass_filter/high_pass_filter.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
         let solution = solver.solve();
@@ -94,7 +100,7 @@ V2 3 0 20
 
     #[test]
     fn test_basic_001_op() {
-        let path = Path::new(&manifest_dir()).join("../../circuits/basic_001/basic_001.cir");
+        let path = Path::new(&circuits_dir()).join("basic_001/basic_001.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
         let solution = solver.solve();
