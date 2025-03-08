@@ -109,4 +109,15 @@ V2 3 0 20
         assert!((solution.get("V(2)").unwrap() - 0.5).abs() < 1e-3);
         assert!((solution.get("I(V4)").unwrap() - (-0.5)).abs() < 1e-3);
     }
+
+    #[test]
+    fn test_resistor_ladder_500_op() {
+        let path = Path::new(&circuits_dir()).join("resistor_ladder_500/resistor_ladder_500.cir");
+        let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
+        let solver = Solver::new(circuit);
+        let solution = solver.solve();
+        println!("{:?}", solution);
+        assert!((solution.get("V(1)").unwrap() - 1.0).abs() < 1e-3);
+        assert!((solution.get("V(2)").unwrap() - (1.0 - 1.0 / 500.0)).abs() < 1e-3);
+    }
 }

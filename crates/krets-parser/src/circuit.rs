@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::elements::Element;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// A structured representation of a circuit element.
 pub struct Circuit {
     /// A list of circuit elements.
