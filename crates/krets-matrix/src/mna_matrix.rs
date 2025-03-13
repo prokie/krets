@@ -1,18 +1,24 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use crate::Matrix;
+use crate::complex_matrix::ComplexMatrix;
+use crate::matrix::Matrix;
 
 pub struct MnaMatrix {
+    /// The A matrix (conductance matrix) representing the circuit.
     pub conductance_matrix: Matrix,
 
-    // /// The solution vector containing unknown node voltages and currents.
-    // pub solution_vector: Matrix,
     /// The B vector (excitation vector) representing independent sources.
     pub excitation_vector: Matrix,
 
     /// Maps circuit nodes and elements to their corresponding indices in the matrix.
     pub index_map: HashMap<String, usize>,
+
+    /// The complex A matrix (conductance matrix) representing the circuit.
+    pub complex_conductance_matrix: ComplexMatrix,
+
+    /// The complex B vector (excitation vector) representing independent sources.
+    pub complex_excitation_vector: ComplexMatrix,
 }
 
 impl fmt::Display for MnaMatrix {
@@ -42,6 +48,26 @@ impl MnaMatrix {
         let mut solution_map = HashMap::new();
         for (node, &index) in &self.index_map {
             solution_map.insert(node.clone(), x[(index, 0)]);
+        }
+
+        solution_map
+    }
+
+    pub fn solve_ac(&self) -> HashMap<String, (f64, f64)> {
+        let lu = self
+            .complex_conductance_matrix
+            .to_sparse_col_mat()
+            .sp_lu()
+            .unwrap();
+
+        let x = faer::linalg::solvers::Solve::solve(
+            &lu,
+            &self.complex_excitation_vector.to_dense_mat(),
+        );
+
+        let mut solution_map = HashMap::new();
+        for (node, &index) in &self.index_map {
+            solution_map.insert(node.clone(), (x[(index, 0)].re, x[(index, 0)].im));
         }
 
         solution_map

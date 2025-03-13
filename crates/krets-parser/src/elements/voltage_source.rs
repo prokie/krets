@@ -17,6 +17,8 @@ pub struct VoltageSource {
     pub plus: String,
     /// Negative node of the voltage source.
     pub minus: String,
+    /// For AC analysis, the amplitude of the AC voltage source.
+    pub ac_amplitude: Option<f64>,
 }
 
 impl Identifiable for VoltageSource {
@@ -47,6 +49,10 @@ impl Stampable for VoltageSource {
             mna_matrix.excitation_vector[(index_current, 0)] = self.value;
         }
     }
+
+    fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, _frequency: f64) {
+        self.add_dc_stamp(mna_matrix);
+    }
 }
 
 impl fmt::Display for VoltageSource {
@@ -70,7 +76,7 @@ impl FromStr for VoltageSource {
             parts.truncate(index);
         }
 
-        if parts.len() != 4 {
+        if parts.len() < 4 {
             return Err(Error::InvalidFormat(
                 "Invalid voltage source format".to_string(),
             ));
@@ -90,11 +96,22 @@ impl FromStr for VoltageSource {
         let value = parts[3]
             .parse::<f64>()
             .map_err(|_| Error::InvalidFloatValue("Invalid voltage source value".to_string()))?;
+
+        let ac_amplitude =
+            if parts.len() > 4 && parts[4].eq("AC") {
+                Some(parts[5].parse::<f64>().map_err(|_| {
+                    Error::InvalidFloatValue("Invalid AC amplitude value".to_string())
+                })?)
+            } else {
+                None
+            };
+
         Ok(VoltageSource {
             name,
             value,
             plus,
             minus,
+            ac_amplitude,
         })
     }
 }

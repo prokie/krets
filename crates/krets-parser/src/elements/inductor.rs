@@ -46,6 +46,10 @@ impl Stampable for Inductor {
             mna_matrix.excitation_vector[(index_current, 0)] = 0.0;
         }
     }
+
+    fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, _frequency: f64) {
+        self.add_dc_stamp(mna_matrix);
+    }
 }
 
 impl FromStr for Inductor {

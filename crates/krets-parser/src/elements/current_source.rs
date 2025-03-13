@@ -50,6 +50,10 @@ impl Stampable for CurrentSource {
             mna_matrix.conductance_matrix[(index_minus, index_current)] = -1.0;
         }
     }
+
+    fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, _frequency: f64) {
+        self.add_dc_stamp(mna_matrix);
+    }
 }
 
 impl FromStr for CurrentSource {

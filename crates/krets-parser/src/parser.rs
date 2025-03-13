@@ -62,9 +62,24 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
     let mut index_map: HashMap<String, usize> = HashMap::new();
     let mut nodes: Vec<String> = vec![];
     let mut index_counter = 0;
+    let mut inside_control_block = false;
 
     for line in lines {
-        if line.is_empty() || line.starts_with('%') {
+        if line.is_empty() || line.starts_with('%') || line.starts_with('*') {
+            continue;
+        }
+
+        if line.starts_with(".control") {
+            inside_control_block = true;
+            continue;
+        }
+
+        if line.starts_with(".endc") {
+            inside_control_block = false;
+            continue;
+        }
+
+        if inside_control_block {
             continue;
         }
 

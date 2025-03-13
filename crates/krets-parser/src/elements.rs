@@ -95,6 +95,19 @@ impl Element {
         }
     }
 
+    pub fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, frequency: f64) {
+        match self {
+            Element::VoltageSource(_) => todo!(),
+            Element::CurrentSource(_) => todo!(),
+            Element::Resistor(_) => todo!(),
+            Element::Capacitor(_) => todo!(),
+            Element::Inductor(_) => todo!(),
+            Element::Diode(_) => todo!(),
+            Element::BJT(_) => todo!(),
+            Element::MOSFET(_) => todo!(),
+        }
+    }
+
     pub fn identifier(&self) -> String {
         match self {
             Element::VoltageSource(e) => e.identifier(),
@@ -114,6 +127,9 @@ pub trait Identifiable {
 }
 pub trait Stampable {
     fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix);
+    fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, frequency: f64) {
+        todo!()
+    }
 }
 
 impl std::fmt::Display for Element {

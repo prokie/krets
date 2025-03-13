@@ -1,7 +1,9 @@
+use krets_matrix::mna_matrix::MnaMatrix;
+
 use crate::prelude::*;
 use std::str::FromStr;
 
-use super::Identifiable;
+use super::{Identifiable, Stampable};
 
 #[derive(Debug, Clone)]
 /// Represents a capacitor in a circuit.
@@ -21,6 +23,50 @@ pub struct Capacitor {
 impl Identifiable for Capacitor {
     fn identifier(&self) -> String {
         format!("C{}", self.name)
+    }
+}
+
+impl Stampable for Capacitor {
+    fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, frequency: f64) {
+        let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
+        let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
+
+        if !self.g2 {
+            if let Some(&index_plus) = index_plus {
+                mna_matrix.conductance_matrix[(index_plus, index_plus)] += self.value;
+            }
+
+            if let Some(&index_minus) = index_minus {
+                mna_matrix.conductance_matrix[(index_minus, index_minus)] += self.value;
+            }
+
+            if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
+                mna_matrix.conductance_matrix[(index_plus, index_minus)] -= 1. / self.value;
+                mna_matrix.conductance_matrix[(index_minus, index_plus)] -= 1. / self.value;
+            }
+        } else {
+            let index_current = mna_matrix
+                .index_map
+                .get(&format!("I({})", self.identifier()));
+
+            if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
+                mna_matrix.conductance_matrix[(index_plus, index_current)] = 1.0;
+                mna_matrix.conductance_matrix[(index_current, index_plus)] = 1.0;
+            }
+
+            if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
+                mna_matrix.conductance_matrix[(index_minus, index_current)] = -1.0;
+                mna_matrix.conductance_matrix[(index_current, index_minus)] = -1.0;
+            }
+
+            if let Some(&index_current) = index_current {
+                mna_matrix.conductance_matrix[(index_current, index_current)] = -self.value;
+            }
+        }
+    }
+
+    fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
+        todo!()
     }
 }
 

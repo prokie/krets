@@ -10,7 +10,7 @@ fn benchmark_resistor_ladder_500(c: &mut Criterion) {
     c.bench_function("resistor_ladder_500", |b| {
         b.iter(|| {
             let solver = Solver::new(circuit.clone());
-            let solution = solver.solve();
+            let solution = solver.solve_op();
             black_box(solution);
         })
     });

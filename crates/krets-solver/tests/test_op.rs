@@ -26,7 +26,7 @@ mod tests {
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
 
         let solver = Solver::new(circuit);
-        let solution = solver.solve();
+        let solution = solver.solve_op();
         assert!((solution.get("V(4)").unwrap() - 1.9888).abs() < 1e-3);
         assert!((solution.get("V(8)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(3)").unwrap() - 2.00879).abs() < 1e-3);
@@ -54,7 +54,7 @@ V2 3 0 20
     ";
         let circuit = krets_parser::parser::parse_circuit_description(circuit_description).unwrap();
         let solver = Solver::new(circuit);
-        let solution = solver.solve();
+        let solution = solver.solve_op();
 
         assert!((solution.get("V(1)").unwrap() - (-8.0)).abs() < 1e-3);
         assert!((solution.get("V(2)").unwrap() - 24.0).abs() < 1e-3);
@@ -69,7 +69,7 @@ V2 3 0 20
         dbg!(&path);
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
-        let solution = solver.solve();
+        let solution = solver.solve_op();
 
         assert!((solution.get("V(in)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(out)").unwrap() - 2.0 / 3.0).abs() < 1e-3);
@@ -81,7 +81,7 @@ V2 3 0 20
         let path = Path::new(&circuits_dir()).join("low_pass_filter/low_pass_filter.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
-        let solution = solver.solve();
+        let solution = solver.solve_op();
 
         assert!((solution.get("V(in)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(out)").unwrap() - 1.0).abs() < 1e-3);
@@ -92,7 +92,7 @@ V2 3 0 20
         let path = Path::new(&circuits_dir()).join("high_pass_filter/high_pass_filter.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
-        let solution = solver.solve();
+        let solution = solver.solve_op();
 
         assert!((solution.get("V(in)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(out)").unwrap() - 1.0).abs() < 1e-3);
@@ -103,7 +103,7 @@ V2 3 0 20
         let path = Path::new(&circuits_dir()).join("basic_001/basic_001.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
-        let solution = solver.solve();
+        let solution = solver.solve_op();
 
         assert!((solution.get("V(1)").unwrap() - 3.0).abs() < 1e-3);
         assert!((solution.get("V(2)").unwrap() - 0.5).abs() < 1e-3);
@@ -115,7 +115,7 @@ V2 3 0 20
         let path = Path::new(&circuits_dir()).join("resistor_ladder_500/resistor_ladder_500.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
-        let solution = solver.solve();
+        let solution = solver.solve_op();
         println!("{:?}", solution);
         assert!((solution.get("V(1)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(2)").unwrap() - (1.0 - 1.0 / 500.0)).abs() < 1e-3);
