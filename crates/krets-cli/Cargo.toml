@@ -1,0 +1,18 @@
+[package]
+name = "krets-cli"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.5.32", features = ["derive"] }
+krets-parser = { path = "../krets-parser" }
+krets-solver = { path = "../krets-solver" }
+
+
+[lints]
+workspace = true
+
+
+[[bin]]
+name = "krets"
+path = "src/main.rs"

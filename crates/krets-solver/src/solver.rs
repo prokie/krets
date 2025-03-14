@@ -20,8 +20,8 @@ impl Solver {
             conductance_matrix: Matrix::new_empty(size, size),
             excitation_vector: Matrix::new_empty(size, 1),
             index_map: self.circuit.index_map,
-            complex_conductance_matrix: ComplexMatrix::new_empty(size, size),
-            complex_excitation_vector: ComplexMatrix::new_empty(size, 1),
+            complex_conductance_matrix: ComplexMatrix::new_empty(0, 0),
+            complex_excitation_vector: ComplexMatrix::new_empty(0, 0),
         };
 
         let mut dc_sweep_element = self
@@ -61,8 +61,8 @@ impl Solver {
             conductance_matrix: Matrix::new_empty(size, size),
             excitation_vector: Matrix::new_empty(size, 1),
             index_map: self.circuit.index_map,
-            complex_conductance_matrix: ComplexMatrix::new_empty(size, size),
-            complex_excitation_vector: ComplexMatrix::new_empty(size, 1),
+            complex_conductance_matrix: ComplexMatrix::new_empty(0, 0),
+            complex_excitation_vector: ComplexMatrix::new_empty(0, 0),
         };
 
         for element in self.circuit.elements {

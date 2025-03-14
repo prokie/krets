@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/krets-cli",
     "crates/krets-matrix",
     "crates/krets-parser",
     "crates/krets-result",
@@ -24,3 +25,9 @@ krets-parser = { path = "crates/krets-parser" }
 krets-solver = { path = "crates/krets-solver" }
 krets-matrix = { path = "crates/krets-matrix" }
 krets-result = { path = "crates/krets-result" }
+
+
+[profile.release]
+debug = true
+lto = "fat"
+codegen-units = 1

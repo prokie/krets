@@ -55,7 +55,7 @@ impl ComplexMatrix {
     }
 
     pub fn new_empty(rows: usize, cols: usize) -> Self {
-        let mut data = HashMap::new();
+        let mut data = HashMap::with_capacity(rows * cols);
         for row in 0..rows {
             for col in 0..cols {
                 data.insert((row, col), c64 { re: 0.0, im: 0.0 });
