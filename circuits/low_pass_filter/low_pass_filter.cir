@@ -4,7 +4,7 @@ R1 in out 1000
 C1 out 0 0.001
 
 .control
-ac lin 100 0 10
+ac lin 1 1000 1000
 save all
-plot v(out)
+print all
 .endc

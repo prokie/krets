@@ -5,8 +5,6 @@ use std::collections::HashMap;
 use std::fmt;
 use std::ops::{Index, IndexMut};
 
-
-
 pub struct Matrix {
     pub rows: usize,
     pub cols: usize,

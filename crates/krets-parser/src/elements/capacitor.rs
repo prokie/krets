@@ -1,9 +1,9 @@
 use krets_matrix::mna_matrix::MnaMatrix;
 
-use crate::prelude::*;
-use std::str::FromStr;
-
 use super::{Identifiable, Stampable};
+use crate::prelude::*;
+use faer::c64;
+use std::{f64::consts::PI, str::FromStr};
 
 #[derive(Debug, Clone)]
 /// Represents a capacitor in a circuit.
@@ -31,18 +31,23 @@ impl Stampable for Capacitor {
         let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
         let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
 
+        let impedance = c64 {
+            re: 0.0,
+            im: -1.0 / (2.0 * PI * frequency * self.value),
+        };
+        let conductance_matrix = &mut mna_matrix.complex_conductance_matrix;
+
         if !self.g2 {
             if let Some(&index_plus) = index_plus {
-                mna_matrix.conductance_matrix[(index_plus, index_plus)] += self.value;
+                conductance_matrix[(index_plus, index_plus)] += 1.0 / impedance;
             }
-
             if let Some(&index_minus) = index_minus {
-                mna_matrix.conductance_matrix[(index_minus, index_minus)] += self.value;
+                conductance_matrix[(index_minus, index_minus)] += 1.0 / impedance
             }
 
             if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-                mna_matrix.conductance_matrix[(index_plus, index_minus)] -= 1. / self.value;
-                mna_matrix.conductance_matrix[(index_minus, index_plus)] -= 1. / self.value;
+                conductance_matrix[(index_plus, index_minus)] -= 1.0 / impedance;
+                conductance_matrix[(index_minus, index_plus)] -= 1.0 / impedance;
             }
         } else {
             let index_current = mna_matrix
@@ -50,17 +55,15 @@ impl Stampable for Capacitor {
                 .get(&format!("I({})", self.identifier()));
 
             if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-                mna_matrix.conductance_matrix[(index_plus, index_current)] = 1.0;
-                mna_matrix.conductance_matrix[(index_current, index_plus)] = 1.0;
+                conductance_matrix[(index_current, index_plus)] = 1.0 / impedance;
             }
 
             if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-                mna_matrix.conductance_matrix[(index_minus, index_current)] = -1.0;
-                mna_matrix.conductance_matrix[(index_current, index_minus)] = -1.0;
+                conductance_matrix[(index_current, index_minus)] = 1.0 / impedance;
             }
 
             if let Some(&index_current) = index_current {
-                mna_matrix.conductance_matrix[(index_current, index_current)] = -self.value;
+                conductance_matrix[(index_current, index_current)] = c64 { re: 1.0, im: 0.0 };
             }
         }
     }

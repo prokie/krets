@@ -72,6 +72,26 @@ impl MnaMatrix {
 
         solution_map
     }
+
+    pub fn pretty_print_complex(&self) -> String {
+        let mut result = String::new();
+        let mut index_to_node: Vec<&str> = vec![""; self.complex_conductance_matrix.rows];
+        for (node, &index) in &self.index_map {
+            index_to_node[index] = node;
+        }
+
+        for (row, index) in index_to_node.iter().enumerate() {
+            for col in 0..self.complex_conductance_matrix.cols {
+                let value = self.complex_conductance_matrix[(row, col)];
+                result.push_str(&format!("{:6.3} + {:6.3}i ", value.re, value.im));
+            }
+            result.push_str(&format!("| {index:6} "));
+            let value = self.complex_excitation_vector[(row, 0)];
+            result.push_str(&format!("|{:6.3} + {:6.3}i\n", value.re, value.im));
+        }
+
+        result
+    }
 }
 
 // #[cfg(test)]

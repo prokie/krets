@@ -97,10 +97,10 @@ impl Element {
 
     pub fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, frequency: f64) {
         match self {
-            Element::VoltageSource(_) => todo!(),
+            Element::VoltageSource(e) => e.add_ac_stamp(mna_matrix, frequency),
             Element::CurrentSource(_) => todo!(),
-            Element::Resistor(_) => todo!(),
-            Element::Capacitor(_) => todo!(),
+            Element::Resistor(e) => e.add_ac_stamp(mna_matrix, frequency),
+            Element::Capacitor(e) => e.add_ac_stamp(mna_matrix, frequency),
             Element::Inductor(_) => todo!(),
             Element::Diode(_) => todo!(),
             Element::BJT(_) => todo!(),

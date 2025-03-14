@@ -75,7 +75,7 @@ impl Solver {
         mna_matrix.solve()
     }
 
-    pub fn solve_ac(self) -> HashMap<String, f64> {
+    pub fn solve_ac(self, frequency: f64) -> HashMap<String, (f64, f64)> {
         let size = self.circuit.index_map.len();
 
         let mut mna_matrix = MnaMatrix {
@@ -87,12 +87,13 @@ impl Solver {
         };
 
         for element in self.circuit.elements {
-            if matches!(element, Element::Capacitor(_)) {
-                continue;
-            }
-            element.add_dc_stamp(&mut mna_matrix);
+            element.add_ac_stamp(&mut mna_matrix, frequency);
         }
 
-        mna_matrix.solve()
+        let mut result = mna_matrix.solve_ac();
+
+        result.insert("frequency".to_string(), (frequency, 0.0));
+
+        result
     }
 }

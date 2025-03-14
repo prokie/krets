@@ -1,3 +1,4 @@
+use faer::c64;
 use krets_matrix::mna_matrix::MnaMatrix;
 
 use crate::prelude::*;
@@ -51,7 +52,31 @@ impl Stampable for VoltageSource {
     }
 
     fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, _frequency: f64) {
-        self.add_dc_stamp(mna_matrix);
+        let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
+        let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
+        let index_current = mna_matrix
+            .index_map
+            .get(&format!("I({})", self.identifier()));
+
+        let conductance_matrix = &mut mna_matrix.complex_conductance_matrix;
+        let excitation_vector = &mut mna_matrix.complex_excitation_vector;
+
+        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
+            conductance_matrix[(index_plus, index_current)] = c64 { im: 0.0, re: 1.0 };
+            conductance_matrix[(index_current, index_plus)] = c64 { im: 0.0, re: 1.0 };
+        }
+
+        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
+            conductance_matrix[(index_minus, index_current)] = c64 { im: 0.0, re: -1.0 };
+            conductance_matrix[(index_current, index_minus)] = c64 { im: 0.0, re: -1.0 };
+        }
+
+        if let (Some(&index_current), Some(ac_amplitude)) = (index_current, self.ac_amplitude) {
+            excitation_vector[(index_current, 0)] = c64 {
+                im: 0.0,
+                re: ac_amplitude,
+            };
+        }
     }
 }
 

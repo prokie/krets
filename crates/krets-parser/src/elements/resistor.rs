@@ -1,10 +1,10 @@
 use krets_matrix::mna_matrix::MnaMatrix;
 
+use super::{Identifiable, Stampable};
 use crate::prelude::*;
+use faer::c64;
 use std::fmt;
 use std::str::FromStr;
-
-use super::{Identifiable, Stampable};
 
 #[derive(Debug, Clone)]
 /// Represents a resistor in a circuit.
@@ -61,7 +61,60 @@ impl Stampable for Resistor {
     }
 
     fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, _frequency: f64) {
-        self.add_dc_stamp(mna_matrix);
+        let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
+        let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
+
+        let complex_conductance_matrix = &mut mna_matrix.complex_conductance_matrix;
+
+        if !self.g2 {
+            if let Some(&index_plus) = index_plus {
+                complex_conductance_matrix[(index_plus, index_plus)] += c64 {
+                    im: 0.0,
+                    re: 1.0 / self.value,
+                };
+            }
+
+            if let Some(&index_minus) = index_minus {
+                complex_conductance_matrix[(index_minus, index_minus)] += c64 {
+                    im: 0.0,
+                    re: 1.0 / self.value,
+                };
+            }
+
+            if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
+                complex_conductance_matrix[(index_plus, index_minus)] -= c64 {
+                    im: 0.0,
+                    re: 1.0 / self.value,
+                };
+                complex_conductance_matrix[(index_minus, index_plus)] -= c64 {
+                    im: 0.0,
+                    re: 1.0 / self.value,
+                };
+            }
+        } else {
+            let index_current = mna_matrix
+                .index_map
+                .get(&format!("I({})", self.identifier()));
+
+            if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
+                complex_conductance_matrix[(index_plus, index_current)] = c64 { im: 0.0, re: 1.0 };
+                complex_conductance_matrix[(index_current, index_plus)] = c64 { im: 0.0, re: 1.0 };
+            }
+
+            if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
+                complex_conductance_matrix[(index_minus, index_current)] =
+                    c64 { im: 0.0, re: -1.0 };
+                complex_conductance_matrix[(index_current, index_minus)] =
+                    c64 { im: 0.0, re: -1.0 };
+            }
+
+            if let Some(&index_current) = index_current {
+                complex_conductance_matrix[(index_current, index_current)] = c64 {
+                    im: 0.0,
+                    re: -self.value,
+                };
+            }
+        }
     }
 }
 
