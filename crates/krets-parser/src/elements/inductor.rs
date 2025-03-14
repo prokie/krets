@@ -1,7 +1,8 @@
+use faer::c64;
 use krets_matrix::mna_matrix::MnaMatrix;
 
 use crate::prelude::*;
-use std::str::FromStr;
+use std::{f64::consts::PI, str::FromStr};
 
 use super::{Identifiable, Stampable};
 
@@ -20,7 +21,7 @@ pub struct Inductor {
 
 impl Identifiable for Inductor {
     fn identifier(&self) -> String {
-        format!("I{}", self.name)
+        format!("L{}", self.name)
     }
 }
 
@@ -47,8 +48,33 @@ impl Stampable for Inductor {
         }
     }
 
-    fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, _frequency: f64) {
-        self.add_dc_stamp(mna_matrix);
+    fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, frequency: f64) {
+        let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
+        let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
+
+        let impedance = c64 {
+            re: 0.0,
+            im: 2.0 * PI * frequency * self.value,
+        };
+        let conductance_matrix = &mut mna_matrix.complex_conductance_matrix;
+
+        let index_current = mna_matrix
+            .index_map
+            .get(&format!("I({})", self.identifier()));
+
+        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
+            conductance_matrix[(index_current, index_plus)] = c64 { re: 1.0, im: 0.0 };
+            conductance_matrix[(index_plus, index_current)] = c64 { re: 1.0, im: 0.0 };
+        }
+
+        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
+            conductance_matrix[(index_current, index_minus)] = c64 { re: -1.0, im: 0.0 };
+            conductance_matrix[(index_minus, index_current)] = c64 { re: -1.0, im: 0.0 };
+        }
+
+        if let Some(&index_current) = index_current {
+            conductance_matrix[(index_current, index_current)] = -impedance;
+        }
     }
 }
 

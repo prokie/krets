@@ -31,6 +31,23 @@ mod tests {
     }
 
     #[test]
+    fn test_high_pass_filter_ac() {
+        let path = Path::new(&circuits_dir()).join("high_pass_filter/high_pass_filter.cir");
+        let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
+        let solver = Solver::new(circuit);
+        let solution = solver.solve_ac(1000.0);
+
+        assert!((solution.get("frequency").unwrap().0 - 1.000000e+03).abs() < 1e-3);
+        assert!((solution.get("frequency").unwrap().1 - 0.000000e+00).abs() < 1e-3);
+        assert!((solution.get("I(L1)").unwrap().0 - 7.169568e-03).abs() < 1e-3);
+        assert!((solution.get("I(L1)").unwrap().1 - (-4.50477e-03)).abs() < 1e-3);
+        assert!((solution.get("V(out)").unwrap().0 - 7.169568e-01).abs() < 1e-3);
+        assert!((solution.get("V(out)").unwrap().1 - (-4.50477e-01)).abs() < 1e-3);
+        assert!((solution.get("I(V1)").unwrap().0 - (-7.16957e-03)).abs() < 1e-3);
+        assert!((solution.get("I(V1)").unwrap().1 - 4.504772e-03).abs() < 1e-3);
+    }
+
+    #[test]
     fn test_voltage_divider_ac() {
         let path =
             Path::new(&manifest_dir()).join("../../circuits/voltage_divider/voltage_divider.cir");

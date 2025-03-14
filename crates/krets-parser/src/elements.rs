@@ -101,7 +101,7 @@ impl Element {
             Element::CurrentSource(_) => todo!(),
             Element::Resistor(e) => e.add_ac_stamp(mna_matrix, frequency),
             Element::Capacitor(e) => e.add_ac_stamp(mna_matrix, frequency),
-            Element::Inductor(_) => todo!(),
+            Element::Inductor(e) => e.add_ac_stamp(mna_matrix, frequency),
             Element::Diode(_) => todo!(),
             Element::BJT(_) => todo!(),
             Element::MOSFET(_) => todo!(),
@@ -127,9 +127,7 @@ pub trait Identifiable {
 }
 pub trait Stampable {
     fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix);
-    fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, frequency: f64) {
-        todo!()
-    }
+    fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, frequency: f64);
 }
 
 impl std::fmt::Display for Element {

@@ -1,3 +1,13 @@
-V1 in 0 1
+* High Pass Filter
+
+V1 in 0 1 AC 1
 L1 in out 0.01
 R1 out 0 100
+
+
+
+.control
+ac lin 1 1000 1000
+save all
+print all
+.endc
