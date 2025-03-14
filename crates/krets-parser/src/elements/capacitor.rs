@@ -68,7 +68,7 @@ impl Stampable for Capacitor {
         }
     }
 
-    fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
+    fn add_dc_stamp(&self, _mna_matrix: &mut MnaMatrix) {
         todo!()
     }
 }
