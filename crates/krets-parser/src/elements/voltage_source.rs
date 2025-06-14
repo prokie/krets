@@ -96,7 +96,7 @@ impl FromStr for VoltageSource {
     fn from_str(s: &str) -> Result<Self> {
         let mut parts: Vec<&str> = s.split_whitespace().collect();
 
-        if parts.iter().any(|&x| x == "%") {
+        if parts.contains(&"%") {
             let index = parts.iter().position(|&x| x == "%").unwrap();
             parts.truncate(index);
         }

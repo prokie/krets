@@ -85,7 +85,7 @@ impl FromStr for Inductor {
         let mut parts: Vec<&str> = s.split_whitespace().collect();
 
         // if % is found ignore everything after it
-        if parts.iter().any(|&x| x == "%") {
+        if parts.contains(&"%") {
             let index = parts.iter().position(|&x| x == "%").unwrap();
             parts.truncate(index);
         }
