@@ -71,8 +71,6 @@ impl Solver {
             }
             result.insert(dc_sweep_element.identifier(), current);
 
-            dbg!(&result);
-
             results.push(result);
         }
         Ok(results)
@@ -135,8 +133,6 @@ impl Solver {
             b[(row, col)] = val;
         }
         let x = lu.solve(&b);
-
-        dbg!(&x);
 
         let mut solution_map = HashMap::new();
         for (node, &index) in index_map {

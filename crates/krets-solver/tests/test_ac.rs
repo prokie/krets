@@ -37,8 +37,6 @@ mod tests {
         let solver = Solver::new(circuit);
         let solution = solver.solve_ac(1000.0);
 
-        dbg!(&solution);
-
         assert!((solution.get("frequency").unwrap().re - 1.000000e+03).abs() < 1e-3);
         assert!((solution.get("frequency").unwrap().im - 0.000000e+00).abs() < 1e-3);
         assert!((solution.get("I(L1)").unwrap().re - 7.169568e-03).abs() < 1e-3);
