@@ -1,8 +1,9 @@
-use krets_matrix::mna_matrix::MnaMatrix;
+use faer::sparse::Triplet;
 
 use super::{Identifiable, Stampable};
 use crate::prelude::*;
 use faer::c64;
+use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
@@ -22,99 +23,200 @@ pub struct Resistor {
 }
 
 impl Stampable for Resistor {
-    fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
-        let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
-        let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
+    fn conductance_matrix_dc_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        let index_plus = index_map.get(&format!("V({})", self.plus));
+        let index_minus = index_map.get(&format!("V({})", self.minus));
+
+        let conductance = 1.0 / self.value;
+
+        let mut triplets = Vec::with_capacity(5);
 
         if !self.g2 {
             if let Some(&index_plus) = index_plus {
-                mna_matrix.conductance_matrix[(index_plus, index_plus)] += 1. / self.value;
+                triplets.push(Triplet {
+                    row: index_plus,
+                    col: index_plus,
+                    val: conductance,
+                });
             }
 
             if let Some(&index_minus) = index_minus {
-                mna_matrix.conductance_matrix[(index_minus, index_minus)] += 1. / self.value;
+                triplets.push(Triplet {
+                    row: index_minus,
+                    col: index_minus,
+                    val: conductance,
+                });
             }
 
             if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-                mna_matrix.conductance_matrix[(index_plus, index_minus)] -= 1. / self.value;
-                mna_matrix.conductance_matrix[(index_minus, index_plus)] -= 1. / self.value;
+                triplets.push(Triplet {
+                    row: index_plus,
+                    col: index_minus,
+                    val: -conductance,
+                });
+
+                triplets.push(Triplet {
+                    row: index_minus,
+                    col: index_plus,
+                    val: -conductance,
+                });
             }
         } else {
-            let index_current = mna_matrix
-                .index_map
-                .get(&format!("I({})", self.identifier()));
+            let index_current = index_map.get(&format!("I({})", self.identifier()));
 
             if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-                mna_matrix.conductance_matrix[(index_plus, index_current)] = 1.0;
-                mna_matrix.conductance_matrix[(index_current, index_plus)] = 1.0;
+                triplets.push(Triplet {
+                    row: index_plus,
+                    col: index_current,
+                    val: 1.0,
+                });
+
+                triplets.push(Triplet {
+                    row: index_current,
+                    col: index_plus,
+                    val: 1.0,
+                });
             }
 
             if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-                mna_matrix.conductance_matrix[(index_minus, index_current)] = -1.0;
-                mna_matrix.conductance_matrix[(index_current, index_minus)] = -1.0;
+                triplets.push(Triplet {
+                    row: index_minus,
+                    col: index_current,
+                    val: -1.0,
+                });
+
+                triplets.push(Triplet {
+                    row: index_current,
+                    col: index_minus,
+                    val: -1.0,
+                });
             }
 
             if let Some(&index_current) = index_current {
-                mna_matrix.conductance_matrix[(index_current, index_current)] = -self.value;
+                triplets.push(Triplet {
+                    row: index_current,
+                    col: index_current,
+                    val: -self.value,
+                });
             }
         }
+
+        triplets
     }
 
-    fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, _frequency: f64) {
-        let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
-        let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
-
-        let complex_conductance_matrix = &mut mna_matrix.complex_conductance_matrix;
+    fn conductance_matrix_ac_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        _frequency: f64,
+    ) -> Vec<Triplet<usize, usize, c64>> {
+        let index_plus = index_map.get(&format!("V({})", self.plus));
+        let index_minus = index_map.get(&format!("V({})", self.minus));
+        let conductance = 1.0 / self.value;
+        let mut triplets = Vec::with_capacity(5);
 
         if !self.g2 {
             if let Some(&index_plus) = index_plus {
-                complex_conductance_matrix[(index_plus, index_plus)] += c64 {
-                    im: 0.0,
-                    re: 1.0 / self.value,
-                };
+                triplets.push(Triplet {
+                    row: index_plus,
+                    col: index_plus,
+                    val: c64 {
+                        im: 0.0,
+                        re: conductance,
+                    },
+                });
             }
 
             if let Some(&index_minus) = index_minus {
-                complex_conductance_matrix[(index_minus, index_minus)] += c64 {
-                    im: 0.0,
-                    re: 1.0 / self.value,
-                };
+                triplets.push(Triplet {
+                    row: index_minus,
+                    col: index_minus,
+                    val: c64 {
+                        im: 0.0,
+                        re: conductance,
+                    },
+                });
             }
 
             if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-                complex_conductance_matrix[(index_plus, index_minus)] -= c64 {
-                    im: 0.0,
-                    re: 1.0 / self.value,
-                };
-                complex_conductance_matrix[(index_minus, index_plus)] -= c64 {
-                    im: 0.0,
-                    re: 1.0 / self.value,
-                };
+                triplets.push(Triplet {
+                    row: index_plus,
+                    col: index_minus,
+                    val: c64 {
+                        im: 0.0,
+                        re: -conductance,
+                    },
+                });
+
+                triplets.push(Triplet {
+                    row: index_minus,
+                    col: index_plus,
+                    val: c64 {
+                        im: 0.0,
+                        re: -conductance,
+                    },
+                });
             }
         } else {
-            let index_current = mna_matrix
-                .index_map
-                .get(&format!("I({})", self.identifier()));
+            let index_current = index_map.get(&format!("I({})", self.identifier()));
 
             if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-                complex_conductance_matrix[(index_plus, index_current)] = c64 { im: 0.0, re: 1.0 };
-                complex_conductance_matrix[(index_current, index_plus)] = c64 { im: 0.0, re: 1.0 };
+                triplets.push(Triplet {
+                    row: index_plus,
+                    col: index_current,
+                    val: c64 { im: 0.0, re: 1.0 },
+                });
+
+                triplets.push(Triplet {
+                    row: index_current,
+                    col: index_plus,
+                    val: c64 { im: 0.0, re: 1.0 },
+                });
             }
 
             if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-                complex_conductance_matrix[(index_minus, index_current)] =
-                    c64 { im: 0.0, re: -1.0 };
-                complex_conductance_matrix[(index_current, index_minus)] =
-                    c64 { im: 0.0, re: -1.0 };
+                triplets.push(Triplet {
+                    row: index_minus,
+                    col: index_current,
+                    val: c64 { im: 0.0, re: -1.0 },
+                });
+
+                triplets.push(Triplet {
+                    row: index_current,
+                    col: index_minus,
+                    val: c64 { im: 0.0, re: -1.0 },
+                });
             }
 
             if let Some(&index_current) = index_current {
-                complex_conductance_matrix[(index_current, index_current)] = c64 {
-                    im: 0.0,
-                    re: -self.value,
-                };
+                triplets.push(Triplet {
+                    row: index_current,
+                    col: index_current,
+                    val: c64 {
+                        im: 0.0,
+                        re: -self.value,
+                    },
+                });
             }
         }
+        triplets
+    }
+
+    fn excitation_vector_dc_stamp(
+        &self,
+        _index_map: &HashMap<String, usize>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        Vec::new()
+    }
+
+    fn excitation_vector_ac_stamp(
+        &self,
+        _index_map: &HashMap<String, usize>,
+        _frequency: f64,
+    ) -> Vec<Triplet<usize, usize, c64>> {
+        Vec::new()
     }
 }
 

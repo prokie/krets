@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 krets-parser = { path = "../krets-parser" }
-krets-matrix = { path = "../krets-matrix" }
 
 faer = { workspace = true }
 thiserror = { workspace = true }
@@ -15,7 +14,7 @@ workspace = true
 
 
 [dev-dependencies]
-criterion = "0.5.1"
+criterion = "0.6.0"
 
 
 [[bench]]

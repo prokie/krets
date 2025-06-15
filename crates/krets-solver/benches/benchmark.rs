@@ -1,5 +1,6 @@
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use krets_solver::solver::Solver;
+use std::hint::black_box;
 use std::path::Path;
 
 fn benchmark_resistor_ladder_500(c: &mut Criterion) {

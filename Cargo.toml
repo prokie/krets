@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "crates/krets-cli",
-    "crates/krets-matrix",
     "crates/krets-parser",
     "crates/krets-result",
     "crates/krets-solver",
@@ -23,7 +22,6 @@ tracing = "0.1.41"
 
 krets-parser = { path = "crates/krets-parser" }
 krets-solver = { path = "crates/krets-solver" }
-krets-matrix = { path = "crates/krets-matrix" }
 krets-result = { path = "crates/krets-result" }
 
 

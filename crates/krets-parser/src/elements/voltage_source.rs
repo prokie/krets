@@ -1,9 +1,9 @@
 use faer::c64;
-use krets_matrix::mna_matrix::MnaMatrix;
+use faer::sparse::Triplet;
 
 use crate::prelude::*;
-use std::fmt;
 use std::str::FromStr;
+use std::{collections::HashMap, fmt};
 
 use super::{Identifiable, Stampable};
 
@@ -29,54 +29,99 @@ impl Identifiable for VoltageSource {
 }
 
 impl Stampable for VoltageSource {
-    fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
-        let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
-        let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
-        let index_current = mna_matrix
-            .index_map
-            .get(&format!("I({})", self.identifier()));
+    fn conductance_matrix_dc_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        let index_plus = index_map.get(&format!("V({})", self.plus));
+        let index_minus = index_map.get(&format!("V({})", self.minus));
+        let index_current = index_map.get(&format!("I({})", self.identifier()));
+
+        let mut triplets = Vec::with_capacity(4);
 
         if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-            mna_matrix.conductance_matrix[(index_plus, index_current)] = 1.0;
-            mna_matrix.conductance_matrix[(index_current, index_plus)] = 1.0;
+            triplets.push(Triplet::new(index_plus, index_current, 1.0));
+            triplets.push(Triplet::new(index_current, index_plus, 1.0));
         }
 
         if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-            mna_matrix.conductance_matrix[(index_minus, index_current)] = -1.0;
-            mna_matrix.conductance_matrix[(index_current, index_minus)] = -1.0;
+            triplets.push(Triplet::new(index_minus, index_current, -1.0));
+            triplets.push(Triplet::new(index_current, index_minus, -1.0));
         }
 
-        if let Some(&index_current) = index_current {
-            mna_matrix.excitation_vector[(index_current, 0)] = self.value;
-        }
+        triplets
     }
 
-    fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, _frequency: f64) {
-        let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
-        let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
-        let index_current = mna_matrix
-            .index_map
-            .get(&format!("I({})", self.identifier()));
+    fn conductance_matrix_ac_stamp(
+        &self,
+        index_map: &std::collections::HashMap<String, usize>,
+        _frequency: f64,
+    ) -> Vec<faer::sparse::Triplet<usize, usize, c64>> {
+        let index_plus = index_map.get(&format!("V({})", self.plus));
+        let index_minus = index_map.get(&format!("V({})", self.minus));
+        let index_current = index_map.get(&format!("I({})", self.identifier()));
 
-        let conductance_matrix = &mut mna_matrix.complex_conductance_matrix;
-        let excitation_vector = &mut mna_matrix.complex_excitation_vector;
+        let mut triplets = Vec::with_capacity(4);
 
         if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-            conductance_matrix[(index_plus, index_current)] = c64 { im: 0.0, re: 1.0 };
-            conductance_matrix[(index_current, index_plus)] = c64 { im: 0.0, re: 1.0 };
+            triplets.push(Triplet::new(
+                index_plus,
+                index_current,
+                c64 { im: 0.0, re: 1.0 },
+            ));
+            triplets.push(Triplet::new(
+                index_current,
+                index_plus,
+                c64 { im: 0.0, re: 1.0 },
+            ));
         }
 
         if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-            conductance_matrix[(index_minus, index_current)] = c64 { im: 0.0, re: -1.0 };
-            conductance_matrix[(index_current, index_minus)] = c64 { im: 0.0, re: -1.0 };
+            triplets.push(Triplet::new(
+                index_minus,
+                index_current,
+                c64 { im: 0.0, re: -1.0 },
+            ));
+            triplets.push(Triplet::new(
+                index_current,
+                index_minus,
+                c64 { im: 0.0, re: -1.0 },
+            ));
         }
 
-        if let (Some(&index_current), Some(ac_amplitude)) = (index_current, self.ac_amplitude) {
-            excitation_vector[(index_current, 0)] = c64 {
-                im: 0.0,
-                re: ac_amplitude,
-            };
+        triplets
+    }
+
+    fn excitation_vector_dc_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        let mut triplets = Vec::with_capacity(1);
+        if let Some(&index_current) = index_map.get(&format!("I({})", self.identifier())) {
+            triplets.push(Triplet::new(index_current, 0, self.value));
         }
+        triplets
+    }
+
+    fn excitation_vector_ac_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        _frequency: f64,
+    ) -> Vec<Triplet<usize, usize, c64>> {
+        let mut triplets = Vec::with_capacity(1);
+        if let Some(&index_current) = index_map.get(&format!("I({})", self.identifier())) {
+            if let Some(ac_amplitude) = self.ac_amplitude {
+                triplets.push(Triplet::new(
+                    index_current,
+                    0,
+                    c64 {
+                        im: 0.0,
+                        re: ac_amplitude,
+                    },
+                ));
+            }
+        }
+        triplets
     }
 }
 

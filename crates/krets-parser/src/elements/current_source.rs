@@ -1,7 +1,7 @@
-use krets_matrix::mna_matrix::MnaMatrix;
+use faer::sparse::Triplet;
 
 use crate::prelude::*;
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use super::{Identifiable, Stampable};
 
@@ -27,33 +27,88 @@ impl Identifiable for CurrentSource {
 }
 
 impl Stampable for CurrentSource {
-    fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
-        let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
-        let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
-        let index_current = mna_matrix
-            .index_map
-            .get(&format!("I({})", self.identifier()));
+    fn conductance_matrix_dc_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        let index_plus = index_map.get(&format!("V({})", self.plus));
+        let index_minus = index_map.get(&format!("V({})", self.minus));
+        let index_current = index_map.get(&format!("I({})", self.identifier()));
 
-        if let Some(&index_plus) = index_plus {
-            mna_matrix.excitation_vector[(index_plus, 0)] = -self.value;
-        }
-
-        if let Some(&index_minus) = index_minus {
-            mna_matrix.excitation_vector[(index_minus, 0)] = self.value;
-        }
+        let mut triplets = Vec::with_capacity(2);
 
         if let (Some(&index_plus), Some(&index_minus), Some(&index_current)) =
             (index_plus, index_minus, index_current)
         {
-            mna_matrix.excitation_vector[(index_current, 0)] = self.value;
-            mna_matrix.conductance_matrix[(index_plus, index_current)] = 1.0;
-            mna_matrix.conductance_matrix[(index_minus, index_current)] = -1.0;
+            triplets.push(Triplet::new(index_plus, index_current, 1.0));
+            triplets.push(Triplet::new(index_minus, index_current, -1.0));
         }
+        triplets
     }
 
-    fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, _frequency: f64) {
-        self.add_dc_stamp(mna_matrix);
+    fn conductance_matrix_ac_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+        _frequency: f64,
+    ) -> Vec<Triplet<usize, usize, faer::c64>> {
+        todo!()
     }
+
+    fn excitation_vector_dc_stamp(
+        &self,
+        index_map: &std::collections::HashMap<String, usize>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        let mut triplets = Vec::with_capacity(3);
+
+        if let Some(&i) = index_map.get(&format!("V({})", self.plus)) {
+            triplets.push(Triplet::new(i, 0, -self.value));
+        }
+
+        if let Some(&i) = index_map.get(&format!("V({})", self.minus)) {
+            triplets.push(Triplet::new(i, 0, self.value));
+        }
+
+        if let Some(&i) = index_map.get(&format!("I({})", self.identifier())) {
+            triplets.push(Triplet::new(i, 0, self.value));
+        }
+
+        triplets
+    }
+
+    fn excitation_vector_ac_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+        _frequency: f64,
+    ) -> Vec<Triplet<usize, usize, faer::c64>> {
+        todo!()
+    }
+    // fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
+    //     let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
+    //     let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
+    //     let index_current = mna_matrix
+    //         .index_map
+    //         .get(&format!("I({})", self.identifier()));
+
+    //     if let Some(&index_plus) = index_plus {
+    //         mna_matrix.excitation_vector[(index_plus, 0)] = -self.value;
+    //     }
+
+    //     if let Some(&index_minus) = index_minus {
+    //         mna_matrix.excitation_vector[(index_minus, 0)] = self.value;
+    //     }
+
+    //     if let (Some(&index_plus), Some(&index_minus), Some(&index_current)) =
+    //         (index_plus, index_minus, index_current)
+    //     {
+    //         mna_matrix.excitation_vector[(index_current, 0)] = self.value;
+    //         mna_matrix.conductance_matrix[(index_plus, index_current)] = 1.0;
+    //         mna_matrix.conductance_matrix[(index_minus, index_current)] = -1.0;
+    //     }
+    // }
+
+    // fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, _frequency: f64) {
+    //     self.add_dc_stamp(mna_matrix);
+    // }
 }
 
 impl FromStr for CurrentSource {

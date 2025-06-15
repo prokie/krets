@@ -1,4 +1,5 @@
-use krets_matrix::mna_matrix::MnaMatrix;
+use faer::{c64, sparse::Triplet};
+use std::collections::HashMap;
 
 pub mod bjt;
 pub mod capacitor;
@@ -82,26 +83,66 @@ impl Element {
         }
     }
 
-    pub fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
+    pub fn conductance_matrix_dc_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
         match self {
-            Element::VoltageSource(e) => e.add_dc_stamp(mna_matrix),
-            Element::CurrentSource(e) => e.add_dc_stamp(mna_matrix),
-            Element::Resistor(e) => e.add_dc_stamp(mna_matrix),
+            Element::VoltageSource(e) => e.conductance_matrix_dc_stamp(index_map),
+            Element::CurrentSource(e) => e.conductance_matrix_dc_stamp(index_map),
+            Element::Resistor(e) => e.conductance_matrix_dc_stamp(index_map),
             Element::Capacitor(_) => todo!(),
-            Element::Inductor(e) => e.add_dc_stamp(mna_matrix),
+            Element::Inductor(e) => e.conductance_matrix_dc_stamp(index_map),
             Element::Diode(_) => todo!(),
             Element::BJT(_) => todo!(),
             Element::MOSFET(_) => todo!(),
         }
     }
 
-    pub fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, frequency: f64) {
+    pub fn conductance_matrix_ac_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        frequency: f64,
+    ) -> Vec<Triplet<usize, usize, c64>> {
         match self {
-            Element::VoltageSource(e) => e.add_ac_stamp(mna_matrix, frequency),
+            Element::VoltageSource(e) => e.conductance_matrix_ac_stamp(index_map, frequency),
             Element::CurrentSource(_) => todo!(),
-            Element::Resistor(e) => e.add_ac_stamp(mna_matrix, frequency),
-            Element::Capacitor(e) => e.add_ac_stamp(mna_matrix, frequency),
-            Element::Inductor(e) => e.add_ac_stamp(mna_matrix, frequency),
+            Element::Resistor(e) => e.conductance_matrix_ac_stamp(index_map, frequency),
+            Element::Capacitor(e) => e.conductance_matrix_ac_stamp(index_map, frequency),
+            Element::Inductor(e) => e.conductance_matrix_ac_stamp(index_map, frequency),
+            Element::Diode(_) => todo!(),
+            Element::BJT(_) => todo!(),
+            Element::MOSFET(_) => todo!(),
+        }
+    }
+
+    pub fn excitation_vector_dc_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        match self {
+            Element::VoltageSource(e) => e.excitation_vector_dc_stamp(index_map),
+            Element::CurrentSource(e) => e.excitation_vector_dc_stamp(index_map),
+            Element::Resistor(e) => e.excitation_vector_dc_stamp(index_map),
+            Element::Capacitor(_) => todo!(),
+            Element::Inductor(e) => e.excitation_vector_dc_stamp(index_map),
+            Element::Diode(_) => todo!(),
+            Element::BJT(_) => todo!(),
+            Element::MOSFET(_) => todo!(),
+        }
+    }
+
+    pub fn excitation_vector_ac_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        frequency: f64,
+    ) -> Vec<Triplet<usize, usize, c64>> {
+        match self {
+            Element::VoltageSource(e) => e.excitation_vector_ac_stamp(index_map, frequency),
+            Element::CurrentSource(_) => todo!(),
+            Element::Resistor(e) => e.excitation_vector_ac_stamp(index_map, frequency),
+            Element::Capacitor(e) => e.excitation_vector_ac_stamp(index_map, frequency),
+            Element::Inductor(e) => e.excitation_vector_ac_stamp(index_map, frequency),
             Element::Diode(_) => todo!(),
             Element::BJT(_) => todo!(),
             Element::MOSFET(_) => todo!(),
@@ -126,8 +167,27 @@ pub trait Identifiable {
     fn identifier(&self) -> String;
 }
 pub trait Stampable {
-    fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix);
-    fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, frequency: f64);
+    fn conductance_matrix_dc_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+    ) -> Vec<Triplet<usize, usize, f64>>;
+
+    fn conductance_matrix_ac_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        frequency: f64,
+    ) -> Vec<Triplet<usize, usize, c64>>;
+
+    fn excitation_vector_dc_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+    ) -> Vec<Triplet<usize, usize, f64>>;
+
+    fn excitation_vector_ac_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        frequency: f64,
+    ) -> Vec<Triplet<usize, usize, c64>>;
 }
 
 impl std::fmt::Display for Element {

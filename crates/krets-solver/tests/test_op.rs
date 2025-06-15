@@ -66,7 +66,6 @@ V2 3 0 20
     #[test]
     fn test_voltage_divider() {
         let path = Path::new(&circuits_dir()).join("voltage_divider/voltage_divider.cir");
-        dbg!(&path);
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
         let solution = solver.solve_op();
