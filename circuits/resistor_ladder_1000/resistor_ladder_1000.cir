@@ -1000,3 +1000,12 @@ R997 997 998 1000
 R998 998 999 1000
 R999 999 1000 1000
 R1000 1000 0 1000
+
+.control
+rusage
+op
+save all
+print all
+rusage
+quit
+.endc

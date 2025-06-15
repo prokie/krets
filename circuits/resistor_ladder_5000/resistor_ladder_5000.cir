@@ -5000,3 +5000,13 @@ R4997 4997 4998 1000
 R4998 4998 4999 1000
 R4999 4999 5000 1000
 R5000 5000 0 1000
+
+
+.control
+rusage
+op
+save all
+print all
+rusage
+quit
+.endc

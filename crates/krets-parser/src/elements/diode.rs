@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{elements::Stampable, prelude::*};
 use std::str::FromStr;
 
 use super::Identifiable;
@@ -19,6 +19,38 @@ pub struct Diode {
 impl Identifiable for Diode {
     fn identifier(&self) -> String {
         format!("D{}", self.name)
+    }
+}
+
+impl Stampable for Diode {
+    fn conductance_matrix_dc_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+    ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
+        todo!()
+    }
+
+    fn conductance_matrix_ac_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+        _frequency: f64,
+    ) -> Vec<faer::sparse::Triplet<usize, usize, faer::c64>> {
+        todo!()
+    }
+
+    fn excitation_vector_dc_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+    ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
+        todo!()
+    }
+
+    fn excitation_vector_ac_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+        _frequency: f64,
+    ) -> Vec<faer::sparse::Triplet<usize, usize, faer::c64>> {
+        todo!()
     }
 }
 
