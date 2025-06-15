@@ -5006,7 +5006,6 @@ R5000 5000 0 1000
 rusage
 op
 save all
-print all
 rusage
 quit
 .endc

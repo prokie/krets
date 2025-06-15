@@ -17,7 +17,5 @@ fn main() {
     let circuit = krets_parser::parser::parse_circuit_description_file(circuit_path).unwrap();
 
     let solver = Solver::new(circuit);
-    let solution = solver.solve_op();
-
-    println!("{:?}", solution);
+    let _solution = solver.solve_op();
 }
