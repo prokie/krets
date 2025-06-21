@@ -109,19 +109,26 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
         }
 
         for node in &element.nodes() {
-            if !nodes.contains(node) {
-                nodes.push(node.clone());
+            // Skip if we've already seen this node
+            if nodes.contains(node) {
+                continue;
+            }
+
+            nodes.push(node.clone());
+
+            // Skip the ground node
+            if node == "0" {
+                continue;
             }
 
             let index_name = format!("V({})", node);
 
-            // Skip the ground node.
-            if node == "0" || index_map.contains_key(&index_name) {
-                continue;
-            }
-
-            index_map.insert(index_name, index_counter);
-            index_counter += 1;
+            // Insert if not already in map
+            index_map.entry(index_name).or_insert_with(|| {
+                let idx = index_counter;
+                index_counter += 1;
+                idx
+            });
         }
 
         elements.push(element);
