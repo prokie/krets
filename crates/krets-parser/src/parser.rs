@@ -104,7 +104,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
         };
 
         if element.is_g2() {
-            index_map.insert(format!("I({})", element), index_counter);
+            index_map.insert(format!("I({element})"), index_counter);
             index_counter += 1;
         }
 
@@ -121,7 +121,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
                 continue;
             }
 
-            let index_name = format!("V({})", node);
+            let index_name = format!("V({node})");
 
             // Insert if not already in map
             index_map.entry(index_name).or_insert_with(|| {

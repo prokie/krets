@@ -26,6 +26,7 @@ impl Stampable for Resistor {
     fn conductance_matrix_dc_stamp(
         &self,
         index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>> {
         let index_plus = index_map.get(&format!("V({})", self.plus));
         let index_minus = index_map.get(&format!("V({})", self.minus));
@@ -110,6 +111,7 @@ impl Stampable for Resistor {
     fn conductance_matrix_ac_stamp(
         &self,
         index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
         _frequency: f64,
     ) -> Vec<Triplet<usize, usize, c64>> {
         let index_plus = index_map.get(&format!("V({})", self.plus));
@@ -207,6 +209,7 @@ impl Stampable for Resistor {
     fn excitation_vector_dc_stamp(
         &self,
         _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>> {
         Vec::new()
     }
@@ -214,6 +217,7 @@ impl Stampable for Resistor {
     fn excitation_vector_ac_stamp(
         &self,
         _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
         _frequency: f64,
     ) -> Vec<Triplet<usize, usize, c64>> {
         Vec::new()
@@ -254,26 +258,24 @@ impl FromStr for Resistor {
 
         if parts.len() != 4 && parts.len() != 5 {
             return Err(Error::InvalidFormat(format!(
-                "Invalid resistor format: '{}'",
-                s
+                "Invalid resistor format: '{s}'"
             )));
         }
 
         if parts[0].len() <= 1 {
             return Err(Error::InvalidFormat(format!(
-                "Resistor name is too short: '{}'",
-                s
+                "Resistor name is too short: '{s}'"
             )));
         }
 
         let name = parts[0][1..]
             .parse::<u32>()
-            .map_err(|_| Error::InvalidNodeName(format!("Invalid resistor name: '{}'", s)))?;
+            .map_err(|_| Error::InvalidNodeName(format!("Invalid resistor name: '{s}'")))?;
         let plus = parts[1].to_string();
         let minus = parts[2].to_string();
         let value = parts[3]
             .parse::<f64>()
-            .map_err(|_| Error::InvalidFloatValue(format!("Invalid resistor value: '{}'", s)))?;
+            .map_err(|_| Error::InvalidFloatValue(format!("Invalid resistor value: '{s}'")))?;
         let g2 = parts.len() == 5 && parts[4] == "G2";
 
         Ok(Resistor {

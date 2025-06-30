@@ -115,8 +115,17 @@ V2 3 0 20
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let solver = Solver::new(circuit);
         let solution = solver.solve_op();
-        println!("{:?}", solution);
+        println!("{solution:?}");
         assert!((solution.get("V(1)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(2)").unwrap() - (1.0 - 1.0 / 500.0)).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_diode_iv_curve_op() {
+        let path = Path::new(&circuits_dir()).join("diode_iv_curve/diode_iv_curve.cir");
+        let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
+        let solver = Solver::new(circuit);
+        let solution = solver.solve_op();
+        println!("{solution:?}");
     }
 }

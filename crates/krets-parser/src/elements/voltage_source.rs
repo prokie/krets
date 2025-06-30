@@ -32,6 +32,7 @@ impl Stampable for VoltageSource {
     fn conductance_matrix_dc_stamp(
         &self,
         index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>> {
         let index_plus = index_map.get(&format!("V({})", self.plus));
         let index_minus = index_map.get(&format!("V({})", self.minus));
@@ -55,6 +56,7 @@ impl Stampable for VoltageSource {
     fn conductance_matrix_ac_stamp(
         &self,
         index_map: &std::collections::HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
         _frequency: f64,
     ) -> Vec<faer::sparse::Triplet<usize, usize, c64>> {
         let index_plus = index_map.get(&format!("V({})", self.plus));
@@ -95,6 +97,7 @@ impl Stampable for VoltageSource {
     fn excitation_vector_dc_stamp(
         &self,
         index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>> {
         let mut triplets = Vec::with_capacity(1);
         if let Some(&index_current) = index_map.get(&format!("I({})", self.identifier())) {
@@ -106,6 +109,7 @@ impl Stampable for VoltageSource {
     fn excitation_vector_ac_stamp(
         &self,
         index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
         _frequency: f64,
     ) -> Vec<Triplet<usize, usize, c64>> {
         let mut triplets = Vec::with_capacity(1);

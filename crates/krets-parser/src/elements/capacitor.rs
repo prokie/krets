@@ -1,7 +1,7 @@
 use super::{Identifiable, Stampable};
 use crate::prelude::*;
 use faer::{c64, sparse::Triplet};
-use std::{f64::consts::PI, str::FromStr};
+use std::{collections::HashMap, f64::consts::PI, str::FromStr};
 
 #[derive(Debug, Clone)]
 /// Represents a capacitor in a circuit.
@@ -72,14 +72,16 @@ impl Stampable for Capacitor {
 
     fn conductance_matrix_dc_stamp(
         &self,
-        _index_map: &std::collections::HashMap<String, usize>,
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
     ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
         todo!()
     }
 
     fn conductance_matrix_ac_stamp(
         &self,
-        index_map: &std::collections::HashMap<String, usize>,
+        index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
         frequency: f64,
     ) -> Vec<faer::sparse::Triplet<usize, usize, c64>> {
         let index_plus = index_map.get(&format!("V({})", self.plus));
@@ -128,14 +130,16 @@ impl Stampable for Capacitor {
 
     fn excitation_vector_dc_stamp(
         &self,
-        _index_map: &std::collections::HashMap<String, usize>,
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
     ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
         todo!()
     }
 
     fn excitation_vector_ac_stamp(
         &self,
-        _index_map: &std::collections::HashMap<String, usize>,
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
         _frequency: f64,
     ) -> Vec<faer::sparse::Triplet<usize, usize, c64>> {
         vec![]
@@ -155,26 +159,24 @@ impl FromStr for Capacitor {
 
         if parts.len() != 4 && parts.len() != 5 {
             return Err(Error::InvalidFormat(format!(
-                "Invalid capacitor format: '{}'",
-                s
+                "Invalid capacitor format: '{s}'"
             )));
         }
 
         if parts[0].len() <= 1 {
             return Err(Error::InvalidFormat(format!(
-                "Capacitor name is too short: '{}'",
-                s
+                "Capacitor name is too short: '{s}'"
             )));
         }
 
         let name = parts[0][1..]
             .parse::<u32>()
-            .map_err(|_| Error::InvalidNodeName(format!("Invalid capacitor name: '{}'", s)))?;
+            .map_err(|_| Error::InvalidNodeName(format!("Invalid capacitor name: '{s}'")))?;
         let plus = parts[1].to_string();
         let minus = parts[2].to_string();
         let value = parts[3]
             .parse::<f64>()
-            .map_err(|_| Error::InvalidFloatValue(format!("Invalid capacitor value: '{}'", s)))?;
+            .map_err(|_| Error::InvalidFloatValue(format!("Invalid capacitor value: '{s}'")))?;
         let g2 = parts.len() == 5 && parts[4] == "G2";
 
         Ok(Capacitor {
