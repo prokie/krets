@@ -74,9 +74,9 @@ $
     0, -0.001, 0.001;
   )
   mat(
-    "I(v1)";
-    V("in");
-    V("out");
+    "I(V1)";
+    "V(in)";
+    "V(out)";
   ) =
   mat(
     0;
@@ -102,9 +102,15 @@ $q = 1.602176634 dot 10^(-19)$ (Elementary charge) #let elementary_charge = 1.60
 
 $T = 300$ (Standard temperature) #let standard_temperature = 300
 
-$V_T = frac(k_B T, q) approx 0.02585$ (Thermal voltage at 300K) #let thermal_voltage = boltzmann_constant * standard_temperature / elementary_charge
+
+#let thermal_voltage = boltzmann_constant * standard_temperature / elementary_charge
+
+$V_T = frac(k_B T, q) approx #calc.round(thermal_voltage, digits: 5)$ (Thermal voltage at 300K)
+
 
 $I_S = 1 dot 10^-12$ (reverse saturation current) #let reverse_saturation_current = 1e-12
+
+
 
 
 
