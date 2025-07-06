@@ -1,8 +1,7 @@
 #import "@preview/zap:0.2.0"
 #import "@preview/cetz:0.4.0"
 #import "@preview/cetz-plot:0.1.2"
-
-
+#import "constants.typ": shockley_diode_conductance, shockley_diode_current
 
 #set heading(numbering: "1.")
 #set math.equation(numbering: "(1)")
@@ -30,9 +29,19 @@ $V_D$ is the voltage across the diode,
 $V_T$ is the thermal voltage, and,
 $n$ is the ideality factor, also known as the quality factor, emission coefficient, or the material constant.
 
+#let hej = ()
+#for value in range(0, 74).map(x => x / 100) {
+  hej.push((value, shockley_diode_current(value)))
+}
 
+#figure(caption: "Diode IV Curve", cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+  plot.plot(size: (5, 5), x-tick-step: .2, y-tick-step: .5, x-grid: true, y-grid: true, plot.add(hej))
+}))
 
-
+#shockley_diode_current(0)
+#shockley_diode_conductance(0)
 
 === Voltage Source
 
@@ -56,7 +65,6 @@ During DC analysis, the circuit is analyzed under steady-state conditions with a
 
 #figure(caption: "Diode IV Curve", zap.canvas({
   import zap: *
-
   vsource("v1", (0, 0), (0, 4), label: "V1")
   resistor("r1", (0, 4), (3, 4), label: "R1")
   diode("d1", (3, 4), (3, 0), label: "R1")
@@ -87,37 +95,10 @@ $
 
 #set heading(numbering: "A.1")
 #counter(heading).update(0)
+
+
+
 = Appendix
+#include "appendix.typ"
 
 
-== Constants
-
-
-The following physical constants are used throughout this document:
-
-
-$k_B = 1.380649 dot 10^(-23)$ (Boltzmann constant) #let boltzmann_constant = 1.380649e-23
-
-$q = 1.602176634 dot 10^(-19)$ (Elementary charge) #let elementary_charge = 1.602176634e-19
-
-$T = 300$ (Standard temperature) #let standard_temperature = 300
-
-
-#let thermal_voltage = boltzmann_constant * standard_temperature / elementary_charge
-
-$V_T = frac(k_B T, q) approx #calc.round(thermal_voltage, digits: 5)$ (Thermal voltage at 300K)
-
-
-$I_S = 1 dot 10^-12$ (reverse saturation current) #let reverse_saturation_current = 1e-12
-
-
-
-
-
-#figure(caption: "Diode IV Curve", cetz.canvas({
-  import cetz.draw: *
-  import cetz-plot: *
-  plot.plot(size: (2, 2), x-tick-step: none, y-tick-step: none, {
-    plot.add(((0, 0), (1, 1), (2, .5), (4, 3)))
-  })
-}))
