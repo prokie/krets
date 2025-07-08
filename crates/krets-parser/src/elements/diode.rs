@@ -141,21 +141,21 @@ impl Stampable for Diode {
 
 impl Diode {
     /// Returns the voltage at the plus node.
-    pub fn v_plus(&self, solution_map: &std::collections::HashMap<String, f64>) -> f64 {
+    pub fn v_plus(&self, solution_map: &HashMap<String, f64>) -> f64 {
         *solution_map
             .get(&format!("V({})", self.plus))
             .unwrap_or(&0.0)
     }
 
     /// Returns the voltage at the minus node.
-    pub fn v_minus(&self, solution_map: &std::collections::HashMap<String, f64>) -> f64 {
+    pub fn v_minus(&self, solution_map: &HashMap<String, f64>) -> f64 {
         *solution_map
             .get(&format!("V({})", self.minus))
             .unwrap_or(&0.0)
     }
 
     /// Returns the voltage across the diode (v_plus - v_minus).
-    pub fn v_d(&self, solution_map: &std::collections::HashMap<String, f64>) -> f64 {
+    pub fn v_d(&self, solution_map: &HashMap<String, f64>) -> f64 {
         dbg!(solution_map);
         let v_plus = self.v_plus(solution_map);
         let v_minus = self.v_minus(solution_map);

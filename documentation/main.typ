@@ -40,8 +40,11 @@ $n$ is the ideality factor, also known as the quality factor, emission coefficie
   plot.plot(size: (5, 5), x-tick-step: .2, y-tick-step: .5, x-grid: true, y-grid: true, plot.add(hej))
 }))
 
-#shockley_diode_current(0)
-#shockley_diode_conductance(0)
+The conductance of the diode is $G_D$ and is given by the derivative of the Shockley diode equation with respect to the voltage:
+
+$ G_D = frac(d I_D, d V_D) = frac(I_S, n V_T) e^frac(V_D, n V_T) $ <shockley-diode-conductance>
+
+
 
 === Voltage Source
 
@@ -62,36 +65,36 @@ During DC analysis, the circuit is analyzed under steady-state conditions with a
 
 ==== Diode IV Curve
 
+#let v1 = 1
+#let r1 = 1000
+$cases(V_1 = 1, R_1 = 1000)$
 
 #figure(caption: "Diode IV Curve", zap.canvas({
   import zap: *
-  vsource("v1", (0, 0), (0, 4), label: "V1")
-  resistor("r1", (0, 4), (3, 4), label: "R1")
-  diode("d1", (3, 4), (3, 0), label: "R1")
+  vsource("v1", (0, 0), (0, 4), label: $V_1$)
+  resistor("r1", (0, 4), (3, 4), label: $R_1$)
+  diode("d1", (3, 4), (3, 0), label: $R_1$)
   ground("gnd", (0, 0))
   wire((0, 0), (3, 0))
 }))
 
+$ I_D = frac(V_("out") - V_1, R_1) $
+$ I_D = I_S (e^frac(V_D, n V_T) - 1) $
+
+
+#let initial_guess = 0.5
+We guess the diode voltage $V_D=#initial_guess$ and calculate the diode current $I_D$ using the Shockley diode equation.
+
+$ I_D = #shockley_diode_current(initial_guess) $
+
+Then we solve for $V_"out"$:
+#let vout = shockley_diode_current(initial_guess) * r1 + v1
 
 
 
-$
-  mat(
-    0, 1, 0;
-    1, 0.001, -0.001;
-    0, -0.001, 0.001;
-  )
-  mat(
-    "I(V1)";
-    "V(in)";
-    "V(out)";
-  ) =
-  mat(
-    0;
-    1;
-    1;
-  )
-$
+$V_"out" = I_D R_1 + V_"in" = #vout$
+
+
 
 #set heading(numbering: "A.1")
 #counter(heading).update(0)
