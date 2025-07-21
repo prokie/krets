@@ -100,15 +100,14 @@ impl Stampable for Diode {
 
         // The voltage across the diode.
         let diode_voltage = self.v_d(solution_map);
-        dbg!(diode_voltage);
+
         let saturation_current = self.options.saturation_current;
-        dbg!(saturation_current);
         let conductance =
             (saturation_current / THERMAL_VOLTAGE) * f64::exp(diode_voltage / THERMAL_VOLTAGE);
 
         // The current through the diode.
         let current = saturation_current * (f64::exp(diode_voltage / THERMAL_VOLTAGE) - 1.0);
-
+        dbg!(diode_voltage, saturation_current, conductance, current);
         let mut triplets = Vec::with_capacity(2);
 
         if let Some(&index_plus) = index_plus {
@@ -144,7 +143,7 @@ impl Diode {
     pub fn v_plus(&self, solution_map: &HashMap<String, f64>) -> f64 {
         *solution_map
             .get(&format!("V({})", self.plus))
-            .unwrap_or(&0.0)
+            .unwrap_or(&0.5)
     }
 
     /// Returns the voltage at the minus node.

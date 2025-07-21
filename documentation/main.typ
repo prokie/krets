@@ -72,27 +72,24 @@ $cases(V_1 = 1, R_1 = 1000)$
 #figure(caption: "Diode IV Curve", zap.canvas({
   import zap: *
   vsource("v1", (0, 0), (0, 4), label: $V_1$)
-  resistor("r1", (0, 4), (3, 4), label: $R_1$)
-  diode("d1", (3, 4), (3, 0), label: $R_1$)
+  resistor("r1", (0, 4), (3, 4), label: $R$)
+  diode("d1", (3, 4), (3, 0), label: $D$)
   ground("gnd", (0, 0))
   wire((0, 0), (3, 0))
 }))
 
-$ I_D = frac(V_("out") - V_1, R_1) $
-$ I_D = I_S (e^frac(V_D, n V_T) - 1) $
+
+Lets build the conductance matrix for this circuit.
 
 
-#let initial_guess = 0.5
-We guess the diode voltage $V_D=#initial_guess$ and calculate the diode current $I_D$ using the Shockley diode equation.
-
-$ I_D = #shockley_diode_current(initial_guess) $
-
-Then we solve for $V_"out"$:
-#let vout = shockley_diode_current(initial_guess) * r1 + v1
-
-
-
-$V_"out" = I_D R_1 + V_"in" = #vout$
+$
+  mat(
+    0, 1, 0;
+    1, frac(1, R), -frac(1, R);
+    0, -frac(1, R), frac(1, R) + G_D
+  )
+  mat(delim: "|", I(V_1); V_"in"; V_"out") = mat(1; 0; I_D)
+$
 
 
 

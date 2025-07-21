@@ -100,7 +100,11 @@ impl Solver {
                 }
             }
 
+            let g_stamps = sum_triplets(&g_stamps);
+            let e_stamps = sum_triplets(&e_stamps);
+
             let size = index_map.len();
+
             let lu = SparseColMat::try_new_from_triplets(size, size, &g_stamps)
                 .expect("Failed to build sparse matrix")
                 .sp_lu()
@@ -113,7 +117,9 @@ impl Solver {
                 b[(row, col)] = val;
             }
 
-            dbg!(&b);
+            print_triplet_matrix(&g_stamps, size, size);
+            print_triplet_matrix(&e_stamps, size, 1);
+
             dbg!(&index_map);
 
             let x = lu.solve(&b);
@@ -168,5 +174,34 @@ impl Solver {
         );
 
         solution_map
+    }
+}
+
+fn sum_triplets(triplets: &[Triplet<usize, usize, f64>]) -> Vec<Triplet<usize, usize, f64>> {
+    let mut map: HashMap<(usize, usize), f64> = HashMap::new();
+    for triplet in triplets {
+        let key = (triplet.row, triplet.col);
+        *map.entry(key).or_insert(0.0) += triplet.val;
+    }
+    map.into_iter()
+        .map(|((row, col), val)| Triplet { row, col, val })
+        .collect()
+}
+
+fn print_triplet_matrix(triplets: &[Triplet<usize, usize, f64>], rows: usize, cols: usize) {
+    // Build a dense matrix initialized to 0.0
+    let mut mat = vec![vec![0.0; cols]; rows];
+    for triplet in triplets {
+        if triplet.row < rows && triplet.col < cols {
+            mat[triplet.row][triplet.col] += triplet.val;
+        }
+    }
+    // Print the matrix
+    println!("Matrix ({} x {}):", rows, cols);
+    for row in 0..rows {
+        for col in 0..cols {
+            print!("{:>12.5e} ", mat[row][col]);
+        }
+        println!();
     }
 }
