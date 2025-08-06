@@ -1,4 +1,4 @@
-#import "@preview/zap:0.2.0"
+#import "@preview/zap:0.2.1"
 #import "@preview/cetz:0.4.0"
 #import "@preview/cetz-plot:0.1.2"
 #import "constants.typ": shockley_diode_conductance, shockley_diode_current
@@ -43,6 +43,26 @@ $n$ is the ideality factor, also known as the quality factor, emission coefficie
 The conductance of the diode is $G_D$ and is given by the derivative of the Shockley diode equation with respect to the voltage:
 
 $ G_D = frac(d I_D, d V_D) = frac(I_S, n V_T) e^frac(V_D, n V_T) $ <shockley-diode-conductance>
+
+The companion model for the diode can be represented as a current source in parallel with a conductance.
+
+
+$ I_"eq" = I_D - G_"eq" V_D $
+
+#figure(caption: "Diode Companion model", zap.canvas({
+  import zap: *
+  wire((0, 0), (3, 0))
+  wire((3, 0), (3, -0.5))
+  wire((2, -0.5), (4, -0.5))
+  node("n1", (3, -0.5))
+  resistor("r1", (2, -0.5), (2, -3), label: $frac(1, G_"eq")$)
+  isource("i1", (4, -0.5), (4, -3), label: $I_"eq"$)
+  wire((2, -3), (4, -3))
+  wire((3, -3), (3, -3.5))
+  node("n2", (3, -3))
+  wire((0, -3.5), (3, -3.5))
+}))
+
 
 
 
