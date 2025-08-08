@@ -85,7 +85,7 @@ impl Solver {
         let elements = &self.circuit.elements;
         let mut result = HashMap::new();
         let mut previous_result = result.clone();
-        let max_iterations = 1;
+        let max_iterations = 30;
 
         for iter in 0..max_iterations {
             let mut g_stamps = Vec::new();
@@ -110,17 +110,13 @@ impl Solver {
                 .sp_lu()
                 .expect("LU decomposition failed");
 
-            dbg!(&g_stamps);
-
             let mut b = Mat::zeros(size, 1);
             for &Triplet { row, col, val } in &e_stamps {
                 b[(row, col)] = val;
             }
 
-            print_triplet_matrix(&g_stamps, size, size);
-            print_triplet_matrix(&e_stamps, size, 1);
-
-            dbg!(&index_map);
+            // print_triplet_matrix(&g_stamps, size, size);
+            // print_triplet_matrix(&e_stamps, size, 1);
 
             let x = lu.solve(&b);
 
@@ -128,7 +124,7 @@ impl Solver {
                 .iter()
                 .map(|(node, &idx)| (node.clone(), x[(idx, 0)]))
                 .collect();
-
+            dbg!(&result);
             previous_result = result.clone();
         }
 

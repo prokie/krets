@@ -64,6 +64,18 @@ $ I_"eq" = I_D - G_"eq" V_D $
 }))
 
 
+The element stamps for the diode in the conductance matrix are given by:
+
+$
+  mat(
+    delim: #none,
+    ,, v^+, ,v^-,, |, "RHS";
+    , , dots.v,, dots.v,, |, dots.v;
+    n^+, dots, +G_"eq", dots, -G_"eq", dots, |, -I_"eq";
+    n^-, dots, -G_"eq", dots, +G_"eq", dots, |, +I_"eq";
+    ,,dots.v,, dots.v,, |, dots.v;
+  )
+$
 
 
 === Voltage Source

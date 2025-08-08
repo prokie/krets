@@ -55,14 +55,8 @@ impl Stampable for Diode {
         let index_plus = index_map.get(&format!("V({})", self.plus));
         let index_minus = index_map.get(&format!("V({})", self.minus));
 
-        // The voltage across the diode.
-        let diode_voltage = self.v_d(solution_map);
-
-        let saturation_current = self.options.saturation_current;
-
-        let conductance =
-            (saturation_current / THERMAL_VOLTAGE) * f64::exp(diode_voltage / THERMAL_VOLTAGE);
-        dbg!(diode_voltage, saturation_current, conductance);
+        // The conductance of the diode based on the diode voltage and saturation current.
+        let conductance = self.conductance(solution_map);
 
         let mut triplets = Vec::with_capacity(2);
 
@@ -98,33 +92,16 @@ impl Stampable for Diode {
         let index_plus = index_map.get(&format!("V({})", self.plus));
         let index_minus = index_map.get(&format!("V({})", self.minus));
 
-        // The voltage across the diode.
-        let diode_voltage = self.v_d(solution_map);
+        let equivalent_current = self.equivalent_current(solution_map);
 
-        let saturation_current = self.options.saturation_current;
-        let conductance =
-            (saturation_current / THERMAL_VOLTAGE) * f64::exp(diode_voltage / THERMAL_VOLTAGE);
-
-        // The current through the diode.
-        let current = saturation_current * (f64::exp(diode_voltage / THERMAL_VOLTAGE) - 1.0);
-        dbg!(diode_voltage, saturation_current, conductance, current);
         let mut triplets = Vec::with_capacity(2);
 
         if let Some(&index_plus) = index_plus {
-            triplets.push(Triplet::new(
-                index_plus,
-                0,
-                -current - conductance * diode_voltage,
-            ));
+            triplets.push(Triplet::new(index_plus, 0, -equivalent_current));
         }
         if let Some(&index_minus) = index_minus {
-            triplets.push(Triplet::new(
-                index_minus,
-                0,
-                current - conductance * diode_voltage,
-            ));
+            triplets.push(Triplet::new(index_minus, 0, equivalent_current));
         }
-        dbg!(triplets.clone());
         triplets
     }
 
@@ -155,13 +132,29 @@ impl Diode {
 
     /// Returns the voltage across the diode (v_plus - v_minus).
     pub fn v_d(&self, solution_map: &HashMap<String, f64>) -> f64 {
-        dbg!(solution_map);
-        let v_plus = self.v_plus(solution_map);
-        let v_minus = self.v_minus(solution_map);
-
-        dbg!(v_plus, v_minus);
-
         self.v_plus(solution_map) - self.v_minus(solution_map)
+    }
+
+    /// Returns the conductance of the diode based on the diode voltage and saturation current.
+    fn conductance(&self, solution_map: &HashMap<String, f64>) -> f64 {
+        let diode_voltage = self.v_d(solution_map);
+        let saturation_current = self.options.saturation_current;
+
+        (saturation_current / THERMAL_VOLTAGE) * f64::exp(diode_voltage / THERMAL_VOLTAGE)
+    }
+
+    fn current(&self, solution_map: &HashMap<String, f64>) -> f64 {
+        // The current through the diode based on the diode voltage and saturation current.
+        let diode_voltage = self.v_d(solution_map);
+        let saturation_current = self.options.saturation_current;
+
+        saturation_current * (f64::exp(diode_voltage / THERMAL_VOLTAGE) - 1.0)
+    }
+
+    fn equivalent_current(&self, solution_map: &HashMap<String, f64>) -> f64 {
+        let diode_voltage = self.v_d(solution_map);
+
+        self.current(solution_map) - self.conductance(solution_map) * diode_voltage
     }
 }
 
