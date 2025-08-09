@@ -16,6 +16,43 @@
 
 == Elements
 
+=== BJT
+
+=== Capacitor
+
+Element stamps for a capacitor in the conductance matrix in group 1:
+
+$
+  mat(
+    delim: #none,
+    , , v^+, , v^-, , |, "RHS";
+    , , dots.v, , dots.v, , |, dots.v;
+    v^+, dots, +C, dots, -C, dots, |, dots.v;
+    v^-, dots, -C, dots, +C, dots, |, dots.v;
+    , , dots.v, , dots.v, , |, dots.v;
+  )
+$
+
+Element stamps for a capacitor in the conductance matrix in group 2:
+
+$
+  mat(
+    delim: #none,
+    , , v^+, , v^-, , i_C, , |, "RHS";
+    , , dots.v, , dots.v, , dots.v, , |, ;
+    v^+, dots, dots, dots, dots, dots, dots, dots, |, ;
+    v^-, dots, dots, dots, dots, dots, dots, dots, |, ;
+    i_C, dots, -C, dots, C, dots, + 1, dots, |, ;
+    , , dots.v, , dots.v, , dots.v, , |, ;
+  )
+$
+
+
+
+=== Current Source
+
+
+
 === Diode
 
 The diode is modeled as a nonlinear element with a current-voltage relationship defined by the Shockley diode equation:
@@ -37,7 +74,16 @@ $n$ is the ideality factor, also known as the quality factor, emission coefficie
 #figure(caption: "Diode IV Curve", cetz.canvas({
   import cetz.draw: *
   import cetz-plot: *
-  plot.plot(size: (5, 5), x-tick-step: .2, y-tick-step: .5, x-grid: true, y-grid: true, plot.add(hej))
+  plot.plot(
+    size: (5, 5),
+    x-tick-step: .2,
+    y-tick-step: .5,
+    x-grid: true,
+    y-grid: true,
+    x-label: $V_D$,
+    y-label: $I_D$,
+    plot.add(hej),
+  )
 }))
 
 The conductance of the diode is $G_D$ and is given by the derivative of the Shockley diode equation with respect to the voltage:
@@ -69,13 +115,22 @@ The element stamps for the diode in the conductance matrix are given by:
 $
   mat(
     delim: #none,
-    ,, v^+, ,v^-,, |, "RHS";
-    , , dots.v,, dots.v,, |, dots.v;
+    , , v^+, , v^-, , |, "RHS";
+    , , dots.v, , dots.v, , |, dots.v;
     n^+, dots, +G_"eq", dots, -G_"eq", dots, |, -I_"eq";
     n^-, dots, -G_"eq", dots, +G_"eq", dots, |, +I_"eq";
-    ,,dots.v,, dots.v,, |, dots.v;
+    , , dots.v, , dots.v, , |, dots.v;
   )
 $
+
+
+
+
+=== Inductor
+
+=== Mosfet
+
+=== Resistor
 
 
 === Voltage Source

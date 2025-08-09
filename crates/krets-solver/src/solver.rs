@@ -8,11 +8,29 @@ use std::collections::HashMap;
 
 pub struct Solver {
     circuit: Circuit,
+    relative_tolerance: f64,
+    current_absolute_tolerance: f64,
+    voltage_absolute_tolerance: f64,
+    maximum_iterations: usize,
+
+    /// Minimum resistance to consider in the solver. All resistors with a value below this will be converted to this value.
+    /// This is to avoid numerical issues with very small resistances.
+    minimum_resistance: f64,
+
+    minimum_conductance: f64,
 }
 
 impl Solver {
     pub const fn new(circuit: Circuit) -> Self {
-        Self { circuit }
+        Self {
+            circuit,
+            relative_tolerance: 0.001,
+            current_absolute_tolerance: 1e-12,
+            voltage_absolute_tolerance: 1e-6,
+            maximum_iterations: 300,
+            minimum_resistance: 1e-3,
+            minimum_conductance: 1e-12,
+        }
     }
 
     pub fn solve_dc(self, dc_analysis: DcAnalysis) -> Result<Vec<HashMap<String, f64>>> {
@@ -193,6 +211,7 @@ fn sum_triplets(triplets: &[Triplet<usize, usize, f64>]) -> Vec<Triplet<usize, u
         .collect()
 }
 
+#[allow(dead_code)]
 fn print_triplet_matrix(triplets: &[Triplet<usize, usize, f64>], rows: usize, cols: usize) {
     // Build a dense matrix initialized to 0.0
     let mut mat = vec![vec![0.0; cols]; rows];
@@ -203,10 +222,10 @@ fn print_triplet_matrix(triplets: &[Triplet<usize, usize, f64>], rows: usize, co
     }
     // Print the matrix
     println!("Matrix ({} x {}):", rows, cols);
-    for row in 0..rows {
+    (0..rows).for_each(|row| {
         for col in 0..cols {
             print!("{:>12.5e} ", mat[row][col]);
         }
         println!();
-    }
+    });
 }
