@@ -113,17 +113,18 @@ impl Stampable for VoltageSource {
         _frequency: f64,
     ) -> Vec<Triplet<usize, usize, c64>> {
         let mut triplets = Vec::with_capacity(1);
-        if let Some(&index_current) = index_map.get(&format!("I({})", self.identifier())) {
-            if let Some(ac_amplitude) = self.ac_amplitude {
-                triplets.push(Triplet::new(
-                    index_current,
-                    0,
-                    c64 {
-                        im: 0.0,
-                        re: ac_amplitude,
-                    },
-                ));
-            }
+        if let (Some(&index_current), Some(ac_amplitude)) = (
+            index_map.get(&format!("I({})", self.identifier())),
+            self.ac_amplitude,
+        ) {
+            triplets.push(Triplet::new(
+                index_current,
+                0,
+                c64 {
+                    im: 0.0,
+                    re: ac_amplitude,
+                },
+            ));
         }
         triplets
     }

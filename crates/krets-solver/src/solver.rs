@@ -85,7 +85,7 @@ impl Solver {
         let elements = &self.circuit.elements;
         let mut result = HashMap::new();
         let mut previous_result = result.clone();
-        let max_iterations = 30;
+        let max_iterations = 300;
 
         for iter in 0..max_iterations {
             let mut g_stamps = Vec::new();
@@ -115,17 +115,26 @@ impl Solver {
                 b[(row, col)] = val;
             }
 
-            // print_triplet_matrix(&g_stamps, size, size);
-            // print_triplet_matrix(&e_stamps, size, 1);
-
             let x = lu.solve(&b);
 
             result = index_map
                 .iter()
                 .map(|(node, &idx)| (node.clone(), x[(idx, 0)]))
                 .collect();
-            dbg!(&result);
+
+            if !previous_result.is_empty()
+                && result
+                    .iter()
+                    .all(|(node, &value)| (value - previous_result[node]).abs() < 1e-12)
+            {
+                println!("Converged after {} iterations", iter + 1);
+                break;
+            }
             previous_result = result.clone();
+
+            if iter == max_iterations - 1 {
+                println!("Warning: Maximum iterations reached without convergence.");
+            }
         }
 
         result
