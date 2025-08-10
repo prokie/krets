@@ -25,7 +25,7 @@ impl Identifiable for Capacitor {
 }
 
 impl Stampable for Capacitor {
-    fn conductance_matrix_dc_stamp(
+    fn add_conductance_matrix_dc_stamp(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -33,7 +33,7 @@ impl Stampable for Capacitor {
         todo!()
     }
 
-    fn conductance_matrix_ac_stamp(
+    fn add_conductance_matrix_ac_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -83,7 +83,7 @@ impl Stampable for Capacitor {
         triplets
     }
 
-    fn excitation_vector_dc_stamp(
+    fn add_excitation_vector_dc_stamp(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -91,7 +91,7 @@ impl Stampable for Capacitor {
         todo!()
     }
 
-    fn excitation_vector_ac_stamp(
+    fn add_excitation_vector_ac_stamp(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,

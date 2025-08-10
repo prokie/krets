@@ -65,16 +65,16 @@ impl Solver {
                     continue;
                 }
 
-                g_stamps.extend(element.conductance_matrix_dc_stamp(
+                g_stamps.extend(element.add_conductance_matrix_dc_stamp(
                     index_map,
                     results.last().unwrap_or(&HashMap::new()),
                 ));
-                e_stamps.extend(element.excitation_vector_dc_stamp(index_map, &result));
+                e_stamps.extend(element.add_excitation_vector_dc_stamp(index_map, &result));
             }
 
             dc_sweep_element.set_value(current);
-            g_stamps.extend(dc_sweep_element.conductance_matrix_dc_stamp(index_map, &result));
-            e_stamps.extend(dc_sweep_element.excitation_vector_dc_stamp(index_map, &result));
+            g_stamps.extend(dc_sweep_element.add_conductance_matrix_dc_stamp(index_map, &result));
+            e_stamps.extend(dc_sweep_element.add_excitation_vector_dc_stamp(index_map, &result));
             current += dc_analysis.step_size;
 
             let size = index_map.len();
@@ -111,10 +111,12 @@ impl Solver {
 
             for element in elements {
                 if !matches!(element, Element::Capacitor(_)) {
-                    g_stamps
-                        .extend(element.conductance_matrix_dc_stamp(index_map, &previous_result));
-                    e_stamps
-                        .extend(element.excitation_vector_dc_stamp(index_map, &previous_result));
+                    g_stamps.extend(
+                        element.add_conductance_matrix_dc_stamp(index_map, &previous_result),
+                    );
+                    e_stamps.extend(
+                        element.add_excitation_vector_dc_stamp(index_map, &previous_result),
+                    );
                 }
             }
 

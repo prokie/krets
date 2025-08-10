@@ -29,7 +29,7 @@ impl Identifiable for VoltageSource {
 }
 
 impl Stampable for VoltageSource {
-    fn conductance_matrix_dc_stamp(
+    fn add_conductance_matrix_dc_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -53,7 +53,7 @@ impl Stampable for VoltageSource {
         triplets
     }
 
-    fn conductance_matrix_ac_stamp(
+    fn add_conductance_matrix_ac_stamp(
         &self,
         index_map: &std::collections::HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -94,7 +94,7 @@ impl Stampable for VoltageSource {
         triplets
     }
 
-    fn excitation_vector_dc_stamp(
+    fn add_excitation_vector_dc_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -106,7 +106,7 @@ impl Stampable for VoltageSource {
         triplets
     }
 
-    fn excitation_vector_ac_stamp(
+    fn add_excitation_vector_ac_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,

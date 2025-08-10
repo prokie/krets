@@ -26,23 +26,34 @@ impl OpSolver {
         let mut result = HashMap::new();
         let mut previous_result = result.clone();
 
-        for iter in 0..self.config.maximum_iterations {
-            let mut g_stamps = Vec::new();
-            let mut e_stamps = Vec::new();
+        let mut g_stamps = Vec::new();
+        let mut e_stamps = Vec::new();
 
-            elements
-                .iter()
-                .filter(|e| !matches!(e, Element::Capacitor(_)))
-                .map(|e| {
-                    (
-                        e.conductance_matrix_dc_stamp(index_map, &previous_result),
-                        e.excitation_vector_dc_stamp(index_map, &previous_result),
-                    )
-                })
-                .for_each(|(g, e)| {
-                    g_stamps.extend(g);
-                    e_stamps.extend(e);
-                });
+        for element in elements {
+            if !matches!(element, Element::Capacitor(_)) {
+                g_stamps
+                    .extend(element.add_conductance_matrix_dc_stamp(index_map, &previous_result));
+                e_stamps
+                    .extend(element.add_excitation_vector_dc_stamp(index_map, &previous_result));
+            }
+        }
+
+        for iter in 0..self.config.maximum_iterations {
+            for nonlinear_element in elements.iter().filter(|e| matches!(e, Element::Diode(_))) {
+                // Subtract previous stamp
+                g_stamps.extend(
+                    nonlinear_element.undo_conductance_matrix_dc_stamp(index_map, &previous_result),
+                );
+                e_stamps.extend(
+                    nonlinear_element.undo_excitation_vector_dc_stamp(index_map, &previous_result),
+                );
+
+                // Add new stamp
+                g_stamps
+                    .extend(nonlinear_element.add_conductance_matrix_dc_stamp(index_map, &result));
+                e_stamps
+                    .extend(nonlinear_element.add_excitation_vector_dc_stamp(index_map, &result));
+            }
 
             let g_stamps = sum_triplets(&g_stamps);
             let e_stamps = sum_triplets(&e_stamps);
@@ -63,21 +74,6 @@ impl OpSolver {
                 .iter()
                 .map(|(node, &idx)| (node.clone(), x[(idx, 0)]))
                 .collect();
-
-            // The residue criterion for convergence
-            let mut total_current = 0.0;
-            let mut maximum_current = 0.0f64;
-            for (key, value) in result.iter() {
-                if key.starts_with("I") {
-                    total_current += value;
-
-                    maximum_current = maximum_current.max(value.abs());
-                }
-            }
-            dbg!(
-                total_current - self.config.relative_tolerance * maximum_current
-                    + self.config.current_absolute_tolerance
-            );
 
             if !previous_result.is_empty()
                 && result

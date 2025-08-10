@@ -25,7 +25,7 @@ impl Identifiable for CurrentSource {
 }
 
 impl Stampable for CurrentSource {
-    fn conductance_matrix_dc_stamp(
+    fn add_conductance_matrix_dc_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -62,7 +62,7 @@ impl Stampable for CurrentSource {
         triplets
     }
 
-    fn conductance_matrix_ac_stamp(
+    fn add_conductance_matrix_ac_stamp(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -71,7 +71,7 @@ impl Stampable for CurrentSource {
         todo!()
     }
 
-    fn excitation_vector_dc_stamp(
+    fn add_excitation_vector_dc_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -82,7 +82,7 @@ impl Stampable for CurrentSource {
         }
     }
 
-    fn excitation_vector_ac_stamp(
+    fn add_excitation_vector_ac_stamp(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,

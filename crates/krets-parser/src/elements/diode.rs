@@ -46,7 +46,7 @@ impl Default for DiodeOptions {
 }
 
 impl Stampable for Diode {
-    fn conductance_matrix_dc_stamp(
+    fn add_conductance_matrix_dc_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
@@ -74,7 +74,7 @@ impl Stampable for Diode {
         triplets
     }
 
-    fn conductance_matrix_ac_stamp(
+    fn add_conductance_matrix_ac_stamp(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -83,7 +83,7 @@ impl Stampable for Diode {
         todo!()
     }
 
-    fn excitation_vector_dc_stamp(
+    fn add_excitation_vector_dc_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
@@ -105,7 +105,7 @@ impl Stampable for Diode {
         triplets
     }
 
-    fn excitation_vector_ac_stamp(
+    fn add_excitation_vector_ac_stamp(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
