@@ -200,7 +200,7 @@ impl Solver {
     }
 }
 
-fn sum_triplets(triplets: &[Triplet<usize, usize, f64>]) -> Vec<Triplet<usize, usize, f64>> {
+pub fn sum_triplets(triplets: &[Triplet<usize, usize, f64>]) -> Vec<Triplet<usize, usize, f64>> {
     let mut map: HashMap<(usize, usize), f64> = HashMap::new();
     for triplet in triplets {
         let key = (triplet.row, triplet.col);

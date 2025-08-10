@@ -16,8 +16,6 @@ pub struct CurrentSource {
     pub plus: String,
     /// The negative node of the current source.
     pub minus: String,
-    // If the current source is G2.
-    pub g2: bool,
 }
 
 impl Identifiable for CurrentSource {
@@ -36,14 +34,31 @@ impl Stampable for CurrentSource {
         let index_minus = index_map.get(&format!("V({})", self.minus));
         let index_current = index_map.get(&format!("I({})", self.identifier()));
 
-        let mut triplets = Vec::with_capacity(2);
+        let mut triplets = Vec::with_capacity(3);
 
-        if let (Some(&index_plus), Some(&index_minus), Some(&index_current)) =
-            (index_plus, index_minus, index_current)
-        {
-            triplets.push(Triplet::new(index_plus, index_current, 1.0));
-            triplets.push(Triplet::new(index_minus, index_current, -1.0));
+        if let Some(&index_current) = index_current {
+            triplets.push(Triplet {
+                row: index_current,
+                col: index_current,
+                val: 1.0,
+            });
         }
+        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
+            triplets.push(Triplet {
+                row: index_plus,
+                col: index_current,
+                val: 1.0,
+            });
+        }
+
+        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
+            triplets.push(Triplet {
+                row: index_minus,
+                col: index_current,
+                val: -1.0,
+            });
+        }
+
         triplets
     }
 
@@ -61,21 +76,10 @@ impl Stampable for CurrentSource {
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>> {
-        let mut triplets = Vec::with_capacity(3);
-
-        if let Some(&i) = index_map.get(&format!("V({})", self.plus)) {
-            triplets.push(Triplet::new(i, 0, -self.value));
+        match index_map.get(&format!("I({})", self.identifier())) {
+            Some(i) => vec![Triplet::new(*i, 0, self.value)],
+            None => Vec::new(),
         }
-
-        if let Some(&i) = index_map.get(&format!("V({})", self.minus)) {
-            triplets.push(Triplet::new(i, 0, self.value));
-        }
-
-        if let Some(&i) = index_map.get(&format!("I({})", self.identifier())) {
-            triplets.push(Triplet::new(i, 0, self.value));
-        }
-
-        triplets
     }
 
     fn excitation_vector_ac_stamp(
@@ -86,33 +90,6 @@ impl Stampable for CurrentSource {
     ) -> Vec<Triplet<usize, usize, faer::c64>> {
         todo!()
     }
-    // fn add_dc_stamp(&self, mna_matrix: &mut MnaMatrix) {
-    //     let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
-    //     let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
-    //     let index_current = mna_matrix
-    //         .index_map
-    //         .get(&format!("I({})", self.identifier()));
-
-    //     if let Some(&index_plus) = index_plus {
-    //         mna_matrix.excitation_vector[(index_plus, 0)] = -self.value;
-    //     }
-
-    //     if let Some(&index_minus) = index_minus {
-    //         mna_matrix.excitation_vector[(index_minus, 0)] = self.value;
-    //     }
-
-    //     if let (Some(&index_plus), Some(&index_minus), Some(&index_current)) =
-    //         (index_plus, index_minus, index_current)
-    //     {
-    //         mna_matrix.excitation_vector[(index_current, 0)] = self.value;
-    //         mna_matrix.conductance_matrix[(index_plus, index_current)] = 1.0;
-    //         mna_matrix.conductance_matrix[(index_minus, index_current)] = -1.0;
-    //     }
-    // }
-
-    // fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, _frequency: f64) {
-    //     self.add_dc_stamp(mna_matrix);
-    // }
 }
 
 impl FromStr for CurrentSource {
@@ -142,14 +119,11 @@ impl FromStr for CurrentSource {
             .parse::<f64>()
             .map_err(|_| Error::InvalidFloatValue("Invalid current source value".to_string()))?;
 
-        let g2 = parts.len() == 5 && parts[4] == "G2";
-
         Ok(CurrentSource {
             name,
             value,
             plus,
             minus,
-            g2,
         })
     }
 }
@@ -167,19 +141,6 @@ mod tests {
         assert_eq!(current_source.plus, "1");
         assert_eq!(current_source.minus, "0");
         assert_eq!(current_source.value, 0.001);
-        assert!(!current_source.g2);
-    }
-
-    #[test]
-    fn test_parse_current_source_with_group() {
-        let current_source_str = "I1 1 0 0.001 G2";
-        let current_source = current_source_str.parse::<CurrentSource>().unwrap();
-
-        assert_eq!(current_source.name, 1);
-        assert_eq!(current_source.plus, "1");
-        assert_eq!(current_source.minus, "0");
-        assert_eq!(current_source.value, 0.001);
-        assert!(current_source.g2);
     }
 
     #[test]

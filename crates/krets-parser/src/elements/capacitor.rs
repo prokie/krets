@@ -25,51 +25,6 @@ impl Identifiable for Capacitor {
 }
 
 impl Stampable for Capacitor {
-    // fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, frequency: f64) {
-    //     let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
-    //     let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
-
-    //     let impedance = c64 {
-    //         re: 0.0,
-    //         im: -1.0 / (2.0 * PI * frequency * self.value),
-    //     };
-    //     let conductance_matrix = &mut mna_matrix.complex_conductance_matrix;
-
-    //     if !self.g2 {
-    //         if let Some(&index_plus) = index_plus {
-    //             conductance_matrix[(index_plus, index_plus)] += 1.0 / impedance;
-    //         }
-    //         if let Some(&index_minus) = index_minus {
-    //             conductance_matrix[(index_minus, index_minus)] += 1.0 / impedance
-    //         }
-
-    //         if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-    //             conductance_matrix[(index_plus, index_minus)] -= 1.0 / impedance;
-    //             conductance_matrix[(index_minus, index_plus)] -= 1.0 / impedance;
-    //         }
-    //     } else {
-    //         let index_current = mna_matrix
-    //             .index_map
-    //             .get(&format!("I({})", self.identifier()));
-
-    //         if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-    //             conductance_matrix[(index_current, index_plus)] = 1.0 / impedance;
-    //         }
-
-    //         if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-    //             conductance_matrix[(index_current, index_minus)] = 1.0 / impedance;
-    //         }
-
-    //         if let Some(&index_current) = index_current {
-    //             conductance_matrix[(index_current, index_current)] = c64 { re: 1.0, im: 0.0 };
-    //         }
-    //     }
-    // }
-
-    // fn add_dc_stamp(&self, _mna_matrix: &mut MnaMatrix) {
-    //     todo!()
-    // }
-
     fn conductance_matrix_dc_stamp(
         &self,
         _index_map: &HashMap<String, usize>,

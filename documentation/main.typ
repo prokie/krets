@@ -51,7 +51,20 @@ $
 
 === Current Source
 
-
+#table(
+  columns: 5,
+  align: horizon,
+  stroke: none,
+  table.header(
+    table.hline(),
+    [], $v^+$, $v^-$, $i$, "RHS",
+    table.hline(),
+    $v^+$, [], [], $+1$, [],
+    $v^-$, [], [], $-1$, $$,
+    $i$, [], [], $+1$, $I$,
+    table.hline(),
+  ),
+)
 
 === Diode
 
@@ -131,6 +144,20 @@ $
 === Mosfet
 
 === Resistor
+
+
+$
+  mat(
+    delim: #none,
+    , , v^+, , v^-, , i_R, , |, "RHS";
+    , , dots.v, , dots.v, , dots.v, , |, ;
+    v^+, dots, dots, dots, dots, dots, +1, dots, |, ;
+    v^-, dots, dots, dots, dots, dots, -1, dots, |, ;
+    i_R, dots, +1, dots, -1, dots, - R, dots, |, ;
+    , , dots.v, , dots.v, , dots.v, , |, ;
+  )
+$
+
 
 
 === Voltage Source

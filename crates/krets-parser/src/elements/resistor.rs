@@ -18,8 +18,6 @@ pub struct Resistor {
     pub plus: String,
     /// Negative node of the resistor.
     pub minus: String,
-    /// If the resistor is G2.
-    pub g2: bool,
 }
 
 impl Stampable for Resistor {
@@ -30,79 +28,44 @@ impl Stampable for Resistor {
     ) -> Vec<Triplet<usize, usize, f64>> {
         let index_plus = index_map.get(&format!("V({})", self.plus));
         let index_minus = index_map.get(&format!("V({})", self.minus));
-
-        let conductance = 1.0 / self.value;
+        let index_current = index_map.get(&format!("I({})", self.identifier()));
 
         let mut triplets = Vec::with_capacity(5);
 
-        if !self.g2 {
-            if let Some(&index_plus) = index_plus {
-                triplets.push(Triplet {
-                    row: index_plus,
-                    col: index_plus,
-                    val: conductance,
-                });
-            }
+        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
+            triplets.push(Triplet {
+                row: index_plus,
+                col: index_current,
+                val: 1.0,
+            });
 
-            if let Some(&index_minus) = index_minus {
-                triplets.push(Triplet {
-                    row: index_minus,
-                    col: index_minus,
-                    val: conductance,
-                });
-            }
+            triplets.push(Triplet {
+                row: index_current,
+                col: index_plus,
+                val: 1.0,
+            });
+        }
 
-            if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-                triplets.push(Triplet {
-                    row: index_plus,
-                    col: index_minus,
-                    val: -conductance,
-                });
+        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
+            triplets.push(Triplet {
+                row: index_minus,
+                col: index_current,
+                val: -1.0,
+            });
 
-                triplets.push(Triplet {
-                    row: index_minus,
-                    col: index_plus,
-                    val: -conductance,
-                });
-            }
-        } else {
-            let index_current = index_map.get(&format!("I({})", self.identifier()));
+            triplets.push(Triplet {
+                row: index_current,
+                col: index_minus,
+                val: -1.0,
+            });
+        }
 
-            if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-                triplets.push(Triplet {
-                    row: index_plus,
-                    col: index_current,
-                    val: 1.0,
-                });
-
-                triplets.push(Triplet {
-                    row: index_current,
-                    col: index_plus,
-                    val: 1.0,
-                });
-            }
-
-            if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-                triplets.push(Triplet {
-                    row: index_minus,
-                    col: index_current,
-                    val: -1.0,
-                });
-
-                triplets.push(Triplet {
-                    row: index_current,
-                    col: index_minus,
-                    val: -1.0,
-                });
-            }
-
-            if let Some(&index_current) = index_current {
-                triplets.push(Triplet {
-                    row: index_current,
-                    col: index_current,
-                    val: -self.value,
-                });
-            }
+        if let Some(&index_current) = index_current {
+            triplets.push(Triplet {
+                row: index_current,
+                col: index_current,
+                val: -self.value,
+            });
         }
 
         triplets
@@ -116,93 +79,49 @@ impl Stampable for Resistor {
     ) -> Vec<Triplet<usize, usize, c64>> {
         let index_plus = index_map.get(&format!("V({})", self.plus));
         let index_minus = index_map.get(&format!("V({})", self.minus));
-        let conductance = 1.0 / self.value;
         let mut triplets = Vec::with_capacity(5);
 
-        if !self.g2 {
-            if let Some(&index_plus) = index_plus {
-                triplets.push(Triplet {
-                    row: index_plus,
-                    col: index_plus,
-                    val: c64 {
-                        im: 0.0,
-                        re: conductance,
-                    },
-                });
-            }
+        let index_current = index_map.get(&format!("I({})", self.identifier()));
 
-            if let Some(&index_minus) = index_minus {
-                triplets.push(Triplet {
-                    row: index_minus,
-                    col: index_minus,
-                    val: c64 {
-                        im: 0.0,
-                        re: conductance,
-                    },
-                });
-            }
+        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
+            triplets.push(Triplet {
+                row: index_plus,
+                col: index_current,
+                val: c64 { im: 0.0, re: 1.0 },
+            });
 
-            if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-                triplets.push(Triplet {
-                    row: index_plus,
-                    col: index_minus,
-                    val: c64 {
-                        im: 0.0,
-                        re: -conductance,
-                    },
-                });
-
-                triplets.push(Triplet {
-                    row: index_minus,
-                    col: index_plus,
-                    val: c64 {
-                        im: 0.0,
-                        re: -conductance,
-                    },
-                });
-            }
-        } else {
-            let index_current = index_map.get(&format!("I({})", self.identifier()));
-
-            if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-                triplets.push(Triplet {
-                    row: index_plus,
-                    col: index_current,
-                    val: c64 { im: 0.0, re: 1.0 },
-                });
-
-                triplets.push(Triplet {
-                    row: index_current,
-                    col: index_plus,
-                    val: c64 { im: 0.0, re: 1.0 },
-                });
-            }
-
-            if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-                triplets.push(Triplet {
-                    row: index_minus,
-                    col: index_current,
-                    val: c64 { im: 0.0, re: -1.0 },
-                });
-
-                triplets.push(Triplet {
-                    row: index_current,
-                    col: index_minus,
-                    val: c64 { im: 0.0, re: -1.0 },
-                });
-            }
-
-            if let Some(&index_current) = index_current {
-                triplets.push(Triplet {
-                    row: index_current,
-                    col: index_current,
-                    val: c64 {
-                        im: 0.0,
-                        re: -self.value,
-                    },
-                });
-            }
+            triplets.push(Triplet {
+                row: index_current,
+                col: index_plus,
+                val: c64 { im: 0.0, re: 1.0 },
+            });
         }
+
+        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
+            triplets.push(Triplet {
+                row: index_minus,
+                col: index_current,
+                val: c64 { im: 0.0, re: -1.0 },
+            });
+
+            triplets.push(Triplet {
+                row: index_current,
+                col: index_minus,
+                val: c64 { im: 0.0, re: -1.0 },
+            });
+        }
+
+        if let Some(&index_current) = index_current {
+            triplets.push(Triplet {
+                row: index_current,
+                col: index_current,
+                val: c64 {
+                    im: 0.0,
+                    re: -self.value,
+                },
+            });
+        }
+
         triplets
     }
 
@@ -235,12 +154,8 @@ impl fmt::Display for Resistor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "R{} {} {} {}{}",
-            self.name,
-            self.plus,
-            self.minus,
-            self.value,
-            if self.g2 { " G2" } else { "" }
+            "R{} {} {} {}",
+            self.name, self.plus, self.minus, self.value,
         )
     }
 }
@@ -276,14 +191,12 @@ impl FromStr for Resistor {
         let value = parts[3]
             .parse::<f64>()
             .map_err(|_| Error::InvalidFloatValue(format!("Invalid resistor value: '{s}'")))?;
-        let g2 = parts.len() == 5 && parts[4] == "G2";
 
         Ok(Resistor {
             name,
             value,
             plus,
             minus,
-            g2,
         })
     }
 }
@@ -301,19 +214,6 @@ mod tests {
         assert_eq!(resistor.plus, "1");
         assert_eq!(resistor.minus, "0");
         assert_eq!(resistor.value, 1000.0);
-        assert!(!resistor.g2);
-    }
-
-    #[test]
-    fn test_parse_resistor_with_group() {
-        let resistor_str = "R1 1 0 1000 G2";
-        let resistor = resistor_str.parse::<Resistor>().unwrap();
-
-        assert_eq!(resistor.name, 1);
-        assert_eq!(resistor.plus, "1");
-        assert_eq!(resistor.minus, "0");
-        assert_eq!(resistor.value, 1000.0);
-        assert!(resistor.g2);
     }
 
     #[test]
@@ -325,7 +225,6 @@ mod tests {
         assert_eq!(resistor.plus, "1");
         assert_eq!(resistor.minus, "0");
         assert_eq!(resistor.value, 1000.0);
-        assert!(!resistor.g2);
     }
 
     #[test]

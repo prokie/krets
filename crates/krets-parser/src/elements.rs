@@ -73,8 +73,8 @@ impl Element {
     pub fn is_g2(&self) -> bool {
         match self {
             Element::VoltageSource(_) => true,
-            Element::CurrentSource(e) => e.g2,
-            Element::Resistor(e) => e.g2,
+            Element::CurrentSource(_) => true,
+            Element::Resistor(_) => true,
             Element::Capacitor(e) => e.g2,
             Element::Inductor(_) => true,
             Element::Diode(_) => false,

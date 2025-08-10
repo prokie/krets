@@ -3,7 +3,7 @@ mod tests {
 
     use std::{env, path::Path};
 
-    use krets_solver::solver::Solver;
+    use krets_solver::{config::SolverConfig, op_solver::OpSolver, solver::Solver};
 
     // Function to get the project root path at runtime
     fn manifest_dir() -> String {
@@ -24,9 +24,8 @@ mod tests {
         let path = Path::new(&circuits_dir())
             .join("circuit_simulation_farid_n_najm/circuit_simulation_farid_n_najm.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
-
-        let solver = Solver::new(circuit);
-        let solution = solver.solve_op();
+        let solver = OpSolver::new(circuit, SolverConfig::default());
+        let solution = solver.solve().unwrap();
         assert!((solution.get("V(4)").unwrap() - 1.9888).abs() < 1e-3);
         assert!((solution.get("V(8)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(3)").unwrap() - 2.00879).abs() < 1e-3);
