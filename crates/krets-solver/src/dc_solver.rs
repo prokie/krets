@@ -1,25 +1,25 @@
 use std::collections::HashMap;
 
-use faer::{
-    Mat,
-    prelude::Solve,
-    sparse::{SparseColMat, Triplet},
-};
-use krets_parser::{circuit::Circuit, elements::Element};
+use crate::config::SolverConfig;
+use crate::prelude::*;
+use crate::solver::{convergence_check, sum_triplets};
+use faer::Mat;
+use faer::prelude::Solve;
+use faer::sparse::{SparseColMat, Triplet};
+use krets_parser::circuit::Circuit;
+use krets_parser::elements::Element;
 
-use crate::{config::SolverConfig, solver::sum_triplets};
-use crate::{prelude::*, solver::convergence_check};
-pub struct OpSolver {
+pub struct DcSolver {
     pub config: SolverConfig,
     pub circuit: Circuit,
 }
 
-impl OpSolver {
+impl DcSolver {
     pub fn new(circuit: Circuit, config: SolverConfig) -> Self {
-        OpSolver { circuit, config }
+        DcSolver { circuit, config }
     }
 
-    pub fn solve(&self) -> Result<HashMap<String, f64>> {
+    pub fn solve(&self) -> Result<Vec<HashMap<String, f64>>> {
         let index_map = &self.circuit.index_map;
         let size = index_map.len();
 
@@ -41,6 +41,8 @@ impl OpSolver {
 
         let mut g_stamps = Vec::new();
         let mut e_stamps = Vec::new();
+
+        let mut results: Vec<HashMap<String, f64>> = vec![];
 
         for element in elements {
             g_stamps.extend(element.add_conductance_matrix_dc_stamp(index_map, &previous_result));
@@ -106,6 +108,6 @@ impl OpSolver {
             }
         }
 
-        Ok(result)
+        Ok(results)
     }
 }

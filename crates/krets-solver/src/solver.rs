@@ -1,3 +1,4 @@
+use crate::config;
 use crate::prelude::*;
 use faer::c64;
 use faer::sparse::SparseColMat;
@@ -193,6 +194,36 @@ pub fn sum_triplets(triplets: &[Triplet<usize, usize, f64>]) -> Vec<Triplet<usiz
     map.into_iter()
         .map(|((row, col), val)| Triplet { row, col, val })
         .collect()
+}
+
+pub fn convergence_check(
+    previous_result: &HashMap<String, f64>,
+    result: &HashMap<String, f64>,
+    config: &config::SolverConfig,
+) -> bool {
+    let reltol = config.relative_tolerance;
+    let current_tol = config.current_absolute_tolerance;
+    let voltage_tol = config.voltage_absolute_tolerance;
+
+    if previous_result.is_empty() {
+        return false;
+    }
+
+    result.iter().all(|(name, &value)| {
+        let prev_value = previous_result[name];
+
+        let diff = (value - prev_value).abs();
+        let scale = value.abs().max(prev_value.abs());
+
+        // Pick which absolute tolerance applies
+        let atol = if name.starts_with("I") {
+            current_tol
+        } else {
+            voltage_tol
+        };
+
+        diff <= reltol * scale + atol
+    })
 }
 
 #[allow(dead_code)]
