@@ -8,29 +8,11 @@ use std::collections::HashMap;
 
 pub struct Solver {
     circuit: Circuit,
-    relative_tolerance: f64,
-    current_absolute_tolerance: f64,
-    voltage_absolute_tolerance: f64,
-    maximum_iterations: usize,
-
-    /// Minimum resistance to consider in the solver. All resistors with a value below this will be converted to this value.
-    /// This is to avoid numerical issues with very small resistances.
-    minimum_resistance: f64,
-
-    minimum_conductance: f64,
 }
 
 impl Solver {
     pub const fn new(circuit: Circuit) -> Self {
-        Self {
-            circuit,
-            relative_tolerance: 0.001,
-            current_absolute_tolerance: 1e-12,
-            voltage_absolute_tolerance: 1e-6,
-            maximum_iterations: 300,
-            minimum_resistance: 1e-3,
-            minimum_conductance: 1e-12,
-        }
+        Self { circuit }
     }
 
     pub fn solve_dc(self, dc_analysis: DcAnalysis) -> Result<Vec<HashMap<String, f64>>> {

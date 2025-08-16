@@ -9,4 +9,8 @@ pub enum Error {
     // Error when an element is not found in the netlist
     #[error("Element '{0}' not found in the netlist")]
     ElementNotFound(String),
+
+    // Error when maximum iterations are exceeded
+    #[error("Maximum iterations exceeded: {0}")]
+    MaximumIterationsExceeded(usize),
 }

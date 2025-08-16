@@ -170,6 +170,16 @@ If the positive terminal is connect to node `i` and the node is not grounded, th
 == Analyses
 
 
+$
+  abs(x_"new" - x_"old") <= "relative_tolerance" * max(abs(x_"new"), abs(x_"old")) +
+  cases(
+    "current_absolute_tolerance",
+    "voltage_absolute_tolerance",
+  )
+$
+
+
+
 === DC
 
 During DC analysis, the circuit is analyzed under steady-state conditions with all capacitors treated as open circuits and all inductors treated as short circuits.

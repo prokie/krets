@@ -22,24 +22,33 @@ impl OpSolver {
     pub fn solve(&self) -> Result<HashMap<String, f64>> {
         let index_map = &self.circuit.index_map;
         let size = index_map.len();
-        let elements = &self.circuit.elements;
+
+        // Remove capacitors from elements since they are not included in DC analysis.
+        let elements = &self
+            .circuit
+            .elements
+            .iter()
+            .filter(|e| !matches!(e, Element::Capacitor(_)))
+            .collect::<Vec<_>>();
+
+        let non_linear_elements = &elements
+            .iter()
+            .filter(|e| e.is_nonlinear())
+            .collect::<Vec<_>>();
+
         let mut result = HashMap::new();
-        let mut previous_result = result.clone();
+        let mut previous_result = HashMap::new();
 
         let mut g_stamps = Vec::new();
         let mut e_stamps = Vec::new();
 
         for element in elements {
-            if !matches!(element, Element::Capacitor(_)) {
-                g_stamps
-                    .extend(element.add_conductance_matrix_dc_stamp(index_map, &previous_result));
-                e_stamps
-                    .extend(element.add_excitation_vector_dc_stamp(index_map, &previous_result));
-            }
+            g_stamps.extend(element.add_conductance_matrix_dc_stamp(index_map, &previous_result));
+            e_stamps.extend(element.add_excitation_vector_dc_stamp(index_map, &previous_result));
         }
 
         for iter in 0..self.config.maximum_iterations {
-            for nonlinear_element in elements.iter().filter(|e| matches!(e, Element::Diode(_))) {
+            for nonlinear_element in non_linear_elements {
                 // Subtract previous stamp
                 g_stamps.extend(
                     nonlinear_element.undo_conductance_matrix_dc_stamp(index_map, &previous_result),
@@ -75,21 +84,60 @@ impl OpSolver {
                 .map(|(node, &idx)| (node.clone(), x[(idx, 0)]))
                 .collect();
 
-            if !previous_result.is_empty()
-                && result
-                    .iter()
-                    .all(|(node, &value)| (value - previous_result[node]).abs() < 1e-12)
-            {
+            if non_linear_elements.is_empty() {
+                // If there are no nonlinear elements, we can exit early.
+                break;
+            }
+
+            if self.convergence_check(&previous_result, &result) {
                 println!("Converged after {} iterations", iter + 1);
                 break;
             }
-            previous_result = result.clone();
+
+            // Move current result to previous_result for next iteration
+            previous_result = std::mem::take(&mut result);
 
             if iter == self.config.maximum_iterations - 1 {
                 println!("Warning: Maximum iterations reached without convergence.");
+
+                return Err(Error::MaximumIterationsExceeded(
+                    self.config.maximum_iterations,
+                ));
             }
         }
 
         Ok(result)
+    }
+
+    fn convergence_check(
+        &self,
+        previous_result: &HashMap<String, f64>,
+        result: &HashMap<String, f64>,
+    ) -> bool {
+        let reltol = self.config.relative_tolerance;
+        let current_tol = self.config.current_absolute_tolerance;
+        let voltage_tol = self.config.voltage_absolute_tolerance;
+
+        if previous_result.is_empty() {
+            return false;
+        }
+
+        result.iter().all(|(name, &value)| {
+            let prev_value = previous_result[name];
+
+            let diff = (value - prev_value).abs();
+            let scale = value.abs().max(prev_value.abs());
+
+            // Pick which absolute tolerance applies
+            let atol = if name.starts_with("I") {
+                // assume currents prefixed with "I"
+                current_tol
+            } else {
+                // otherwise treat as voltage
+                voltage_tol
+            };
+
+            diff <= reltol * scale + atol
+        })
     }
 }

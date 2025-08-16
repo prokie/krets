@@ -194,6 +194,28 @@ impl Element {
             Element::MOSFET(e) => e.identifier(),
         }
     }
+
+    pub fn undo_conductance_matrix_dc_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        solution_map: &HashMap<String, f64>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        self.add_conductance_matrix_dc_stamp(index_map, solution_map)
+            .into_iter()
+            .map(|t| Triplet::new(t.row, t.col, -t.val))
+            .collect()
+    }
+
+    pub fn undo_excitation_vector_dc_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        solution_map: &HashMap<String, f64>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        self.add_excitation_vector_dc_stamp(index_map, solution_map)
+            .into_iter()
+            .map(|t| Triplet::new(t.row, t.col, -t.val))
+            .collect()
+    }
 }
 
 pub trait Identifiable {
