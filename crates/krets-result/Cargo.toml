@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-parquet = "54.2.1"
-polars = { version = "0.46.0", features = ["parquet"] }
+parquet = "56.2.0"
+polars = { version = "0.51.0", features = ["parquet"] }
 
 [lints]
 workspace = true

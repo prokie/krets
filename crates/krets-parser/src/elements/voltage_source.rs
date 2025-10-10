@@ -12,7 +12,7 @@ use super::{Identifiable, Stampable};
 pub struct VoltageSource {
     /// Name of the voltage source.
     pub name: u32,
-    /// Value of the voltage source.
+    /// Value of the DC voltage source.
     pub value: f64,
     /// Positive node of the voltage source.
     pub plus: String,
@@ -29,7 +29,7 @@ impl Identifiable for VoltageSource {
 }
 
 impl Stampable for VoltageSource {
-    fn conductance_matrix_dc_stamp(
+    fn add_conductance_matrix_dc_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -40,20 +40,20 @@ impl Stampable for VoltageSource {
 
         let mut triplets = Vec::with_capacity(4);
 
-        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-            triplets.push(Triplet::new(index_plus, index_current, 1.0));
-            triplets.push(Triplet::new(index_current, index_plus, 1.0));
+        if let (Some(&ip), Some(&ic)) = (index_plus, index_current) {
+            triplets.push(Triplet::new(ip, ic, 1.0));
+            triplets.push(Triplet::new(ic, ip, 1.0));
         }
 
-        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-            triplets.push(Triplet::new(index_minus, index_current, -1.0));
-            triplets.push(Triplet::new(index_current, index_minus, -1.0));
+        if let (Some(&im), Some(&ic)) = (index_minus, index_current) {
+            triplets.push(Triplet::new(im, ic, -1.0));
+            triplets.push(Triplet::new(ic, im, -1.0));
         }
 
         triplets
     }
 
-    fn conductance_matrix_ac_stamp(
+    fn add_conductance_matrix_ac_stamp(
         &self,
         index_map: &std::collections::HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -62,68 +62,47 @@ impl Stampable for VoltageSource {
         let index_plus = index_map.get(&format!("V({})", self.plus));
         let index_minus = index_map.get(&format!("V({})", self.minus));
         let index_current = index_map.get(&format!("I({})", self.identifier()));
-
+        let one = c64::new(1.0, 0.0);
         let mut triplets = Vec::with_capacity(4);
 
-        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-            triplets.push(Triplet::new(
-                index_plus,
-                index_current,
-                c64 { im: 0.0, re: 1.0 },
-            ));
-            triplets.push(Triplet::new(
-                index_current,
-                index_plus,
-                c64 { im: 0.0, re: 1.0 },
-            ));
+        if let (Some(&ip), Some(&ic)) = (index_plus, index_current) {
+            triplets.push(Triplet::new(ip, ic, one));
+            triplets.push(Triplet::new(ic, ip, one));
         }
 
-        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-            triplets.push(Triplet::new(
-                index_minus,
-                index_current,
-                c64 { im: 0.0, re: -1.0 },
-            ));
-            triplets.push(Triplet::new(
-                index_current,
-                index_minus,
-                c64 { im: 0.0, re: -1.0 },
-            ));
+        if let (Some(&im), Some(&ic)) = (index_minus, index_current) {
+            triplets.push(Triplet::new(im, ic, -one));
+            triplets.push(Triplet::new(ic, im, -one));
         }
 
         triplets
     }
 
-    fn excitation_vector_dc_stamp(
+    fn add_excitation_vector_dc_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>> {
         let mut triplets = Vec::with_capacity(1);
-        if let Some(&index_current) = index_map.get(&format!("I({})", self.identifier())) {
-            triplets.push(Triplet::new(index_current, 0, self.value));
+        if let Some(&ic) = index_map.get(&format!("I({})", self.identifier())) {
+            triplets.push(Triplet::new(ic, 0, self.value));
         }
         triplets
     }
 
-    fn excitation_vector_ac_stamp(
+    fn add_excitation_vector_ac_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
         _frequency: f64,
     ) -> Vec<Triplet<usize, usize, c64>> {
         let mut triplets = Vec::with_capacity(1);
-        if let Some(&index_current) = index_map.get(&format!("I({})", self.identifier())) {
-            if let Some(ac_amplitude) = self.ac_amplitude {
-                triplets.push(Triplet::new(
-                    index_current,
-                    0,
-                    c64 {
-                        im: 0.0,
-                        re: ac_amplitude,
-                    },
-                ));
-            }
+
+        if let (Some(&ic), Some(ac_amplitude)) = (
+            index_map.get(&format!("I({})", self.identifier())),
+            self.ac_amplitude,
+        ) {
+            triplets.push(Triplet::new(ic, 0, c64::new(ac_amplitude, 0.0)));
         }
         triplets
     }
@@ -143,42 +122,51 @@ impl FromStr for VoltageSource {
     type Err = crate::prelude::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let mut parts: Vec<&str> = s.split_whitespace().collect();
+        let s_without_comment = s.split('%').next().unwrap_or("").trim();
+        let parts: Vec<&str> = s_without_comment.split_whitespace().collect();
 
-        if parts.contains(&"%") {
-            let index = parts.iter().position(|&x| x == "%").unwrap();
-            parts.truncate(index);
+        if parts.len() != 4 && parts.len() != 6 {
+            return Err(Error::InvalidFormat(format!(
+                "Invalid voltage source format: Expected 4 or 6 parts, found {}, in '{s}'",
+                parts.len()
+            )));
         }
 
-        if parts.len() < 4 {
-            return Err(Error::InvalidFormat(
-                "Invalid voltage source format".to_string(),
-            ));
+        if !parts[0].starts_with(['V', 'v']) {
+            return Err(Error::InvalidFormat(format!(
+                "Invalid voltage source identifier: '{s}'"
+            )));
         }
 
         if parts[0].len() <= 1 {
-            return Err(Error::InvalidFormat(
-                "Voltage source name is too short".to_string(),
-            ));
+            return Err(Error::InvalidFormat(format!(
+                "Voltage source name is too short: '{s}'"
+            )));
         }
 
         let name = parts[0][1..]
             .parse::<u32>()
-            .map_err(|_| Error::InvalidNodeName("Invalid voltage source name".to_string()))?;
+            .map_err(|_| Error::InvalidNodeName(format!("Invalid voltage source name: '{s}'")))?;
         let plus = parts[1].to_string();
         let minus = parts[2].to_string();
-        let value = parts[3]
-            .parse::<f64>()
-            .map_err(|_| Error::InvalidFloatValue("Invalid voltage source value".to_string()))?;
+        let value = parts[3].parse::<f64>().map_err(|_| {
+            Error::InvalidFloatValue(format!("Invalid voltage source value: '{s}'"))
+        })?;
 
-        let ac_amplitude =
-            if parts.len() > 4 && parts[4].eq("AC") {
+        let ac_amplitude = if parts.len() == 6 {
+            if parts[4].eq_ignore_ascii_case("AC") {
                 Some(parts[5].parse::<f64>().map_err(|_| {
-                    Error::InvalidFloatValue("Invalid AC amplitude value".to_string())
+                    Error::InvalidFloatValue(format!("Invalid AC amplitude value: '{s}'"))
                 })?)
             } else {
-                None
-            };
+                return Err(Error::InvalidFormat(format!(
+                    "Invalid AC specification: expected 'AC', found '{}' in '{s}'",
+                    parts[4]
+                )));
+            }
+        } else {
+            None
+        };
 
         Ok(VoltageSource {
             name,
@@ -194,46 +182,55 @@ impl FromStr for VoltageSource {
 mod tests {
     use super::*;
 
+    // --- Parser Tests ---
     #[test]
     fn test_parse_voltage_source() {
-        let voltage_source_str = "V1 1 0 5";
-        let voltage_source = voltage_source_str.parse::<VoltageSource>().unwrap();
-
-        assert_eq!(voltage_source.name, 1);
-        assert_eq!(voltage_source.plus, "1");
-        assert_eq!(voltage_source.minus, "0");
-        assert_eq!(voltage_source.value, 5.0);
+        let s = "V1 1 0 5";
+        let vs = s.parse::<VoltageSource>().unwrap();
+        assert_eq!(vs.name, 1);
+        assert_eq!(vs.plus, "1");
+        assert_eq!(vs.minus, "0");
+        assert_eq!(vs.value, 5.0);
+        assert_eq!(vs.ac_amplitude, None);
     }
 
     #[test]
-    fn test_parse_voltage_source_with_comment() {
-        let voltage_source_str = "V1 1 0 5 % This is a comment";
-        let voltage_source = voltage_source_str.parse::<VoltageSource>().unwrap();
-
-        assert_eq!(voltage_source.name, 1);
-        assert_eq!(voltage_source.plus, "1");
-        assert_eq!(voltage_source.minus, "0");
-        assert_eq!(voltage_source.value, 5.0);
+    fn test_parse_with_ac() {
+        let s = "V2 3 4 0 AC 1.5";
+        let vs = s.parse::<VoltageSource>().unwrap();
+        assert_eq!(vs.name, 2);
+        assert_eq!(vs.value, 0.0);
+        assert_eq!(vs.ac_amplitude, Some(1.5));
     }
 
     #[test]
-    fn test_invalid_voltage_source_format() {
-        let voltage_source_str = "V1 1 0";
-        let result = voltage_source_str.parse::<VoltageSource>();
-        assert!(result.is_err());
+    fn test_parse_case_insensitive() {
+        let s = "v3 5 6 12 ac 10";
+        let vs = s.parse::<VoltageSource>().unwrap();
+        assert_eq!(vs.name, 3);
+        assert_eq!(vs.ac_amplitude, Some(10.0));
     }
 
     #[test]
-    fn test_invalid_voltage_source_name() {
-        let voltage_source_str = "V 1 0 5";
-        let result = voltage_source_str.parse::<VoltageSource>();
-        assert!(result.is_err());
+    fn test_parse_with_comment() {
+        let s = "V1 1 0 5 % DC value";
+        let vs = s.parse::<VoltageSource>().unwrap();
+        assert_eq!(vs.value, 5.0);
     }
 
     #[test]
-    fn test_invalid_voltage_source_value() {
-        let voltage_source_str = "V1 1 0 abc";
-        let result = voltage_source_str.parse::<VoltageSource>();
-        assert!(result.is_err());
+    fn test_invalid_format_too_few_parts() {
+        assert!("V1 1 0".parse::<VoltageSource>().is_err());
+    }
+
+    #[test]
+    fn test_invalid_format_too_many_parts() {
+        assert!("V1 1 0 5 6".parse::<VoltageSource>().is_err());
+    }
+
+    #[test]
+    fn test_invalid_ac_format() {
+        assert!("V1 1 0 5 AC".parse::<VoltageSource>().is_err()); // Missing value
+        assert!("V1 1 0 5 DC 1".parse::<VoltageSource>().is_err()); // Wrong keyword
     }
 }

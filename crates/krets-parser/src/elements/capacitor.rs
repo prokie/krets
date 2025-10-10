@@ -25,60 +25,16 @@ impl Identifiable for Capacitor {
 }
 
 impl Stampable for Capacitor {
-    // fn add_ac_stamp(&self, mna_matrix: &mut MnaMatrix, frequency: f64) {
-    //     let index_plus = mna_matrix.index_map.get(&format!("V({})", self.plus));
-    //     let index_minus = mna_matrix.index_map.get(&format!("V({})", self.minus));
-
-    //     let impedance = c64 {
-    //         re: 0.0,
-    //         im: -1.0 / (2.0 * PI * frequency * self.value),
-    //     };
-    //     let conductance_matrix = &mut mna_matrix.complex_conductance_matrix;
-
-    //     if !self.g2 {
-    //         if let Some(&index_plus) = index_plus {
-    //             conductance_matrix[(index_plus, index_plus)] += 1.0 / impedance;
-    //         }
-    //         if let Some(&index_minus) = index_minus {
-    //             conductance_matrix[(index_minus, index_minus)] += 1.0 / impedance
-    //         }
-
-    //         if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-    //             conductance_matrix[(index_plus, index_minus)] -= 1.0 / impedance;
-    //             conductance_matrix[(index_minus, index_plus)] -= 1.0 / impedance;
-    //         }
-    //     } else {
-    //         let index_current = mna_matrix
-    //             .index_map
-    //             .get(&format!("I({})", self.identifier()));
-
-    //         if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-    //             conductance_matrix[(index_current, index_plus)] = 1.0 / impedance;
-    //         }
-
-    //         if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-    //             conductance_matrix[(index_current, index_minus)] = 1.0 / impedance;
-    //         }
-
-    //         if let Some(&index_current) = index_current {
-    //             conductance_matrix[(index_current, index_current)] = c64 { re: 1.0, im: 0.0 };
-    //         }
-    //     }
-    // }
-
-    // fn add_dc_stamp(&self, _mna_matrix: &mut MnaMatrix) {
-    //     todo!()
-    // }
-
-    fn conductance_matrix_dc_stamp(
+    fn add_conductance_matrix_dc_stamp(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
     ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
-        todo!()
+        // A capacitor is an open circuit in DC analysis, so it contributes nothing to the DC conductance matrix.
+        vec![]
     }
 
-    fn conductance_matrix_ac_stamp(
+    fn add_conductance_matrix_ac_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -86,37 +42,40 @@ impl Stampable for Capacitor {
     ) -> Vec<faer::sparse::Triplet<usize, usize, c64>> {
         let index_plus = index_map.get(&format!("V({})", self.plus));
         let index_minus = index_map.get(&format!("V({})", self.minus));
-        let index_current = index_map.get(&format!("I({})", self.identifier()));
+
+        let admittance = c64 {
+            re: 0.0,
+            im: 2.0 * PI * frequency * self.value,
+        };
 
         let mut triplets = Vec::with_capacity(4);
 
-        let impedance = c64 {
-            re: 0.0,
-            im: -1.0 / (2.0 * PI * frequency * self.value),
-        };
-
         if !self.g2 {
             if let Some(&index_plus) = index_plus {
-                triplets.push(Triplet::new(index_plus, index_plus, 1.0 / impedance));
+                triplets.push(Triplet::new(index_plus, index_plus, admittance));
             }
             if let Some(&index_minus) = index_minus {
-                triplets.push(Triplet::new(index_minus, index_minus, 1.0 / impedance));
+                triplets.push(Triplet::new(index_minus, index_minus, admittance));
             }
-
             if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-                triplets.push(Triplet::new(index_plus, index_minus, -1.0 / impedance));
-                triplets.push(Triplet::new(index_minus, index_plus, -1.0 / impedance));
+                triplets.push(Triplet::new(index_plus, index_minus, -admittance));
+                triplets.push(Triplet::new(index_minus, index_plus, -admittance));
             }
         } else {
+            let index_current = index_map.get(&format!("I({})", self.identifier()));
+
             if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-                triplets.push(Triplet::new(index_current, index_plus, 1.0 / impedance));
+                // -Y contribution for V_plus
+                triplets.push(Triplet::new(index_current, index_plus, -admittance));
             }
 
             if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-                triplets.push(Triplet::new(index_current, index_minus, 1.0 / impedance));
+                // +Y contribution for V_minus
+                triplets.push(Triplet::new(index_current, index_minus, admittance));
             }
 
             if let Some(&index_current) = index_current {
+                // +1 contribution for I_c
                 triplets.push(Triplet::new(
                     index_current,
                     index_current,
@@ -128,20 +87,22 @@ impl Stampable for Capacitor {
         triplets
     }
 
-    fn excitation_vector_dc_stamp(
+    fn add_excitation_vector_dc_stamp(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
     ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
-        todo!()
+        // Capacitors are passive and don't contribute to the DC excitation vector.
+        vec![]
     }
 
-    fn excitation_vector_ac_stamp(
+    fn add_excitation_vector_ac_stamp(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
         _frequency: f64,
     ) -> Vec<faer::sparse::Triplet<usize, usize, c64>> {
+        // Capacitors are passive and don't contribute to the AC excitation vector.
         vec![]
     }
 }
@@ -150,16 +111,21 @@ impl FromStr for Capacitor {
     type Err = crate::prelude::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let mut parts: Vec<&str> = s.split_whitespace().collect();
+        // IMPROVEMENT: Handle comments more robustly by splitting the string
+        // at the comment character '%' before processing.
+        let s_without_comment = s.split('%').next().unwrap_or("").trim();
+        let parts: Vec<&str> = s_without_comment.split_whitespace().collect();
 
-        if parts.contains(&"%") {
-            let index = parts.iter().position(|&x| x == "%").unwrap();
-            parts.truncate(index);
-        }
-
-        if parts.len() != 4 && parts.len() != 5 {
+        if parts.len() < 4 || parts.len() > 5 {
             return Err(Error::InvalidFormat(format!(
                 "Invalid capacitor format: '{s}'"
+            )));
+        }
+
+        // FIX: Add check for identifier prefix 'C'
+        if !parts[0].starts_with(['C', 'c']) {
+            return Err(Error::InvalidFormat(format!(
+                "Invalid capacitor identifier: '{s}'"
             )));
         }
 
@@ -177,7 +143,18 @@ impl FromStr for Capacitor {
         let value = parts[3]
             .parse::<f64>()
             .map_err(|_| Error::InvalidFloatValue(format!("Invalid capacitor value: '{s}'")))?;
-        let g2 = parts.len() == 5 && parts[4] == "G2";
+
+        let g2 = if parts.len() == 5 {
+            if parts[4].eq_ignore_ascii_case("G2") {
+                true
+            } else {
+                return Err(Error::InvalidFormat(format!(
+                    "Invalid 5th argument for capacitor: '{s}'. Expected 'G2'."
+                )));
+            }
+        } else {
+            false
+        };
 
         Ok(Capacitor {
             name,
@@ -230,6 +207,35 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_capacitor_with_comment_no_space() {
+        let capacitor_str = "C1 1 0 1e-6%This is a comment";
+        let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
+
+        assert_eq!(capacitor.name, 1);
+        assert_eq!(capacitor.value, 1e-6);
+        assert!(!capacitor.g2);
+    }
+
+    #[test]
+    fn test_parse_capacitor_with_g2_and_comment() {
+        let capacitor_str = "c2 3 4 10e-9 G2 % comment";
+        let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
+
+        assert_eq!(capacitor.name, 2);
+        assert_eq!(capacitor.value, 10e-9);
+        assert!(capacitor.g2);
+    }
+
+    #[test]
+    fn test_parse_lowercase() {
+        let capacitor_str = "c1 1 0 1e-6 g2";
+        let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
+
+        assert_eq!(capacitor.name, 1);
+        assert!(capacitor.g2);
+    }
+
+    #[test]
     fn test_invalid_capacitor_format() {
         let capacitor_str = "C1 1 0";
         let result = capacitor_str.parse::<Capacitor>();
@@ -239,6 +245,20 @@ mod tests {
     #[test]
     fn test_invalid_capacitor_name() {
         let capacitor_str = "C 1 0 0.000001";
+        let result = capacitor_str.parse::<Capacitor>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_identifier_prefix() {
+        let capacitor_str = "R1 1 0 100";
+        let result = capacitor_str.parse::<Capacitor>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_fifth_argument() {
+        let capacitor_str = "C1 1 0 1e-6 G3";
         let result = capacitor_str.parse::<Capacitor>();
         assert!(result.is_err());
     }

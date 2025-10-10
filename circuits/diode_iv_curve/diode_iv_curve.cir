@@ -4,13 +4,13 @@ R1 in out 1000
 D1 out 0 DMOD
 
 
-.model DMOD D
+.model DMOD D (is=1e-12)
 
 
 
 .control
 options abstol=1e-12 reltol=1e-6
-dc V1 0 2.0 0.01
+op
 save all
 print all
 .endc

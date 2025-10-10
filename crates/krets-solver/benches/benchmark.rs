@@ -10,8 +10,8 @@ fn benchmark_resistor_ladder_500(c: &mut Criterion) {
 
     c.bench_function("resistor_ladder_500", |b| {
         b.iter(|| {
-            let solver = Solver::new(circuit.clone());
-            let solution = solver.solve_op();
+            let mut solver = Solver::new(circuit.clone());
+            let solution = solver.solve();
             black_box(solution);
         })
     });
@@ -24,7 +24,7 @@ fn benchmark_resistor_ladder_1000(c: &mut Criterion) {
     c.bench_function("resistor_ladder_1000", |b| {
         b.iter(|| {
             let solver = Solver::new(circuit.clone());
-            let solution = solver.solve_op();
+            let solution = solver.solve();
             black_box(solution);
         })
     });
@@ -37,7 +37,7 @@ fn benchmark_resistor_ladder_5000(c: &mut Criterion) {
     c.bench_function("resistor_ladder_5000", |b| {
         b.iter(|| {
             let solver = Solver::new(circuit.clone());
-            let solution = solver.solve_op();
+            let solution = solver.solve();
             black_box(solution);
         })
     });

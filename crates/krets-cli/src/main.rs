@@ -16,6 +16,6 @@ fn main() {
     let circuit_path = std::path::Path::new(&args.circuit);
     let circuit = krets_parser::parser::parse_circuit_description_file(circuit_path).unwrap();
 
-    let solver = Solver::new(circuit);
-    let _solution = solver.solve_op();
+    // let solver = Solver::new(circuit);
+    // let _solution = solver.solve_op();
 }

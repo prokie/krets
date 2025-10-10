@@ -4,7 +4,6 @@ My SPICE circuit simulator called `krets` written in rust.
 
 I am doing this project to learn rust.
 
-
 ## Supported components
 
 - [ ] BJT
@@ -17,7 +16,6 @@ I am doing this project to learn rust.
 - [x] Resistor
 - [x] Voltage Source
 - [ ] Subcircuit definitions
-
 
 ## Supported analyses
 
