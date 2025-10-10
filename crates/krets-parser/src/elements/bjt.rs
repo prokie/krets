@@ -30,7 +30,7 @@ pub struct BJT {
 }
 
 impl Identifiable for BJT {
-    /// Returns the identifier of the resistor in the format `R{name}`.
+    /// Returns the identifier of the BJT in the format `Q{name}`.
     fn identifier(&self) -> String {
         format!("Q{}", self.name)
     }
@@ -42,20 +42,46 @@ impl FromStr for BJT {
     fn from_str(s: &str) -> Result<Self> {
         let parts: Vec<&str> = s.split_whitespace().collect();
 
-        if parts.len() != 4 && parts.len() != 5 {
-            return Err(Error::InvalidFormat("Invalid BJT format".to_string()));
+        if parts.len() < 4 || parts.len() > 5 {
+            return Err(Error::InvalidFormat(format!(
+                "Invalid BJT format: Expected 4 or 5 parts, but found {}",
+                parts.len()
+            )));
         }
 
-        if parts[0].len() <= 2 {
-            return Err(Error::InvalidFormat("BJT name is too short".to_string()));
+        let identifier = parts[0];
+        if !identifier.starts_with(['Q', 'q']) {
+            return Err(Error::InvalidFormat(
+                "Invalid BJT identifier: Must start with 'Q'.".to_string(),
+            ));
         }
 
-        let name = parts[0][2..]
+        let bjt_type = match identifier.chars().nth(1) {
+            Some('N') | Some('n') => BjtType::NPN,
+            Some('P') | Some('p') => BjtType::PNP,
+            _ => {
+                // FIX: Corrected the error message from "MOSFET" to "BJT".
+                return Err(Error::InvalidFormat(
+                    "Invalid BJT type in identifier. Expected 'N' or 'P' after 'Q'.".to_string(),
+                ));
+            }
+        };
+
+        // This check is now safer because we've already confirmed the first two chars
+        if identifier.len() < 3 {
+            return Err(Error::InvalidFormat(
+                "Invalid BJT identifier: Missing number after type.".to_string(),
+            ));
+        }
+
+        let name = identifier[2..]
             .parse::<u32>()
-            .map_err(|_| Error::InvalidNodeName("Invalid BJT name".to_string()))?;
+            .map_err(|_| Error::InvalidNodeName("Invalid BJT name number".to_string()))?;
+
         let collector = parts[1].to_string();
         let base = parts[2].to_string();
         let emitter = parts[3].to_string();
+
         let value = if parts.len() == 5 {
             Some(
                 parts[4]
@@ -64,14 +90,6 @@ impl FromStr for BJT {
             )
         } else {
             None
-        };
-
-        let bjt_type = match parts[0].chars().nth(1).unwrap() {
-            'N' => BjtType::NPN,
-            'n' => BjtType::NPN,
-            'P' => BjtType::PNP,
-            'p' => BjtType::PNP,
-            _ => return Err(Error::InvalidFormat("Invalid MOSFET format".to_string())),
         };
 
         Ok(BJT {
@@ -100,6 +118,7 @@ mod tests {
         assert_eq!(bjt.emitter, "3");
         assert_eq!(bjt.value, Some(0.7));
         assert_eq!(bjt.bjt_type, BjtType::NPN);
+        assert_eq!(bjt.identifier(), "Q1");
     }
 
     #[test]
@@ -113,6 +132,7 @@ mod tests {
         assert_eq!(bjt.emitter, "6");
         assert_eq!(bjt.value, Some(0.8));
         assert_eq!(bjt.bjt_type, BjtType::PNP);
+        assert_eq!(bjt.identifier(), "Q1");
     }
 
     #[test]
@@ -126,11 +146,33 @@ mod tests {
         assert_eq!(bjt.emitter, "9");
         assert_eq!(bjt.value, None);
         assert_eq!(bjt.bjt_type, BjtType::NPN);
+        assert_eq!(bjt.identifier(), "Q2");
     }
 
     #[test]
-    fn test_invalid_bjt_format() {
+    fn test_invalid_bjt_format_parts() {
         let bjt_str = "QN1 1 2";
+        let result = bjt_str.parse::<BJT>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_bjt_type() {
+        let bjt_str = "QX1 1 2 3";
+        let result = bjt_str.parse::<BJT>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_bjt_name() {
+        let bjt_str = "QNa 1 2 3";
+        let result = bjt_str.parse::<BJT>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_malformed_identifier() {
+        let bjt_str = "Q 1 2 3";
         let result = bjt_str.parse::<BJT>();
         assert!(result.is_err());
     }

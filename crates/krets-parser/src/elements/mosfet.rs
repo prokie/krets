@@ -31,7 +31,7 @@ pub struct MOSFET {
 }
 
 impl Identifiable for MOSFET {
-    /// Returns the identifier of the resistor in the format `R{name}`.
+    /// Returns the identifier of the MOSFET in the format `M{name}`.
     fn identifier(&self) -> String {
         format!("M{}", self.name)
     }
@@ -41,39 +41,56 @@ impl FromStr for MOSFET {
     type Err = crate::prelude::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let parts: Vec<&str> = s.split_whitespace().collect();
+        let s_without_comment = s.split('%').next().unwrap_or("").trim();
+        let parts: Vec<&str> = s_without_comment.split_whitespace().collect();
 
         if parts.len() != 4 && parts.len() != 5 {
-            return Err(Error::InvalidFormat("Invalid MOSFET format".to_string()));
+            return Err(Error::InvalidFormat(format!(
+                "Invalid MOSFET format: Expected 4 or 5 parts, found {}, in '{s}'",
+                parts.len()
+            )));
         }
 
-        if parts[0].len() <= 2 {
-            return Err(Error::InvalidFormat("MOSFET name is too short".to_string()));
+        let identifier = parts[0];
+
+        if !identifier.starts_with(['M', 'm']) {
+            return Err(Error::InvalidFormat(format!(
+                "Invalid MOSFET identifier: must start with 'M', in '{s}'"
+            )));
         }
 
-        let name = parts[0][2..]
+        if identifier.len() < 3 {
+            return Err(Error::InvalidFormat(format!(
+                "MOSFET name is too short: expected format M<type><name>, in '{s}'"
+            )));
+        }
+
+        let mosfet_type = match identifier.chars().nth(1) {
+            Some('N') | Some('n') => MosfetType::NChannel,
+            Some('P') | Some('p') => MosfetType::PChannel,
+            _ => {
+                return Err(Error::InvalidFormat(format!(
+                    "Invalid MOSFET type: expected 'N' or 'P' as the second character, in '{s}'"
+                )));
+            }
+        };
+
+        let name = identifier[2..]
             .parse::<u32>()
-            .map_err(|_| Error::InvalidNodeName("Invalid MOSFET name".to_string()))?;
+            .map_err(|_| Error::InvalidNodeName(format!("Invalid MOSFET name: '{s}'")))?;
         let drain = parts[1].to_string();
         let gate = parts[2].to_string();
         let source = parts[3].to_string();
-        let value = if parts.len() == 5 {
-            Some(
-                parts[4]
-                    .parse::<f64>()
-                    .map_err(|_| Error::InvalidFloatValue("Invalid MOSFET value".to_string()))?,
-            )
-        } else {
-            None
-        };
 
-        let mosfet_type = match parts[0].chars().nth(1).unwrap() {
-            'N' => MosfetType::NChannel,
-            'n' => MosfetType::NChannel,
-            'P' => MosfetType::PChannel,
-            'p' => MosfetType::PChannel,
-            _ => return Err(Error::InvalidFormat("Invalid MOSFET format".to_string())),
-        };
+        let value =
+            if parts.len() == 5 {
+                Some(parts[4].parse::<f64>().map_err(|_| {
+                    Error::InvalidFloatValue(format!("Invalid MOSFET value: '{s}'"))
+                })?)
+            } else {
+                None
+            };
+
         Ok(MOSFET {
             name,
             drain,
@@ -103,7 +120,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_pchannel_mosfet() {
+    fn test_parse_pchannel_mosfet_case_insensitive() {
         let mosfet_str = "mP1 4 5 6 2.5";
         let mosfet = mosfet_str.parse::<MOSFET>().unwrap();
 
@@ -129,9 +146,37 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_with_comment() {
+        let s = "MP3 1 2 3 % My P-Channel FET";
+        let mosfet = s.parse::<MOSFET>().unwrap();
+        assert_eq!(mosfet.name, 3);
+        assert_eq!(mosfet.mosfet_type, MosfetType::PChannel);
+    }
+
+    #[test]
     fn test_invalid_mosfet_format() {
         let mosfet_str = "MN1 1 2";
         let result = mosfet_str.parse::<MOSFET>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_error_on_short_name() {
+        assert!("M1 1 2 3".parse::<MOSFET>().is_err());
+        assert!("M 1 2 3".parse::<MOSFET>().is_err());
+    }
+
+    #[test]
+    fn test_invalid_type_char() {
+        let s = "MX1 1 2 3";
+        let result = s.parse::<MOSFET>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_prefix() {
+        let s = "R1 1 2 3";
+        let result = s.parse::<MOSFET>();
         assert!(result.is_err());
     }
 }
