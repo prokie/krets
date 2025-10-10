@@ -7,7 +7,7 @@ edition = "2024"
 clap = { version = "4.5.32", features = ["derive"] }
 krets-parser = { path = "../krets-parser" }
 krets-solver = { path = "../krets-solver" }
-
+krets-result = { path = "../krets-result" }
 
 [lints]
 workspace = true
