@@ -33,4 +33,8 @@ pub enum Error {
     /// Error indicating that an unknown element type was encountered in the input string.
     #[error("Unknown element type: {0}")]
     UnknownElementType(String),
+
+    /// Error indicating a parsing failure on a specific line of the netlist.
+    #[error("Parse error on line {line}: {message}")]
+    ParseError { line: usize, message: String },
 }

@@ -1,111 +1,94 @@
 use std::collections::HashMap;
 
+use crate::{
+    config::SolverConfig,
+    prelude::*,
+    solver::{convergence_check, sum_triplets},
+};
 use faer::{
     Mat,
     prelude::Solve,
     sparse::{SparseColMat, Triplet},
 };
-use krets_parser::{circuit::Circuit, elements::Element};
+use krets_parser::{
+    circuit::Circuit,
+    elements::{Element, Stampable},
+};
 
-use crate::{config::SolverConfig, solver::sum_triplets};
-use crate::{prelude::*, solver::convergence_check};
-pub struct OpSolver {
-    pub config: SolverConfig,
-    pub circuit: Circuit,
-}
+/// Solves for the DC operating point of the circuit.
+///
+/// This function implements the Newton-Raphson iterative method to find the DC steady-state
+/// solution for a potentially non-linear circuit.
+pub fn solve(circuit: &Circuit, config: &SolverConfig) -> Result<HashMap<String, f64>> {
+    let index_map = &circuit.index_map;
+    let size = index_map.len();
 
-impl OpSolver {
-    pub fn new(circuit: Circuit, config: SolverConfig) -> Self {
-        OpSolver { circuit, config }
-    }
+    // Capacitors act as open circuits in DC analysis and can be filtered out.
+    let elements: Vec<&Element> = circuit
+        .elements
+        .iter()
+        .filter(|e| !matches!(e, Element::Capacitor(_)))
+        .collect();
 
-    pub fn solve(&self) -> Result<HashMap<String, f64>> {
-        let index_map = &self.circuit.index_map;
-        let size = index_map.len();
+    // Check if the circuit contains any non-linear elements. If not, the solver
+    // only needs to run for one iteration.
+    let has_nonlinear_elements = elements.iter().any(|e| e.is_nonlinear());
 
-        // Remove capacitors from elements since they are not included in DC analysis.
-        let elements = &self
-            .circuit
-            .elements
-            .iter()
-            .filter(|e| !matches!(e, Element::Capacitor(_)))
-            .collect::<Vec<_>>();
+    let mut result = HashMap::new();
+    let mut previous_result = HashMap::new();
 
-        let non_linear_elements = &elements
-            .iter()
-            .filter(|e| e.is_nonlinear())
-            .collect::<Vec<_>>();
-
-        let mut result = HashMap::new();
-        let mut previous_result = HashMap::new();
-
+    for iter in 0..config.maximum_iterations {
+        // --- Rebuild MNA matrices in each iteration ---
+        // This is the core of the Newton-Raphson method. The Jacobian (g_stamps)
+        // and the RHS vector (e_stamps) are recalculated based on the solution from
+        // the previous iteration (`previous_result`).
         let mut g_stamps = Vec::new();
         let mut e_stamps = Vec::new();
 
-        for element in elements {
+        for element in &elements {
             g_stamps.extend(element.add_conductance_matrix_dc_stamp(index_map, &previous_result));
             e_stamps.extend(element.add_excitation_vector_dc_stamp(index_map, &previous_result));
         }
 
-        for iter in 0..self.config.maximum_iterations {
-            for nonlinear_element in non_linear_elements {
-                // Subtract previous stamp
-                g_stamps.extend(
-                    nonlinear_element.undo_conductance_matrix_dc_stamp(index_map, &previous_result),
-                );
-                e_stamps.extend(
-                    nonlinear_element.undo_excitation_vector_dc_stamp(index_map, &previous_result),
-                );
+        let g_stamps_summed = sum_triplets(&g_stamps);
+        let e_stamps_summed = sum_triplets(&e_stamps);
 
-                // Add new stamp
-                g_stamps
-                    .extend(nonlinear_element.add_conductance_matrix_dc_stamp(index_map, &result));
-                e_stamps
-                    .extend(nonlinear_element.add_excitation_vector_dc_stamp(index_map, &result));
-            }
+        let lu = SparseColMat::try_new_from_triplets(size, size, &g_stamps_summed)
+            .expect("Failed to build sparse matrix")
+            .sp_lu()
+            .expect("LU decomposition failed");
 
-            let g_stamps = sum_triplets(&g_stamps);
-            let e_stamps = sum_triplets(&e_stamps);
-
-            let lu = SparseColMat::try_new_from_triplets(size, size, &g_stamps)
-                .expect("Failed to build sparse matrix")
-                .sp_lu()
-                .expect("LU decomposition failed");
-
-            let mut b = Mat::zeros(size, 1);
-            for &Triplet { row, col, val } in &e_stamps {
-                b[(row, col)] = val;
-            }
-
-            let x = lu.solve(&b);
-
-            result = index_map
-                .iter()
-                .map(|(node, &idx)| (node.clone(), x[(idx, 0)]))
-                .collect();
-
-            if non_linear_elements.is_empty() {
-                // If there are no nonlinear elements, we can exit early.
-                break;
-            }
-
-            if convergence_check(&previous_result, &result, &self.config) {
-                println!("Converged after {} iterations", iter + 1);
-                break;
-            }
-
-            // Move current result to previous_result for next iteration
-            previous_result = std::mem::take(&mut result);
-
-            if iter == self.config.maximum_iterations - 1 {
-                println!("Warning: Maximum iterations reached without convergence.");
-
-                return Err(Error::MaximumIterationsExceeded(
-                    self.config.maximum_iterations,
-                ));
-            }
+        let mut b = Mat::zeros(size, 1);
+        for &Triplet { row, col, val } in &e_stamps_summed {
+            b[(row, col)] = val;
         }
 
-        Ok(result)
+        let x = lu.solve(&b);
+
+        result = index_map
+            .iter()
+            .map(|(node, &idx)| (node.clone(), x[(idx, 0)]))
+            .collect();
+
+        // For purely linear circuits, we only need one iteration.
+        if !has_nonlinear_elements {
+            break;
+        }
+
+        if convergence_check(&previous_result, &result, config) {
+            println!("Converged after {} iterations", iter + 1);
+            break;
+        }
+
+        // Move current result to previous_result for the next iteration.
+        previous_result = result.clone();
+
+        if iter == config.maximum_iterations - 1 {
+            println!("Warning: Maximum iterations reached without convergence.");
+            return Err(Error::MaximumIterationsExceeded(config.maximum_iterations));
+        }
     }
+
+    // Return the final converged operating point solution.
+    Ok(result)
 }

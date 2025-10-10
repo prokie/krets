@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{elements::Stampable, prelude::*};
 use std::str::FromStr;
 
 use super::Identifiable;
@@ -33,6 +33,42 @@ impl Identifiable for BJT {
     /// Returns the identifier of the BJT in the format `Q{name}`.
     fn identifier(&self) -> String {
         format!("Q{}", self.name)
+    }
+}
+
+impl Stampable for BJT {
+    fn add_conductance_matrix_dc_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+        _solution_map: &std::collections::HashMap<String, f64>,
+    ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
+        todo!()
+    }
+
+    fn add_excitation_vector_dc_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+        _solution_map: &std::collections::HashMap<String, f64>,
+    ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
+        todo!()
+    }
+
+    fn add_excitation_vector_ac_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+        _solution_map: &std::collections::HashMap<String, f64>,
+        _frequency: f64,
+    ) -> Vec<faer::sparse::Triplet<usize, usize, faer::c64>> {
+        todo!()
+    }
+
+    fn add_conductance_matrix_ac_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+        _solution_map: &std::collections::HashMap<String, f64>,
+        _frequency: f64,
+    ) -> Vec<faer::sparse::Triplet<usize, usize, faer::c64>> {
+        todo!()
     }
 }
 

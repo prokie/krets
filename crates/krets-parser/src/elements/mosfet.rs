@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{elements::Stampable, prelude::*};
 use std::str::FromStr;
 
 use super::Identifiable;
@@ -34,6 +34,42 @@ impl Identifiable for MOSFET {
     /// Returns the identifier of the MOSFET in the format `M{name}`.
     fn identifier(&self) -> String {
         format!("M{}", self.name)
+    }
+}
+
+impl Stampable for MOSFET {
+    fn add_conductance_matrix_dc_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+        _solution_map: &std::collections::HashMap<String, f64>,
+    ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
+        todo!()
+    }
+
+    fn add_excitation_vector_dc_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+        _solution_map: &std::collections::HashMap<String, f64>,
+    ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
+        todo!()
+    }
+
+    fn add_excitation_vector_ac_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+        _solution_map: &std::collections::HashMap<String, f64>,
+        _frequency: f64,
+    ) -> Vec<faer::sparse::Triplet<usize, usize, faer::c64>> {
+        todo!()
+    }
+
+    fn add_conductance_matrix_ac_stamp(
+        &self,
+        _index_map: &std::collections::HashMap<String, usize>,
+        _solution_map: &std::collections::HashMap<String, f64>,
+        _frequency: f64,
+    ) -> Vec<faer::sparse::Triplet<usize, usize, faer::c64>> {
+        todo!()
     }
 }
 

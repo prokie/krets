@@ -1,19 +1,22 @@
 #[cfg(test)]
 mod tests {
-
+    use krets_parser::analyses::Analysis;
+    use krets_solver::{config::SolverConfig, solver::Solver};
     use std::{env, path::Path};
-
-    use krets_solver::{config::SolverConfig, op_solver::OpSolver, solver::Solver};
 
     // Function to get the project root path at runtime
     fn manifest_dir() -> String {
-        env::var("CARGO_MANIFEST_DIR").unwrap()
+        env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string())
     }
 
     // Function to get the circuits directory path
     fn circuits_dir() -> String {
+        // Adjust the path to navigate from the crate's root to the workspace root's circuits dir
         Path::new(&manifest_dir())
-            .join("../../circuits/")
+            .parent() // Go up from crates/krets-solver
+            .and_then(Path::parent) // Go up from crates
+            .unwrap()
+            .join("circuits/")
             .to_str()
             .unwrap()
             .to_string()
@@ -24,8 +27,11 @@ mod tests {
         let path = Path::new(&circuits_dir())
             .join("circuit_simulation_farid_n_najm/circuit_simulation_farid_n_najm.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
-        let solver = OpSolver::new(circuit, SolverConfig::default());
-        let solution = solver.solve().unwrap();
+        let config = SolverConfig::default();
+        let mut solver = Solver::new(circuit, config);
+        let analysis = Analysis::Op;
+        let solution = solver.solve(analysis).unwrap().into_op();
+
         assert!((solution.get("V(4)").unwrap() - 1.9888).abs() < 1e-3);
         assert!((solution.get("V(8)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(3)").unwrap() - 2.00879).abs() < 1e-3);
@@ -52,8 +58,9 @@ R3 2 0 8
 V2 3 0 20
     ";
         let circuit = krets_parser::parser::parse_circuit_description(circuit_description).unwrap();
-        let solver = Solver::new(circuit);
-        let solution = solver.solve_op();
+        let config = SolverConfig::default();
+        let mut solver = Solver::new(circuit, config);
+        let solution = solver.solve(Analysis::Op).unwrap().into_op();
 
         assert!((solution.get("V(1)").unwrap() - (-8.0)).abs() < 1e-3);
         assert!((solution.get("V(2)").unwrap() - 24.0).abs() < 1e-3);
@@ -66,8 +73,9 @@ V2 3 0 20
     fn test_voltage_divider() {
         let path = Path::new(&circuits_dir()).join("voltage_divider/voltage_divider.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
-        let solver = Solver::new(circuit);
-        let solution = solver.solve_op();
+        let config = SolverConfig::default();
+        let mut solver = Solver::new(circuit, config);
+        let solution = solver.solve(Analysis::Op).unwrap().into_op();
 
         assert!((solution.get("V(in)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(out)").unwrap() - 2.0 / 3.0).abs() < 1e-3);
@@ -78,8 +86,9 @@ V2 3 0 20
     fn test_low_pass_filter_op() {
         let path = Path::new(&circuits_dir()).join("low_pass_filter/low_pass_filter.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
-        let solver = Solver::new(circuit);
-        let solution = solver.solve_op();
+        let config = SolverConfig::default();
+        let mut solver = Solver::new(circuit, config);
+        let solution = solver.solve(Analysis::Op).unwrap().into_op();
 
         assert!((solution.get("V(in)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(out)").unwrap() - 1.0).abs() < 1e-3);
@@ -89,8 +98,9 @@ V2 3 0 20
     fn test_high_pass_filter_op() {
         let path = Path::new(&circuits_dir()).join("high_pass_filter/high_pass_filter.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
-        let solver = Solver::new(circuit);
-        let solution = solver.solve_op();
+        let config = SolverConfig::default();
+        let mut solver = Solver::new(circuit, config);
+        let solution = solver.solve(Analysis::Op).unwrap().into_op();
 
         assert!((solution.get("V(in)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(out)").unwrap() - 1.0).abs() < 1e-3);
@@ -100,8 +110,9 @@ V2 3 0 20
     fn test_basic_001_op() {
         let path = Path::new(&circuits_dir()).join("basic_001/basic_001.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
-        let solver = Solver::new(circuit);
-        let solution = solver.solve_op();
+        let config = SolverConfig::default();
+        let mut solver = Solver::new(circuit, config);
+        let solution = solver.solve(Analysis::Op).unwrap().into_op();
 
         assert!((solution.get("V(1)").unwrap() - 3.0).abs() < 1e-3);
         assert!((solution.get("V(2)").unwrap() - 0.5).abs() < 1e-3);
@@ -112,8 +123,9 @@ V2 3 0 20
     fn test_resistor_ladder_500_op() {
         let path = Path::new(&circuits_dir()).join("resistor_ladder_500/resistor_ladder_500.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
-        let solver = Solver::new(circuit);
-        let solution = solver.solve_op();
+        let config = SolverConfig::default();
+        let mut solver = Solver::new(circuit, config);
+        let solution = solver.solve(Analysis::Op).unwrap().into_op();
         assert!((solution.get("V(1)").unwrap() - 1.0).abs() < 1e-3);
         assert!((solution.get("V(2)").unwrap() - (1.0 - 1.0 / 500.0)).abs() < 1e-3);
     }
@@ -122,8 +134,9 @@ V2 3 0 20
     fn test_diode_iv_curve_op() {
         let path = Path::new(&circuits_dir()).join("diode_iv_curve/diode_iv_curve.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
-        let solver = Solver::new(circuit);
-        let solution = solver.solve_op();
+        let config = SolverConfig::default();
+        let mut solver = Solver::new(circuit, config);
+        let solution = solver.solve(Analysis::Op).unwrap().into_op();
         assert!((solution.get("V(out)").unwrap() - 0.517).abs() < 1e-3);
         assert!((solution.get("I(V1)").unwrap() - 4.82e-04).abs() < 1e-3);
     }

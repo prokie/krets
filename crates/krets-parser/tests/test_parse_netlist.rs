@@ -73,7 +73,7 @@ mod tests {
     fn test_parse_invalid_format() {
         let netlist = "V1 1 0";
         let circuit = parse_circuit_description(netlist);
-        assert!(matches!(circuit, Err(Error::InvalidFormat(_))));
+        assert!(matches!(circuit, Err(Error::ParseError { .. })));
     }
 
     #[test]
