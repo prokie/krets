@@ -1,4 +1,6 @@
 /// Configuration structure for controlling solver parameters across different simulation types
+
+#[derive(Clone, Debug)]
 pub struct SolverConfig {
     /// Tolerance for convergence based on relative error
     pub relative_tolerance: f64,
