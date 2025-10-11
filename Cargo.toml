@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/krets-cli",
+    "crates/krets-gui",
     "crates/krets-parser",
     "crates/krets-result",
     "crates/krets-solver",
