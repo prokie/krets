@@ -103,7 +103,7 @@ impl Element {
             // Voltage sources and inductors are always group 2.
             Element::VoltageSource(_) | Element::Inductor(_) => true,
             // The parser determines if these are Group 2.
-            Element::Resistor(_) => true,
+            Element::Resistor(e) => e.g2,
             Element::Capacitor(e) => e.g2,
             Element::CurrentSource(_) => true,
             // Non-linear elements are linearized into Group 1 companion models.

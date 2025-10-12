@@ -157,7 +157,7 @@ impl Stampable for Capacitor {
         let v_prev = v_plus_prev - v_minus_prev;
 
         // Calculate the equivalent current source value: I_eq = (C/h) * v_prev
-        let i_eq = (self.value / h) * v_prev;
+        let i_eq = -(self.value / h) * v_prev;
 
         let mut triplets = Vec::with_capacity(2);
 

@@ -124,34 +124,37 @@ mod tests {
         let mut solver = Solver::new(circuit, config);
 
         let tran_analysis = TransientAnalysis {
-            time_step: 50e-6,
-            stop_time: 5e-3, // 5ms
+            time_step: 50e-6, // 50us
+            stop_time: 50e-3, // 50ms
         };
 
         let solution = solver.solve(Analysis::Transient(tran_analysis)).unwrap();
-
+        // print_results_to_console(&solution);
         let transient_solution = solution.clone().into_transient();
 
         // --- Check initial condition (t=0) ---
-        // This is the DC operating point. Capacitor is an open circuit.
         let result_t0 = &transient_solution[0];
         assert!((result_t0.get("V(in)").unwrap() - 0.0).abs() < 1e-3);
         assert!((result_t0.get("V(out)").unwrap() - 0.0).abs() < 1e-3);
 
-        // --- Check one time constant (t=1ms) ---
-        // For an RC circuit, Vc(t) = V_final * (1 - exp(-t/RC))
-        // Here, R=1k, C=1uF, so RC = 1ms. V_final = 1V.
-        // At t=1ms, Vc = 1 * (1 - exp(-1)) = 0.6321V
-        // let result_t1ms = &transient_solution[10]; // Step 10 corresponds to t = 10 * 100us = 1ms
+        let result_t5ms = transient_solution.last().unwrap();
+        assert!((result_t5ms.get("V(out)").unwrap() - 0.989).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_low_pass_filter_transient() {
+        let path = Path::new(&circuits_dir()).join("low_pass_filter/low_pass_filter.cir");
+        let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
+        let config = SolverConfig::default();
+        let mut solver = Solver::new(circuit, config);
+
+        let tran_analysis = TransientAnalysis {
+            time_step: 50e-6, // 50us
+            stop_time: 10e-3, // 5ms
+        };
+
+        let solution = solver.solve(Analysis::Transient(tran_analysis)).unwrap();
 
         print_results_to_console(&solution);
-
-        // assert!((result_t1ms.get("V(out)").unwrap() - 0.6321).abs() < 5e-2); // Looser tolerance due to BE accuracy
-
-        // --- Check five time constants (t=5ms) ---
-        // At t=5ms, the capacitor should be almost fully charged.
-        // Vc = 1 * (1 - exp(-5)) = 0.9932V
-        // let result_t5ms = transient_solution.last().unwrap();
-        // assert!((result_t5ms.get("V(out)").unwrap() - 0.9932).abs() < 1e-3);
     }
 }

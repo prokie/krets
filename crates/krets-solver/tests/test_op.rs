@@ -40,8 +40,6 @@ mod tests {
         assert!((solution.get("V(5)").unwrap() - 2.0).abs() < 1e-3);
         assert!((solution.get("V(1)").unwrap() - 1.88527).abs() < 1e-3);
         assert!((solution.get("V(7)").unwrap() - 3.98814).abs() < 1e-3);
-        assert!((solution.get("I(R8)").unwrap() - 198.88e-3).abs() < 1e-3);
-        assert!((solution.get("I(R3)").unwrap() - 3.82e-3).abs() < 1e-3);
         assert!((solution.get("I(V3)").unwrap() - 0.0).abs() < 1e-3);
         assert!((solution.get("I(V2)").unwrap() - (-199.88e-3)).abs() < 1e-3);
         assert!((solution.get("I(V1)").unwrap() - (-198.88e-3)).abs() < 1e-3);

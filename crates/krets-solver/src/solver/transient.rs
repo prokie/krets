@@ -40,6 +40,10 @@ pub fn solve(
     let time_step = tran_analysis.time_step;
     let num_steps = (tran_analysis.stop_time / time_step).round() as usize;
 
+    // Check if the circuit contains any non-linear elements. If not, the solver
+    // only needs to run for one iteration.
+    let has_nonlinear_elements = &circuit.elements.iter().any(|e| e.is_nonlinear());
+
     println!(
         "Starting transient analysis from t=0 to t={}s with a {}s time step.",
         tran_analysis.stop_time, time_step
@@ -89,12 +93,23 @@ pub fn solve(
             }
             let x = lu.solve(&b);
 
+            // #[cfg(debug_assertions)]
+            // {
+            //     println!("\n--- System State at Iteration: {} ---", iter);
+            //     print_system(&g_stamps_summed, &b, &x, index_map);
+            // }
+
             op_result_at_t = index_map
                 .iter()
                 .map(|(node, &idx)| (node.clone(), x[(idx, 0)]))
                 .collect();
 
             op_result_at_t.insert("time".to_string(), current_time);
+
+            // For purely linear circuits, we only need one iteration.
+            if !has_nonlinear_elements {
+                break;
+            }
 
             if convergence_check(&previous_nr_guess, &op_result_at_t, config) {
                 break; // Newton-Raphson converged for this time step.
@@ -110,4 +125,51 @@ pub fn solve(
         all_results.push(op_result_at_t);
     }
     Ok(all_results)
+}
+
+/// A helper function to pretty-print the full MNA system (Gx=b) for debugging.
+#[allow(dead_code)]
+fn print_system(
+    g_triplets: &[Triplet<usize, usize, f64>],
+    b_vector: &Mat<f64>,
+    x_vector: &Mat<f64>,
+    index_map: &HashMap<String, usize>,
+) {
+    let size = index_map.len();
+    let mut rev_index_map: Vec<String> = vec![String::new(); size];
+    for (name, &idx) in index_map {
+        if idx < size {
+            rev_index_map[idx] = name.clone();
+        }
+    }
+
+    let matrix_map: HashMap<(usize, usize), f64> = g_triplets
+        .iter()
+        .map(|&Triplet { row, col, val }| ((row, col), val))
+        .collect();
+
+    // Print header
+    print!("{:<12}", ""); // Spacer for row names
+    for i in 0..size {
+        print!("{:<12}", rev_index_map[i]);
+    }
+    println!(
+        "{:<15}   {:<15}",
+        "| x Vector (Solution)", "| b Vector (Excitation)"
+    );
+    println!("{}", "-".repeat(12 * (size + 1) + 32));
+
+    // Print each row of the system
+    for r in 0..size {
+        print!("{:<12}", rev_index_map[r]);
+        for c in 0..size {
+            let val = matrix_map.get(&(r, c)).unwrap_or(&0.0);
+            print!("{:<12.4}", val);
+        }
+        println!(
+            "| {:<15.6e} | {:<15.6e}",
+            x_vector.get(r, 0), // Use NaN for missing values
+            b_vector.get(r, 0)
+        );
+    }
 }

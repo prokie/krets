@@ -176,12 +176,13 @@ impl Stampable for VoltageSource {
     fn add_excitation_vector_transient_stamp(
         &self,
         index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
+        solution_map: &HashMap<String, f64>,
         _prev_solution: &HashMap<String, f64>,
-        time: f64,
+        _time_step: f64,
     ) -> Vec<Triplet<usize, usize, f64>> {
+        let current_time = solution_map.get("time").cloned().unwrap_or(0.0);
         if let Some(&ic) = index_map.get(&format!("I({})", self.identifier())) {
-            vec![Triplet::new(ic, 0, self.transient_value_at(time))]
+            vec![Triplet::new(ic, 0, self.transient_value_at(current_time))]
         } else {
             vec![]
         }
@@ -369,7 +370,7 @@ mod tests {
 
     #[test]
     fn test_parse_pulse() {
-        let s = "V1 in 0 dc 0 PULSE(0 5 1u 10n 10n 5u 10u)";
+        let s = "V1 in 0 dc 0 PULSE(0 5 1u 100u 100u 5u 10u)";
         let vs = s.parse::<VoltageSource>().unwrap();
         assert_eq!(vs.dc_value, 0.0);
         match vs.source_type {
@@ -377,12 +378,68 @@ mod tests {
                 assert_eq!(p.initial_value, 0.0);
                 assert_eq!(p.pulsed_value, 5.0);
                 assert!((p.delay_time - 1e-6).abs() < 1e-12);
-                assert!((p.rise_time - 10e-9).abs() < 1e-12);
-                assert!((p.fall_time - 10e-9).abs() < 1e-12);
+                assert!((p.rise_time - 100e-6).abs() < 1e-12);
+                assert!((p.fall_time - 100e-6).abs() < 1e-12);
                 assert!((p.pulse_width - 5e-6).abs() < 1e-12);
                 assert!((p.period - 10e-6).abs() < 1e-12);
             }
             _ => panic!("Expected Pulse source type"),
         }
+    }
+
+    #[test]
+    fn test_pulse_value_at_time() {
+        let pulse = Pulse {
+            initial_value: 0.0,
+            pulsed_value: 5.0,
+            delay_time: 1e-6,  // 1us
+            rise_time: 10e-9,  // 10ns
+            fall_time: 10e-9,  // 10ns
+            pulse_width: 5e-6, // 5us
+            period: 10e-6,     // 10us
+        };
+
+        let epsilon = 1e-9;
+
+        // 1. Before delay time
+        assert!(
+            (pulse.value_at(0.5e-6) - 0.0).abs() < epsilon,
+            "Failed before delay"
+        );
+
+        // 2. Mid-rise time
+        // t = 1us + 5ns = 1.005us
+        assert!(
+            (pulse.value_at(1.005e-6) - 2.5).abs() < epsilon,
+            "Failed during rise"
+        );
+
+        // 3. During pulse width
+        // t = 1us + 10ns + 2us = 3.01us
+        assert!(
+            (pulse.value_at(3.01e-6) - 5.0).abs() < epsilon,
+            "Failed during pulse width"
+        );
+
+        // 4. Mid-fall time
+        // t = 1us + 10ns + 5us + 5ns = 6.015us
+        assert!(
+            (pulse.value_at(6.015e-6) - 2.5).abs() < epsilon,
+            "Failed during fall"
+        );
+
+        // 5. After fall time, before period ends
+        // t = 8us
+        assert!(
+            (pulse.value_at(8.0e-6) - 0.0).abs() < epsilon,
+            "Failed after fall"
+        );
+
+        // 6. In the next period, during rise time
+        // t = 10us (period) + 1us (delay) + 5ns = 11.005us
+        assert!(
+            (pulse.value_at(11.005e-6) - 2.5).abs() < epsilon,
+            "Failed in next period"
+        );
     }
 }
