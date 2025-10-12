@@ -11,30 +11,36 @@ pub mod resistor;
 pub mod voltage_source;
 
 /// Represents any component that can be included in a circuit simulation.
-///
-/// This enum acts as a wrapper around the specific struct for each element type,
-/// allowing for a heterogeneous collection of circuit components.
 #[derive(Debug, Clone)]
 pub enum Element {
-    /// A voltage source element.
     VoltageSource(voltage_source::VoltageSource),
-    /// A current source element.
     CurrentSource(current_source::CurrentSource),
-    /// A resistor element.
     Resistor(resistor::Resistor),
-    /// A capacitor element.
     Capacitor(capacitor::Capacitor),
-    /// An inductor element.
     Inductor(inductor::Inductor),
-    /// A diode element.
     Diode(diode::Diode),
-    /// Bipolar Junction Transistor (BJT) element.
     BJT(bjt::BJT),
-    /// Metal-Oxide-Semiconductor Field-Effect Transistor (MOSFET) element.
     MOSFET(mosfet::MOSFET),
 }
 
-// Manually implement the `From` trait for each element variant.
+/// A macro to forward a method call to the correct inner element struct.
+/// This reduces boilerplate code for the `Element` enum wrappers.
+macro_rules! dispatch {
+    ($self:expr, $method:ident($($args:expr),*)) => {
+        match $self {
+            Element::VoltageSource(e) => e.$method($($args),*),
+            Element::CurrentSource(e) => e.$method($($args),*),
+            Element::Resistor(e) => e.$method($($args),*),
+            Element::Capacitor(e) => e.$method($($args),*),
+            Element::Inductor(e) => e.$method($($args),*),
+            Element::Diode(e) => e.$method($($args),*),
+            Element::BJT(e) => e.$method($($args),*),
+            Element::MOSFET(e) => e.$method($($args),*),
+        }
+    };
+}
+
+// --- From trait implementations for ergonomic conversion ---
 impl From<voltage_source::VoltageSource> for Element {
     fn from(item: voltage_source::VoltageSource) -> Self {
         Element::VoltageSource(item)
@@ -94,17 +100,14 @@ impl Element {
     /// Determines if the element requires a dedicated branch current (Group 2) in MNA.
     pub fn is_g2(&self) -> bool {
         match self {
-            // Voltage sources and inductors always require a branch current in MNA.
-            Element::VoltageSource(_) => true,
-            Element::Inductor(_) => true,
-            // Non-linear elements are linearized into Group 1 companion models.
-            Element::Diode(_) => false,
-            Element::BJT(_) => false,
-            Element::MOSFET(_) => false,
-            // For these elements, group membership depends on the netlist definition.
-            Element::CurrentSource(_) => true,
+            // Voltage sources and inductors are always group 2.
+            Element::VoltageSource(_) | Element::Inductor(_) => true,
+            // The parser determines if these are Group 2.
             Element::Resistor(_) => true,
             Element::Capacitor(e) => e.g2,
+            Element::CurrentSource(_) => true,
+            // Non-linear elements are linearized into Group 1 companion models.
+            Element::Diode(_) | Element::BJT(_) | Element::MOSFET(_) => false,
         }
     }
 
@@ -119,58 +122,60 @@ impl Element {
 
 /// A trait for elements that have a unique string identifier.
 pub trait Identifiable {
-    /// Returns the SPICE-like identifier for the element (e.g., "R1", "V_SOURCE").
     fn identifier(&self) -> String;
 }
 
 /// A trait for elements that can contribute to the MNA matrices.
-///
-/// This unified trait handles contributions for both DC and AC analyses, providing a single,
-/// consistent interface for all stampable circuit components.
 pub trait Stampable {
-    /// Contributes to the DC conductance matrix (the `G` matrix in `Gx=z`).
     fn add_conductance_matrix_dc_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>>;
-
-    /// Contributes to the DC excitation vector (the `z` vector in `Gx=z`).
     fn add_excitation_vector_dc_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>>;
-
-    /// Contributes to the AC conductance matrix (the `Y` matrix in `Yx=z`).
     fn add_conductance_matrix_ac_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
         frequency: f64,
     ) -> Vec<Triplet<usize, usize, c64>>;
-
-    /// Contributes to the AC excitation vector (the `z` vector in `Yx=z`).
     fn add_excitation_vector_ac_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
         frequency: f64,
     ) -> Vec<Triplet<usize, usize, c64>>;
+
+    /// Default implementation for resistive elements. Their transient stamp is the same as their DC stamp.
+    fn add_conductance_matrix_transient_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        solution_map: &HashMap<String, f64>,
+        _prev_solution: &HashMap<String, f64>,
+        _time_step: f64,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        self.add_conductance_matrix_dc_stamp(index_map, solution_map)
+    }
+
+    /// Default implementation for resistive elements.
+    fn add_excitation_vector_transient_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        solution_map: &HashMap<String, f64>,
+        _prev_solution: &HashMap<String, f64>,
+        _time_step: f64,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        self.add_excitation_vector_dc_stamp(index_map, solution_map)
+    }
 }
 
 impl Identifiable for Element {
     fn identifier(&self) -> String {
-        match self {
-            Element::VoltageSource(e) => e.identifier(),
-            Element::CurrentSource(e) => e.identifier(),
-            Element::Resistor(e) => e.identifier(),
-            Element::Capacitor(e) => e.identifier(),
-            Element::Inductor(e) => e.identifier(),
-            Element::Diode(e) => e.identifier(),
-            Element::BJT(e) => e.identifier(),
-            Element::MOSFET(e) => e.identifier(),
-        }
+        dispatch!(self, identifier())
     }
 }
 
@@ -180,99 +185,76 @@ impl Stampable for Element {
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>> {
-        match self {
-            Element::VoltageSource(e) => e.add_conductance_matrix_dc_stamp(index_map, solution_map),
-            Element::CurrentSource(e) => e.add_conductance_matrix_dc_stamp(index_map, solution_map),
-            Element::Resistor(e) => e.add_conductance_matrix_dc_stamp(index_map, solution_map),
-            Element::Capacitor(e) => e.add_conductance_matrix_dc_stamp(index_map, solution_map),
-            Element::Inductor(e) => e.add_conductance_matrix_dc_stamp(index_map, solution_map),
-            Element::Diode(e) => e.add_conductance_matrix_dc_stamp(index_map, solution_map),
-            Element::BJT(e) => e.add_conductance_matrix_dc_stamp(index_map, solution_map),
-            Element::MOSFET(e) => e.add_conductance_matrix_dc_stamp(index_map, solution_map),
-        }
+        dispatch!(
+            self,
+            add_conductance_matrix_dc_stamp(index_map, solution_map)
+        )
     }
-
+    fn add_excitation_vector_dc_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        solution_map: &HashMap<String, f64>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        dispatch!(
+            self,
+            add_excitation_vector_dc_stamp(index_map, solution_map)
+        )
+    }
     fn add_conductance_matrix_ac_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
         frequency: f64,
     ) -> Vec<Triplet<usize, usize, c64>> {
-        match self {
-            Element::VoltageSource(e) => {
-                e.add_conductance_matrix_ac_stamp(index_map, solution_map, frequency)
-            }
-            Element::CurrentSource(e) => {
-                e.add_conductance_matrix_ac_stamp(index_map, solution_map, frequency)
-            }
-            Element::Resistor(e) => {
-                e.add_conductance_matrix_ac_stamp(index_map, solution_map, frequency)
-            }
-            Element::Capacitor(e) => {
-                e.add_conductance_matrix_ac_stamp(index_map, solution_map, frequency)
-            }
-            Element::Inductor(e) => {
-                e.add_conductance_matrix_ac_stamp(index_map, solution_map, frequency)
-            }
-            Element::Diode(e) => {
-                e.add_conductance_matrix_ac_stamp(index_map, solution_map, frequency)
-            }
-            Element::BJT(e) => {
-                e.add_conductance_matrix_ac_stamp(index_map, solution_map, frequency)
-            }
-            Element::MOSFET(e) => {
-                e.add_conductance_matrix_ac_stamp(index_map, solution_map, frequency)
-            }
-        }
+        dispatch!(
+            self,
+            add_conductance_matrix_ac_stamp(index_map, solution_map, frequency)
+        )
     }
-
-    fn add_excitation_vector_dc_stamp(
-        &self,
-        index_map: &HashMap<String, usize>,
-        solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        match self {
-            Element::VoltageSource(e) => e.add_excitation_vector_dc_stamp(index_map, solution_map),
-            Element::CurrentSource(e) => e.add_excitation_vector_dc_stamp(index_map, solution_map),
-            Element::Resistor(e) => e.add_excitation_vector_dc_stamp(index_map, solution_map),
-            Element::Capacitor(e) => e.add_excitation_vector_dc_stamp(index_map, solution_map),
-            Element::Inductor(e) => e.add_excitation_vector_dc_stamp(index_map, solution_map),
-            Element::Diode(e) => e.add_excitation_vector_dc_stamp(index_map, solution_map),
-            Element::BJT(e) => e.add_excitation_vector_dc_stamp(index_map, solution_map),
-            Element::MOSFET(e) => e.add_excitation_vector_dc_stamp(index_map, solution_map),
-        }
-    }
-
     fn add_excitation_vector_ac_stamp(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
         frequency: f64,
     ) -> Vec<Triplet<usize, usize, c64>> {
-        match self {
-            Element::VoltageSource(e) => {
-                e.add_excitation_vector_ac_stamp(index_map, solution_map, frequency)
-            }
-            Element::CurrentSource(e) => {
-                e.add_excitation_vector_ac_stamp(index_map, solution_map, frequency)
-            }
-            Element::Resistor(e) => {
-                e.add_excitation_vector_ac_stamp(index_map, solution_map, frequency)
-            }
-            Element::Capacitor(e) => {
-                e.add_excitation_vector_ac_stamp(index_map, solution_map, frequency)
-            }
-            Element::Inductor(e) => {
-                e.add_excitation_vector_ac_stamp(index_map, solution_map, frequency)
-            }
-            Element::Diode(e) => {
-                e.add_excitation_vector_ac_stamp(index_map, solution_map, frequency)
-            }
-            Element::BJT(e) => e.add_excitation_vector_ac_stamp(index_map, solution_map, frequency),
-            Element::MOSFET(e) => {
-                e.add_excitation_vector_ac_stamp(index_map, solution_map, frequency)
-            }
-        }
+        dispatch!(
+            self,
+            add_excitation_vector_ac_stamp(index_map, solution_map, frequency)
+        )
+    }
+    fn add_conductance_matrix_transient_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        solution_map: &HashMap<String, f64>,
+        prev_solution: &HashMap<String, f64>,
+        time_step: f64,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        dispatch!(
+            self,
+            add_conductance_matrix_transient_stamp(
+                index_map,
+                solution_map,
+                prev_solution,
+                time_step
+            )
+        )
+    }
+    fn add_excitation_vector_transient_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        solution_map: &HashMap<String, f64>,
+        prev_solution: &HashMap<String, f64>,
+        time_step: f64,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        dispatch!(
+            self,
+            add_excitation_vector_transient_stamp(
+                index_map,
+                solution_map,
+                prev_solution,
+                time_step
+            )
+        )
     }
 }
 

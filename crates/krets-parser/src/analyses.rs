@@ -12,6 +12,9 @@ pub enum Analysis {
 
     /// AC Small-Signal Frequency Analysis.
     Ac { frequency: f64 },
+
+    /// Transient Analysis.
+    Transient(TransientAnalysis),
 }
 
 /// Contains the parameters for a DC Sweep analysis.
@@ -25,6 +28,12 @@ pub struct DcAnalysis {
     pub stop: f64,
     /// The increment for each step of the sweep.
     pub step_size: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct TransientAnalysis {
+    pub time_step: f64,
+    pub total_time: f64,
 }
 
 /// Holds the output data from a completed analysis.
@@ -44,6 +53,11 @@ pub enum AnalysisResult {
     /// Result of an AC Small-Signal Analysis.
     /// A HashMap containing the complex-valued solution at a single frequency.
     Ac(HashMap<String, c64>),
+
+    /// Result of a Transient analysis.
+    /// A vector of HashMaps, where each map is the solution at one
+    /// time step.
+    Transient(Vec<HashMap<String, f64>>),
 }
 
 impl AnalysisResult {

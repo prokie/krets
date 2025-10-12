@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use super::op_solver;
-use crate::{config::SolverConfig, prelude::*, solver::sum_triplets};
+use crate::{config::SolverConfig, prelude::*, solver::op};
 use faer::{
     Mat, c64,
     prelude::Solve,
@@ -20,7 +19,7 @@ pub fn solve(
     frequency: f64,
 ) -> Result<HashMap<String, c64>> {
     // First, find the DC operating point. This is crucial for linearizing non-linear components.
-    let dc_solution = op_solver::solve(circuit, config)?;
+    let dc_solution = op::solve(circuit, config)?;
 
     let index_map = &circuit.index_map;
     let size = index_map.len();

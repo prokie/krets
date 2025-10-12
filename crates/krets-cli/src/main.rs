@@ -59,6 +59,10 @@ fn main() {
                         println!("Parquet export for AC analysis is not yet supported.");
                         Ok(())
                     }
+                    AnalysisResult::Transient(_) => {
+                        println!("Parquet export for Transient analysis is not yet supported.");
+                        Ok(())
+                    }
                 };
                 if let Err(e) = write_result {
                     eprintln!("Error writing to Parquet file: {}", e);
@@ -137,6 +141,9 @@ fn print_results_to_console(result: &AnalysisResult) {
                 let (mag, phase_deg) = (value.norm(), value.arg().to_degrees());
                 println!("{:<15} | {:>19.6e} | {:>19.6e}", node, mag, phase_deg);
             }
+        }
+        _ => {
+            todo!();
         }
     }
 }

@@ -105,6 +105,71 @@ impl Stampable for Capacitor {
         // Capacitors are passive and don't contribute to the AC excitation vector.
         vec![]
     }
+
+    fn add_conductance_matrix_transient_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>, // Not needed for a linear capacitor's conductance
+        _prev_solution: &HashMap<String, f64>, // Not needed for a linear capacitor's conductance
+        h: f64,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        let g = self.value / h;
+
+        let index_plus = index_map.get(&format!("V({})", self.plus));
+        let index_minus = index_map.get(&format!("V({})", self.minus));
+
+        let mut triplets = Vec::with_capacity(4);
+
+        if let Some(&ip) = index_plus {
+            triplets.push(Triplet::new(ip, ip, g));
+        }
+        if let Some(&im) = index_minus {
+            triplets.push(Triplet::new(im, im, g));
+        }
+        if let (Some(&ip), Some(&im)) = (index_plus, index_minus) {
+            triplets.push(Triplet::new(ip, im, -g));
+            triplets.push(Triplet::new(im, ip, -g));
+        }
+
+        triplets
+    }
+
+    fn add_excitation_vector_transient_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>, // Not needed for a linear capacitor's excitation
+        prev_solution: &HashMap<String, f64>,
+        h: f64,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        let index_plus = index_map.get(&format!("V({})", self.plus));
+        let index_minus = index_map.get(&format!("V({})", self.minus));
+
+        // Get the capacitor's voltage from the PREVIOUS time step.
+        // Default to 0.0 if a node is not in the map (e.g., ground or first step).
+        let v_plus_prev = prev_solution
+            .get(&format!("V({})", self.plus))
+            .copied()
+            .unwrap_or(0.0);
+        let v_minus_prev = prev_solution
+            .get(&format!("V({})", self.minus))
+            .copied()
+            .unwrap_or(0.0);
+        let v_prev = v_plus_prev - v_minus_prev;
+
+        // Calculate the equivalent current source value: I_eq = (C/h) * v_prev
+        let i_eq = (self.value / h) * v_prev;
+
+        let mut triplets = Vec::with_capacity(2);
+
+        if let Some(&ip) = index_plus {
+            triplets.push(Triplet::new(ip, 0, -i_eq));
+        }
+        if let Some(&im) = index_minus {
+            triplets.push(Triplet::new(im, 0, i_eq));
+        }
+
+        triplets
+    }
 }
 
 impl FromStr for Capacitor {

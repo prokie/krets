@@ -1,10 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{
-    config::SolverConfig,
-    prelude::*,
-    solver::{convergence_check, sum_triplets},
-};
+use crate::prelude::*;
 use faer::{
     Mat,
     prelude::Solve,

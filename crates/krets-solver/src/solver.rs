@@ -1,5 +1,10 @@
+pub mod ac;
+pub mod dc;
+pub mod op;
+pub mod transient;
+
 use crate::config::SolverConfig;
-use crate::{ac_solver, dc_solver, op_solver, prelude::*};
+use crate::prelude::*;
 use faer::sparse::Triplet;
 use krets_parser::analyses::{Analysis, AnalysisResult};
 use krets_parser::circuit::Circuit;
@@ -26,17 +31,22 @@ impl Solver {
     pub fn solve(&mut self, analysis: Analysis) -> Result<AnalysisResult> {
         match analysis {
             Analysis::Op => {
-                let result = op_solver::solve(&self.circuit, &self.config)?;
+                let result = op::solve(&self.circuit, &self.config)?;
                 Ok(AnalysisResult::Op(result))
             }
             Analysis::Dc(dc_params) => {
                 // Pass the circuit mutably to allow the sweep to temporarily change element values.
-                let result = dc_solver::solve(&mut self.circuit, &self.config, dc_params)?;
+                let result = dc::solve(&mut self.circuit, &self.config, dc_params)?;
                 Ok(AnalysisResult::Dc(result))
             }
             Analysis::Ac { frequency } => {
-                let result = ac_solver::solve(&self.circuit, &self.config, frequency)?;
+                let result = ac::solve(&self.circuit, &self.config, frequency)?;
                 Ok(AnalysisResult::Ac(result))
+            }
+            Analysis::Transient(transient_params) => {
+                // Pass the circuit mutably to allow time-dependent elements to update their state.
+                let result = transient::solve(&mut self.circuit, &self.config, transient_params)?;
+                Ok(AnalysisResult::Transient(result))
             }
         }
     }
