@@ -1,8 +1,8 @@
 use std::{fs, path::PathBuf};
 
 use eframe::egui;
+use egui_extras::{Column, TableBuilder};
 use egui_plot::{Legend, Line, Plot, PlotPoints};
-use egui_table::{HeaderRow, Table};
 
 /// Represents an entry in the directory listing.
 struct DirectoryEntry {
@@ -83,13 +83,28 @@ impl eframe::App for KretsApp {
             }
 
             let my_plot = Plot::new("My Plot").legend(Legend::default());
-            let mut my_table = Table::new().columns(vec![
-                egui_table::Column::new(0.0),
-                egui_table::Column::new(1.1),
-                egui_table::Column::new(2.2),
-            ]);
 
-            // my_table.headers(Header]);
+            TableBuilder::new(ui)
+                .column(Column::auto().resizable(true))
+                .column(Column::remainder())
+                .header(20.0, |mut header| {
+                    header.col(|ui| {
+                        ui.heading("First column");
+                    });
+                    header.col(|ui| {
+                        ui.heading("Second column");
+                    });
+                })
+                .body(|mut body| {
+                    body.row(30.0, |mut row| {
+                        row.col(|ui| {
+                            ui.label("Hello");
+                        });
+                        row.col(|ui| {
+                            let _ = ui.button("world!");
+                        });
+                    });
+                });
 
             // let's create a dummy line in the plot
             let graph: Vec<[f64; 2]> = vec![[0.0, 1.0], [2.0, 3.0], [3.0, 2.0]];
