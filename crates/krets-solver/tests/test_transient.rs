@@ -1,0 +1,157 @@
+#[cfg(test)]
+mod tests {
+    use krets_parser::analyses::AnalysisResult;
+    use krets_parser::analyses::{Analysis, TransientAnalysis};
+    use krets_solver::{config::SolverConfig, solver::Solver};
+    use std::{env, path::Path};
+    // Function to get the project root path at runtime
+    fn manifest_dir() -> String {
+        env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string())
+    }
+
+    fn print_results_to_console(result: &AnalysisResult) {
+        match result {
+            AnalysisResult::Op(op_solution) => {
+                let mut sorted_results: Vec<_> = op_solution.iter().collect();
+                sorted_results.sort_by_key(|(k, _)| *k);
+
+                println!("{:<15} | {:<15}", "Node/Branch", "Value");
+                println!("{:-<15}-+-{:-<15}", "", "");
+
+                for (node_or_branch, value) in sorted_results {
+                    let unit = if node_or_branch.starts_with('V') {
+                        "V"
+                    } else {
+                        "A"
+                    };
+                    println!("{:<15} | {:>14.6e} {}", node_or_branch, value, unit);
+                }
+            }
+            AnalysisResult::Dc(dc_solution) => {
+                if dc_solution.is_empty() {
+                    println!("DC sweep produced no results.");
+                    return;
+                }
+                // Get headers from the first result, sorted for consistent order
+                let mut headers: Vec<_> = dc_solution[0].keys().collect();
+                headers.sort();
+
+                // Print header
+                for header in &headers {
+                    print!("{:<18}", header);
+                }
+                println!();
+                println!("{:-<width$}", "", width = headers.len() * 18);
+
+                // Print rows
+                for step_result in dc_solution {
+                    for header in &headers {
+                        if let Some(value) = step_result.get(*header) {
+                            print!("{:<18.6e}", value);
+                        } else {
+                            print!("{:<18}", "N/A");
+                        }
+                    }
+                    println!();
+                }
+            }
+            AnalysisResult::Ac(ac_solution) => {
+                let mut sorted_results: Vec<_> = ac_solution.iter().collect();
+                sorted_results.sort_by_key(|(k, _)| *k);
+
+                println!(
+                    "{:<15} | {:<20} | {:<20}",
+                    "Node/Branch", "Magnitude", "Phase (deg)"
+                );
+                println!("{:-<15}-+-{:-<20}-+-{:-<20}", "", "", "");
+
+                for (node, value) in sorted_results {
+                    let (mag, phase_deg) = (value.norm(), value.arg().to_degrees());
+                    println!("{:<15} | {:>19.6e} | {:>19.6e}", node, mag, phase_deg);
+                }
+            }
+            AnalysisResult::Transient(tran_solution) => {
+                if tran_solution.is_empty() {
+                    println!("Transient analysis produced no results.");
+                    return;
+                }
+                // Get headers from the first result, sorted for consistent order
+                let mut headers: Vec<_> = tran_solution[0].keys().collect();
+                headers.sort();
+
+                dbg!(&headers);
+
+                // Print header
+                for header in &headers {
+                    print!("{:<18}", header);
+                }
+                println!();
+                println!("{:-<width$}", "", width = headers.len() * 18);
+
+                // Print rows
+                for step_result in tran_solution {
+                    for header in &headers {
+                        if let Some(value) = step_result.get(*header) {
+                            print!("{:<18.6e}", value);
+                        } else {
+                            print!("{:<18}", "N/A");
+                        }
+                    }
+                    println!();
+                }
+            }
+        }
+    }
+
+    // Function to get the circuits directory path
+    fn circuits_dir() -> String {
+        // Adjust the path to navigate from the crate's root to the workspace root's circuits dir
+        Path::new(&manifest_dir())
+            .parent() // Go up from crates/krets-solver
+            .and_then(Path::parent) // Go up from crates
+            .unwrap()
+            .join("circuits/")
+            .to_str()
+            .unwrap()
+            .to_string()
+    }
+
+    #[test]
+    fn test_dual_rc_ladder_transient() {
+        let path = Path::new(&circuits_dir()).join("dual_rc_ladder/dual_rc_ladder.cir");
+        let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
+        let config = SolverConfig::default();
+        let mut solver = Solver::new(circuit, config);
+
+        let tran_analysis = TransientAnalysis {
+            time_step: 50e-6,
+            stop_time: 5e-3, // 5ms
+        };
+
+        let solution = solver.solve(Analysis::Transient(tran_analysis)).unwrap();
+
+        let transient_solution = solution.clone().into_transient();
+
+        // --- Check initial condition (t=0) ---
+        // This is the DC operating point. Capacitor is an open circuit.
+        let result_t0 = &transient_solution[0];
+        assert!((result_t0.get("V(in)").unwrap() - 0.0).abs() < 1e-3);
+        assert!((result_t0.get("V(out)").unwrap() - 0.0).abs() < 1e-3);
+
+        // --- Check one time constant (t=1ms) ---
+        // For an RC circuit, Vc(t) = V_final * (1 - exp(-t/RC))
+        // Here, R=1k, C=1uF, so RC = 1ms. V_final = 1V.
+        // At t=1ms, Vc = 1 * (1 - exp(-1)) = 0.6321V
+        // let result_t1ms = &transient_solution[10]; // Step 10 corresponds to t = 10 * 100us = 1ms
+
+        print_results_to_console(&solution);
+
+        // assert!((result_t1ms.get("V(out)").unwrap() - 0.6321).abs() < 5e-2); // Looser tolerance due to BE accuracy
+
+        // --- Check five time constants (t=5ms) ---
+        // At t=5ms, the capacitor should be almost fully charged.
+        // Vc = 1 * (1 - exp(-5)) = 0.9932V
+        // let result_t5ms = transient_solution.last().unwrap();
+        // assert!((result_t5ms.get("V(out)").unwrap() - 0.9932).abs() < 1e-3);
+    }
+}

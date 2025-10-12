@@ -23,7 +23,7 @@ mod tests {
                 assert_eq!(vs.name, 1);
                 assert_eq!(vs.plus, "1");
                 assert_eq!(vs.minus, "0");
-                assert_eq!(vs.value, 5.0);
+                assert_eq!(vs.dc_value, 5.0);
             }
             _ => panic!("Expected a voltage source element"),
         }
@@ -43,7 +43,7 @@ mod tests {
                 assert_eq!(vs.name, 1);
                 assert_eq!(vs.plus, "1");
                 assert_eq!(vs.minus, "0");
-                assert_eq!(vs.value, 5.0);
+                assert_eq!(vs.dc_value, 5.0);
             }
             _ => panic!("Expected a voltage source element"),
         }
@@ -63,7 +63,7 @@ mod tests {
                 assert_eq!(vs.name, 1);
                 assert_eq!(vs.plus, "1");
                 assert_eq!(vs.minus, "0");
-                assert_eq!(vs.value, 5.0);
+                assert_eq!(vs.dc_value, 5.0);
             }
             _ => panic!("Expected a voltage source element"),
         }

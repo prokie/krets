@@ -20,6 +20,8 @@ missing_panics_doc = "allow"
 thiserror = "2.0.17"
 faer = "0.23.2"
 tracing = "0.1.41"
+regex = "1.12.1"
+
 
 krets-parser = { path = "crates/krets-parser" }
 krets-solver = { path = "crates/krets-solver" }

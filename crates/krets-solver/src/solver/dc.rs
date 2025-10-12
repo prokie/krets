@@ -33,7 +33,7 @@ pub fn solve(
 
     // Store the original value of the swept element to restore it after the analysis.
     let original_value = match &circuit.elements[sweep_element_index] {
-        Element::VoltageSource(vs) => vs.value,
+        Element::VoltageSource(vs) => vs.dc_value,
         Element::CurrentSource(is) => is.value,
         _ => {
             return Err(Error::InvalidElementFormat(
@@ -55,7 +55,7 @@ pub fn solve(
 
         // Update the value of the sweep element for the current step.
         match &mut circuit.elements[sweep_element_index] {
-            Element::VoltageSource(vs) => vs.value = current_sweep_val,
+            Element::VoltageSource(vs) => vs.dc_value = current_sweep_val,
             Element::CurrentSource(is) => is.value = current_sweep_val,
             _ => unreachable!(),
         }
@@ -122,7 +122,7 @@ pub fn solve(
 
     // Restore the original value of the swept element.
     match &mut circuit.elements[sweep_element_index] {
-        Element::VoltageSource(vs) => vs.value = original_value,
+        Element::VoltageSource(vs) => vs.dc_value = original_value,
         Element::CurrentSource(is) => is.value = original_value,
         _ => unreachable!(),
     }
