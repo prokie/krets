@@ -33,7 +33,7 @@ pub struct DcAnalysis {
 #[derive(Debug, Clone)]
 pub struct TransientAnalysis {
     pub time_step: f64,
-    pub total_time: f64,
+    pub stop_time: f64,
 }
 
 /// Holds the output data from a completed analysis.
@@ -91,6 +91,17 @@ impl AnalysisResult {
         match self {
             AnalysisResult::Ac(result) => result,
             _ => panic!("Called `into_ac()` on a non-Ac result"),
+        }
+    }
+
+    /// Unwraps the `AnalysisResult` to get the `Transient` result.
+    ///
+    /// # Panics
+    /// Panics if the result is not `AnalysisResult::Transient`.
+    pub fn into_transient(self) -> Vec<HashMap<String, f64>> {
+        match self {
+            AnalysisResult::Transient(result) => result,
+            _ => panic!("Called `into_transient()` on a non-Transient result"),
         }
     }
 }

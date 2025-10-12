@@ -146,9 +146,9 @@ impl FromStr for Inductor {
             .map_err(|_| Error::InvalidNodeName(format!("Invalid inductor name: '{s}'")))?;
         let plus = parts[1].to_string();
         let minus = parts[2].to_string();
-        let value = parts[3]
-            .parse::<f64>()
-            .map_err(|_| Error::InvalidFloatValue(format!("Invalid inductor value: '{s}'")))?;
+        let value = parse_value(parts[3]).map_err(|e| {
+            Error::InvalidFormat(format!("Invalid capacitor value in '{}': {}", s, e))
+        })?;
 
         Ok(Inductor {
             name,

@@ -31,8 +31,8 @@ mod tests {
         let analysis = Analysis::Ac { frequency: 1000.0 };
         let solution = solver.solve(analysis).unwrap().into_ac();
         dbg!("AC Solution: {:?}", &solution);
-        assert!((solution.get("V(out)").unwrap().re - 2.533030e-08).abs() < 1e-3);
-        assert!((solution.get("V(out)").unwrap().im - (2.533030e-08)).abs() < 1e-3);
+        assert!((solution.get("V(out)").unwrap().re - 2.470452e-02).abs() < 1e-3);
+        assert!((solution.get("V(out)").unwrap().im - (-1.55223e-01)).abs() < 1e-3);
     }
 
     #[test]

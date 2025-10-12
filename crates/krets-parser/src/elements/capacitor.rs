@@ -205,9 +205,9 @@ impl FromStr for Capacitor {
             .map_err(|_| Error::InvalidNodeName(format!("Invalid capacitor name: '{s}'")))?;
         let plus = parts[1].to_string();
         let minus = parts[2].to_string();
-        let value = parts[3]
-            .parse::<f64>()
-            .map_err(|_| Error::InvalidFloatValue(format!("Invalid capacitor value: '{s}'")))?;
+        let value = parse_value(parts[3]).map_err(|e| {
+            Error::InvalidFormat(format!("Invalid capacitor value in '{}': {}", s, e))
+        })?;
 
         let g2 = if parts.len() == 5 {
             if parts[4].eq_ignore_ascii_case("G2") {

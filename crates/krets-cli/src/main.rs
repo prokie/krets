@@ -142,8 +142,33 @@ fn print_results_to_console(result: &AnalysisResult) {
                 println!("{:<15} | {:>19.6e} | {:>19.6e}", node, mag, phase_deg);
             }
         }
-        _ => {
-            todo!();
+        AnalysisResult::Transient(tran_solution) => {
+            if tran_solution.is_empty() {
+                println!("Transient analysis produced no results.");
+                return;
+            }
+            // Get headers from the first result, sorted for consistent order
+            let mut headers: Vec<_> = tran_solution[0].keys().collect();
+            headers.sort();
+
+            // Print header
+            for header in &headers {
+                print!("{:<18}", header);
+            }
+            println!();
+            println!("{:-<width$}", "", width = headers.len() * 18);
+
+            // Print rows
+            for step_result in tran_solution {
+                for header in &headers {
+                    if let Some(value) = step_result.get(*header) {
+                        print!("{:<18.6e}", value);
+                    } else {
+                        print!("{:<18}", "N/A");
+                    }
+                }
+                println!();
+            }
         }
     }
 }
