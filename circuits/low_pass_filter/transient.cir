@@ -1,0 +1,9 @@
+* Low Pass filter
+V1 in 0 dc 0 PULSE (0 1 1u 1u 1u 1 1)
+R1 in out 1000
+C1 out 0 1u
+
+.control
+tran 50u 20m
+plot in  out
+.endc

@@ -137,24 +137,42 @@ mod tests {
         assert!((result_t0.get("V(in)").unwrap() - 0.0).abs() < 1e-3);
         assert!((result_t0.get("V(out)").unwrap() - 0.0).abs() < 1e-3);
 
-        let result_t5ms = transient_solution.last().unwrap();
-        assert!((result_t5ms.get("V(out)").unwrap() - 0.989).abs() < 1e-3);
+        let result_last = transient_solution.last().unwrap();
+        assert!((result_last.get("V(out)").unwrap() - 0.989).abs() < 1e-3);
     }
 
     #[test]
     fn test_low_pass_filter_transient() {
-        let path = Path::new(&circuits_dir()).join("low_pass_filter/low_pass_filter.cir");
+        let path = Path::new(&circuits_dir()).join("low_pass_filter/transient.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let config = SolverConfig::default();
         let mut solver = Solver::new(circuit, config);
 
         let tran_analysis = TransientAnalysis {
             time_step: 50e-6, // 50us
-            stop_time: 10e-3, // 5ms
+            stop_time: 20e-3, // 20ms
         };
 
         let solution = solver.solve(Analysis::Transient(tran_analysis)).unwrap();
-
         print_results_to_console(&solution);
+        let transient_solution = solution.clone().into_transient();
+
+        // --- Check initial condition (t=0) ---
+        let result_t0 = &transient_solution[0];
+        assert!((result_t0.get("V(in)").unwrap() - 0.0).abs() < 1e-3);
+        assert!((result_t0.get("V(out)").unwrap() - 0.0).abs() < 1e-3);
+
+        // At 2ms, the output should be close to 1V (steady state for a step input)
+        // V(out) = 1 - exp(-t/RC)  ≈ 0.8647
+
+        let result_2ms = &transient_solution[42];
+
+        assert!((result_2ms.get("V(out)").unwrap() - 0.8647).abs() < 1e-3);
+        assert!((result_2ms.get("time").unwrap() - 2.1e-3).abs() < 1e-6);
+
+        let result_last = transient_solution.last().unwrap();
+        assert!((result_last.get("V(out)").unwrap() - 1.0).abs() < 1e-3);
+
+        // print_results_to_console(&solution);
     }
 }
