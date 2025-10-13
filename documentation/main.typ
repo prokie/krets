@@ -1,6 +1,6 @@
-#import "@preview/zap:0.2.1"
-#import "@preview/cetz:0.4.0"
-#import "@preview/cetz-plot:0.1.2"
+#import "@preview/zap:0.4.0"
+#import "@preview/cetz:0.4.2"
+#import "@preview/cetz-plot:0.1.3"
 #import "constants.typ": shockley_diode_conductance, shockley_diode_current
 
 #set heading(numbering: "1.")
@@ -108,8 +108,9 @@ The companion model for the diode can be represented as a current source in para
 
 $ I_"eq" = I_D - G_"eq" V_D $
 
-#figure(caption: "Diode Companion model", zap.canvas({
+#figure(caption: "Diode Companion model", zap.circuit({
   import zap: *
+  set-style(zap: (variant: "ieee"))
   wire((0, 0), (3, 0))
   wire((3, 0), (3, -0.5))
   wire((2, -0.5), (4, -0.5))
@@ -193,8 +194,9 @@ During DC analysis, the circuit is analyzed under steady-state conditions with a
 #let r1 = 1000
 $cases(V_1 = 1, R_1 = 1000)$
 
-#figure(caption: "Diode IV Curve", zap.canvas({
+#figure(caption: "Diode IV Curve", zap.circuit({
   import zap: *
+  set-style(zap: (variant: "ieee"))
   vsource("v1", (0, 0), (0, 4), label: $V_1$)
   resistor("r1", (0, 4), (3, 4), label: $R$)
   diode("d1", (3, 4), (3, 0), label: $D$)
