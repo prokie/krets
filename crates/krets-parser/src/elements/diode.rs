@@ -1,6 +1,13 @@
-use faer::{c64, sparse::Triplet};
-
 use crate::{constants::THERMAL_VOLTAGE, elements::Stampable, prelude::*};
+use faer::{c64, sparse::Triplet};
+use nom::{
+    IResult, Parser,
+    branch::alt,
+    bytes::complete::tag,
+    character::complete::space1,
+    combinator::{all_consuming, opt},
+    sequence::preceded,
+};
 use std::{collections::HashMap, str::FromStr};
 
 use super::Identifiable;
@@ -184,55 +191,35 @@ impl Diode {
         vd.clamp(-v_critical, v_critical)
     }
 }
+fn parse_diode(input: &str) -> IResult<&str, Diode> {
+    let (input, _) = alt((tag("D"), tag("d"))).parse(input)?;
+    let (input, name) = alphanumeric_or_underscore1(input)?;
+    let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, minus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, model_name) = opt(preceded(space1, alphanumeric_or_underscore1)).parse(input)?;
+
+    let diode = Diode {
+        name: name.parse().unwrap_or(0),
+        plus: plus.to_string(),
+        minus: minus.to_string(),
+        model_name: model_name.unwrap_or("default").to_string(),
+        options: DiodeOptions::default(),
+    };
+
+    Ok((input, diode))
+}
 
 impl FromStr for Diode {
     type Err = crate::prelude::Error;
 
     fn from_str(s: &str) -> Result<Self> {
         let s_without_comment = s.split('%').next().unwrap_or("").trim();
-        let parts: Vec<&str> = s_without_comment.split_whitespace().collect();
 
-        if parts.len() != 3 && parts.len() != 4 {
-            return Err(Error::InvalidFormat(format!("Invalid diode format: '{s}'")));
-        }
+        let (_, diode) = all_consuming(parse_diode)
+            .parse(s_without_comment)
+            .map_err(|e| Error::InvalidFormat(e.to_string()))?;
 
-        // IMPROVEMENT: Add check for identifier prefix 'D'.
-        if !parts[0].starts_with(['D', 'd']) {
-            return Err(Error::InvalidFormat(format!(
-                "Invalid diode identifier: '{s}'"
-            )));
-        }
-
-        if parts[0].len() <= 1 {
-            return Err(Error::InvalidFormat(format!(
-                "Diode name is too short: '{s}'"
-            )));
-        }
-
-        let name = parts[0][1..]
-            .parse::<u32>()
-            .map_err(|_| Error::InvalidNodeName(format!("Invalid diode name: '{s}'")))?;
-        let plus = parts[1].to_string();
-        let minus = parts[2].to_string();
-
-        // IMPROVEMENT: Parse the model name. In a full simulator, you would use this
-        // name to look up the DiodeOptions from a .MODEL statement.
-        let model_name = if parts.len() == 4 {
-            parts[3].to_string()
-        } else {
-            // SPICE often has a default model if none is specified.
-            "default".to_string()
-        };
-
-        let diode_options = DiodeOptions::default();
-
-        Ok(Diode {
-            name,
-            model_name,
-            options: diode_options,
-            plus,
-            minus,
-        })
+        Ok(diode)
     }
 }
 
