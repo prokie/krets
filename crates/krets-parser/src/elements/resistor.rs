@@ -1,4 +1,8 @@
 use faer::sparse::Triplet;
+use nom::{
+    IResult, Parser, branch::alt, bytes::complete::tag, character::complete::space1,
+    combinator::all_consuming, sequence::preceded,
+};
 
 use super::{Identifiable, Stampable};
 use crate::prelude::*;
@@ -155,58 +159,40 @@ impl fmt::Display for Resistor {
         )
     }
 }
+fn parse_resistor(input: &str) -> IResult<&str, Resistor> {
+    let (input, _) = alt((tag("R"), tag("r"))).parse(input)?;
+    let (input, name) = alphanumeric_or_underscore1(input)?;
+    let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, minus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, value) = preceded(space1, value_parser).parse(input)?;
+
+    let resistor = Resistor {
+        name: name.parse().unwrap_or(0),
+        plus: plus.to_string(),
+        minus: minus.to_string(),
+        value,
+        g2: false,
+    };
+
+    Ok((input, resistor))
+}
 
 impl FromStr for Resistor {
     type Err = crate::prelude::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        // IMPROVEMENT: Handle comments robustly.
         let s_without_comment = s.split('%').next().unwrap_or("").trim();
-        let parts: Vec<&str> = s_without_comment.split_whitespace().collect();
+        let (_, resistor) = all_consuming(parse_resistor)
+            .parse(s_without_comment)
+            .map_err(|e| Error::InvalidFormat(e.to_string()))?;
 
-        // FIX: A resistor definition should have exactly 4 parts.
-        if parts.len() != 4 {
-            return Err(Error::InvalidFormat(format!(
-                "Invalid resistor format: '{s}'"
-            )));
-        }
-
-        // IMPROVEMENT: Add check for identifier prefix 'R'.
-        if !parts[0].starts_with(['R', 'r']) {
-            return Err(Error::InvalidFormat(format!(
-                "Invalid resistor identifier: '{s}'"
-            )));
-        }
-
-        if parts[0].len() <= 1 {
-            return Err(Error::InvalidFormat(format!(
-                "Resistor name is too short: '{s}'"
-            )));
-        }
-
-        let name = parts[0][1..]
-            .parse::<u32>()
-            .map_err(|_| Error::InvalidNodeName(format!("Invalid resistor name: '{s}'")))?;
-        let plus = parts[1].to_string();
-        let minus = parts[2].to_string();
-        let value = parse_value(parts[3]).map_err(|e| {
-            Error::InvalidFormat(format!("Invalid capacitor value in '{}': {}", s, e))
-        })?;
-
-        // IMPROVEMENT: Prevent division by zero in the stamping logic.
-        if value <= 0.0 {
+        if resistor.value <= 0.0 {
             return Err(Error::InvalidFloatValue(format!(
                 "Resistor value must be positive: '{s}'"
             )));
         }
 
-        Ok(Resistor {
-            name,
-            value,
-            plus,
-            minus,
-            g2: false,
-        })
+        Ok(resistor)
     }
 }
 
