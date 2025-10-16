@@ -82,9 +82,6 @@ impl Stampable for CurrentSource {
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>> {
-        // The branch equation for the source is I_source = value, which is represented
-        // in the form A*x = z as 1*I_source = value. The '1' is handled by the solver's
-        // identity matrix initialization, so we only need to provide the 'value' for the z vector.
         match index_map.get(&format!("I({})", self.identifier())) {
             Some(i) => vec![Triplet::new(*i, 0, self.value)],
             None => Vec::new(),
