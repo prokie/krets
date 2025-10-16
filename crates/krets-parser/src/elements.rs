@@ -101,7 +101,8 @@ impl Element {
     pub fn is_g2(&self) -> bool {
         match self {
             // Voltage sources and inductors are always group 2.
-            Element::VoltageSource(_) | Element::Inductor(_) => true,
+            Element::VoltageSource(_) => true,
+            Element::Inductor(_) => false,
             // The parser determines if these are Group 2.
             Element::Resistor(e) => e.g2,
             Element::Capacitor(e) => e.g2,

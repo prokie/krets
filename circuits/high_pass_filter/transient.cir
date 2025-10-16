@@ -1,6 +1,6 @@
 * High Pass Filter
 
-V1 in 0 dc 0 PULSE (0 1 1u 1u 1u 1 1)
+V1 in 0 dc 0 PULSE (0 1 1u 10u 10u 1 1)
 L1 in out 0.01
 R1 out 0 100
 
