@@ -142,6 +142,23 @@ mod tests {
     }
 
     #[test]
+    fn test_rectifier() {
+        let path = Path::new(&circuits_dir()).join("rectifier/rectifier.cir");
+        let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
+        let config = SolverConfig::default();
+        let mut solver = Solver::new(circuit, config);
+
+        let tran_analysis = TransientAnalysis {
+            time_step: 50e-6, // 50us
+            stop_time: 50e-3, // 20ms
+        };
+
+        let solution = solver.solve(Analysis::Transient(tran_analysis)).unwrap();
+        print_results_to_console(&solution);
+        let transient_solution = solution.clone().into_transient();
+    }
+
+    #[test]
     fn test_low_pass_filter_transient() {
         let path = Path::new(&circuits_dir()).join("low_pass_filter/transient.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
