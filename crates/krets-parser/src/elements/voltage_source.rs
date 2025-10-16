@@ -35,6 +35,41 @@ pub struct Pulse {
     pub period: f64,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+/// Defines the parameters for a PULSE voltage source.
+pub struct Sinusoidal {
+    /// Offset value.
+    pub offset: f64,
+    /// Amplitude of the sine wave.
+    pub amplitude: f64,
+    /// Frequency of the sine wave in Hz.
+    pub frequency: f64,
+    /// Delay before the sine wave starts.
+    pub delay: f64,
+    /// Damping factor for the sine wave.
+    pub damping: f64,
+    /// Phase shift in degrees.
+    pub phase: f64,
+}
+
+impl Sinusoidal {
+    /// Calculates the value of the sinusoidal at a given time.
+    pub fn value_at(&self, time: f64) -> f64 {
+        if time < self.delay {
+            return self.offset;
+        }
+
+        let angular_frequency = 2.0 * std::f64::consts::PI * self.frequency;
+        let phase_radians = self.phase.to_radians();
+        let t = time - self.delay;
+
+        self.offset
+            + self.amplitude
+                * (-self.damping * t).exp()
+                * (angular_frequency * t + phase_radians).sin()
+    }
+}
+
 impl Pulse {
     /// Calculates the value of the pulse at a given time.
     pub fn value_at(&self, time: f64) -> f64 {
@@ -69,6 +104,7 @@ enum Param {
     Dc(f64),
     Ac(f64),
     Pulse(Pulse),
+    Sinusoidal(Sinusoidal),
 }
 
 /// Parses a DC parameter block, e.g., "dc 5.0"
@@ -128,6 +164,40 @@ fn parse_pulse_param(input: &str) -> IResult<&str, Param> {
     Ok((input, Param::Pulse(pulse)))
 }
 
+fn parse_sinusoidal_param(input: &str) -> IResult<&str, Param> {
+    // Define a parser for all the values inside the parentheses
+
+    let values_parser = (
+        preceded(space0, value_parser),
+        preceded(space1, value_parser),
+        preceded(space1, value_parser),
+        preceded(space1, value_parser),
+        preceded(space1, value_parser),
+        preceded(space1, value_parser),
+    );
+
+    let (input, (offset, amplitude, frequency, delay, damping, phase)) = preceded(
+        tag_no_case("sin"),
+        delimited(
+            preceded(space0, tag("(")),
+            values_parser,
+            preceded(space0, tag(")")),
+        ),
+    )
+    .parse(input)?;
+
+    let sinusoidal = Sinusoidal {
+        offset,
+        amplitude,
+        frequency,
+        delay,
+        damping,
+        phase,
+    };
+
+    Ok((input, Param::Sinusoidal(sinusoidal)))
+}
+
 /// Main nom parser for the VoltageSource
 fn parse_voltage_source(input: &str) -> IResult<&str, VoltageSource> {
     let (input, _) = alt((tag("V"), tag("v"))).parse(input)?;
@@ -139,7 +209,12 @@ fn parse_voltage_source(input: &str) -> IResult<&str, VoltageSource> {
 
     let parse_any_param = preceded(
         space1,
-        alt((parse_dc_param, parse_ac_param, parse_pulse_param)),
+        alt((
+            parse_dc_param,
+            parse_ac_param,
+            parse_pulse_param,
+            parse_sinusoidal_param,
+        )),
     );
 
     // 3. Use `many0` to parse zero or more parameter blocks in any order.
@@ -149,12 +224,14 @@ fn parse_voltage_source(input: &str) -> IResult<&str, VoltageSource> {
     let mut dc_value = implicit_dc.unwrap_or(0.0);
     let mut ac_amplitude = 0.0;
     let mut pulse: Option<Pulse> = None;
+    let mut sinusoidal: Option<Sinusoidal> = None;
 
     for param in params {
         match param {
             Param::Dc(val) => dc_value = val,
             Param::Ac(val) => ac_amplitude = val,
             Param::Pulse(val) => pulse = Some(val),
+            Param::Sinusoidal(val) => sinusoidal = Some(val),
         }
     }
 
@@ -165,6 +242,7 @@ fn parse_voltage_source(input: &str) -> IResult<&str, VoltageSource> {
         dc_value,
         ac_amplitude,
         pulse,
+        sinusoidal,
     };
 
     Ok((input, voltage_source))
@@ -180,6 +258,8 @@ impl VoltageSource {
     pub fn transient_value_at(&self, time: f64) -> f64 {
         if let Some(pulse) = &self.pulse {
             pulse.value_at(time)
+        } else if let Some(sinusoidal) = &self.sinusoidal {
+            sinusoidal.value_at(time)
         } else {
             self.dc_value
         }
@@ -195,6 +275,7 @@ pub struct VoltageSource {
     pub dc_value: f64,
     pub ac_amplitude: f64,
     pub pulse: Option<Pulse>,
+    pub sinusoidal: Option<Sinusoidal>,
 }
 
 impl Identifiable for VoltageSource {
@@ -435,6 +516,79 @@ mod tests {
         assert!(
             (pulse.value_at(11.005e-6) - 2.5).abs() < epsilon,
             "Failed in next period"
+        );
+    }
+
+    #[test]
+    fn test_parse_sinusoidal() {
+        let s = "V1 in 0 SIN(0 1 1k 1m 0.1 90)";
+        let vs = s.parse::<VoltageSource>().unwrap();
+        let epsilon = 1e-9;
+
+        // The sinusoidal source is for transient, not DC, so dc_value should be 0 unless specified.
+        assert_eq!(vs.dc_value, 0.0);
+        assert!(vs.sinusoidal.is_some());
+
+        let sin = vs.sinusoidal.unwrap();
+        assert!((sin.offset - 0.0).abs() < epsilon);
+        assert!((sin.amplitude - 1.0).abs() < epsilon);
+        assert!((sin.frequency - 1000.0).abs() < epsilon);
+        assert!((sin.delay - 1e-3).abs() < epsilon);
+        assert!((sin.damping - 0.1).abs() < epsilon);
+        assert!((sin.phase - 90.0).abs() < epsilon);
+    }
+
+    #[test]
+    fn test_sinusoidal_value_at_time() {
+        let sin = Sinusoidal {
+            offset: 1.0,
+            amplitude: 5.0,
+            frequency: 1000.0, // 1kHz -> period is 1ms
+            delay: 1e-3,       // 1ms
+            damping: 0.0,      // No damping for simpler checks
+            phase: 0.0,        // No phase shift
+        };
+
+        let epsilon = 1e-9;
+
+        // 1. Before delay time
+        assert!(
+            (sin.value_at(0.5e-3) - 1.0).abs() < epsilon,
+            "Failed before delay"
+        );
+
+        // 2. At first peak (1/4 period after delay)
+        // t = 1ms (delay) + 0.25ms (1/4 period) = 1.25ms
+        // value = 1.0 (offset) + 5.0 (amp) * sin(pi/2) = 6.0
+        assert!(
+            (sin.value_at(1.25e-3) - 6.0).abs() < epsilon,
+            "Failed at first peak"
+        );
+
+        // 3. At first zero crossing (1/2 period after delay)
+        // t = 1ms (delay) + 0.5ms (1/2 period) = 1.5ms
+        // value = 1.0 (offset) + 5.0 (amp) * sin(pi) = 1.0
+        assert!(
+            (sin.value_at(1.5e-3) - 1.0).abs() < epsilon,
+            "Failed at zero crossing"
+        );
+
+        // 4. At first trough (3/4 period after delay)
+        // t = 1ms (delay) + 0.75ms (3/4 period) = 1.75ms
+        // value = 1.0 (offset) + 5.0 (amp) * sin(3*pi/2) = -4.0
+        assert!(
+            (sin.value_at(1.75e-3) - -4.0).abs() < epsilon,
+            "Failed at first trough"
+        );
+
+        // Test with a 90-degree phase shift (becomes a cosine wave)
+        let sin_phase = Sinusoidal { phase: 90.0, ..sin };
+
+        // 5. At delay time with 90deg phase shift, sin(pi/2) = 1
+        // value = 1.0 + 5.0 * 1 = 6.0
+        assert!(
+            (sin_phase.value_at(1e-3) - 6.0).abs() < epsilon,
+            "Failed at delay with phase shift"
         );
     }
 }
