@@ -1,0 +1,21 @@
+
+V1 inac1 0 SIN(0 5 60 0 0 0)
+V2 inac2 0 SIN(0 -5 60 0 0 0)
+
+D1 inac1 outdc DMOD
+D2 inac2 outdc DMOD  
+D3 0 inac1 DMOD
+D4 0 inac2 DMOD
+
+C1 outdc 0 100u
+R1 outdc 0 1k 
+
+.model DMOD D (is=1e-12)
+
+.tran 0.1ms 50ms
+
+.control
+  run
+  plot v(inac1,inac2) v(outdc)
+.endc
+.end

@@ -1,3 +1,9 @@
+use nom::{
+    IResult, Parser,
+    bytes::complete::{is_not, take_while1},
+    combinator::map_res,
+};
+
 use crate::prelude::*;
 
 /// Parses a SPICE-style numeric value string with metric suffixes.
@@ -53,6 +59,20 @@ pub fn parse_value(s: &str) -> Result<f64> {
         .map_err(|_| Error::InvalidFloatValue(format!("Invalid numeric value '{}'", s)))?;
 
     Ok(base_val * multiplier)
+}
+
+/// Parses a string consisting of alphanumeric characters and underscores.
+pub fn alphanumeric_or_underscore1(input: &str) -> IResult<&str, &str> {
+    take_while1(|c: char| c.is_ascii_alphanumeric() || c == '_').parse(input)
+}
+
+/// A nom parser that recognizes a value token and parses it using our custom logic.
+pub fn value_parser(input: &str) -> IResult<&str, f64> {
+    // 1. Recognize a token (any sequence of chars that isn't a space or parenthesis).
+    let token_parser = is_not(" \t\r\n()");
+
+    // 2. Apply your custom parsing function to the recognized token.
+    map_res(token_parser, parse_value).parse(input)
 }
 
 #[cfg(test)]

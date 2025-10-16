@@ -9,6 +9,7 @@ mod tests {
         env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string())
     }
 
+    #[allow(dead_code)]
     fn print_results_to_console(result: &AnalysisResult) {
         match result {
             AnalysisResult::Op(op_solution) => {
@@ -79,8 +80,6 @@ mod tests {
                 let mut headers: Vec<_> = tran_solution[0].keys().collect();
                 headers.sort();
 
-                dbg!(&headers);
-
                 // Print header
                 for header in &headers {
                     print!("{:<18}", header);
@@ -142,6 +141,23 @@ mod tests {
     }
 
     #[test]
+    fn test_rectifier() {
+        let path = Path::new(&circuits_dir()).join("rectifier/rectifier.cir");
+        let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
+        let config = SolverConfig::default();
+        let mut solver = Solver::new(circuit, config);
+
+        let tran_analysis = TransientAnalysis {
+            time_step: 50e-6, // 50us
+            stop_time: 50e-3, // 20ms
+        };
+
+        solver.solve(Analysis::Transient(tran_analysis)).unwrap();
+        // print_results_to_console(&solution);
+        // let transient_solution = solution.clone().into_transient();
+    }
+
+    #[test]
     fn test_low_pass_filter_transient() {
         let path = Path::new(&circuits_dir()).join("low_pass_filter/transient.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
@@ -154,7 +170,7 @@ mod tests {
         };
 
         let solution = solver.solve(Analysis::Transient(tran_analysis)).unwrap();
-        print_results_to_console(&solution);
+        // print_results_to_console(&solution);
         let transient_solution = solution.clone().into_transient();
 
         // --- Check initial condition (t=0) ---

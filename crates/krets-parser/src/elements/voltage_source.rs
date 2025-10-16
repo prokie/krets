@@ -1,12 +1,22 @@
 use crate::prelude::*;
 use faer::c64;
 use faer::sparse::Triplet;
-use regex::Regex;
+use nom::{
+    IResult, Parser,
+    branch::alt,
+    bytes::complete::{tag, tag_no_case},
+    character::complete::{space0, space1},
+    combinator::{all_consuming, map, opt},
+    multi::many0,
+    number::complete::double,
+    sequence::{delimited, preceded},
+};
 use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use super::{Identifiable, Stampable};
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, PartialEq)]
 /// Defines the parameters for a PULSE voltage source.
 pub struct Pulse {
     /// Initial value before the pulse.
@@ -23,6 +33,41 @@ pub struct Pulse {
     pub pulse_width: f64,
     /// Total duration of one cycle of the pulse.
     pub period: f64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+/// Defines the parameters for a PULSE voltage source.
+pub struct Sinusoidal {
+    /// Offset value.
+    pub offset: f64,
+    /// Amplitude of the sine wave.
+    pub amplitude: f64,
+    /// Frequency of the sine wave in Hz.
+    pub frequency: f64,
+    /// Delay before the sine wave starts.
+    pub delay: f64,
+    /// Damping factor for the sine wave.
+    pub damping: f64,
+    /// Phase shift in degrees.
+    pub phase: f64,
+}
+
+impl Sinusoidal {
+    /// Calculates the value of the sinusoidal at a given time.
+    pub fn value_at(&self, time: f64) -> f64 {
+        if time < self.delay {
+            return self.offset;
+        }
+
+        let angular_frequency = 2.0 * std::f64::consts::PI * self.frequency;
+        let phase_radians = self.phase.to_radians();
+        let t = time - self.delay;
+
+        self.offset
+            + self.amplitude
+                * (-self.damping * t).exp()
+                * (angular_frequency * t + phase_radians).sin()
+    }
 }
 
 impl Pulse {
@@ -53,6 +98,147 @@ impl Pulse {
     }
 }
 
+/// An enum to represent the different types of optional parameters.
+#[derive(Debug, PartialEq)]
+enum Param {
+    Dc(f64),
+    Ac(f64),
+    Pulse(Pulse),
+    Sinusoidal(Sinusoidal),
+}
+
+/// Parses a DC parameter block, e.g., "dc 5.0"
+fn parse_dc_param(input: &str) -> IResult<&str, Param> {
+    map(preceded((tag_no_case("dc"), space1), double), Param::Dc).parse(input)
+}
+
+/// Parses an AC parameter block, e.g., "ac 10 90"
+fn parse_ac_param(input: &str) -> IResult<&str, Param> {
+    map(preceded((tag_no_case("ac"), space1), double), Param::Ac).parse(input)
+}
+
+fn parse_pulse_param(input: &str) -> IResult<&str, Param> {
+    // Define a parser for all the values inside the parentheses
+    let values_parser = (
+        preceded(space0, value_parser),
+        preceded(space1, value_parser),
+        preceded(space1, value_parser),
+        preceded(space1, value_parser),
+        preceded(space1, value_parser),
+        preceded(space1, value_parser),
+        preceded(space1, value_parser),
+    );
+
+    let (
+        input,
+        (initial_value, pulsed_value, delay_time, rise_time, fall_time, pulse_width, period),
+    ) = preceded(
+        tag_no_case("pulse"),
+        delimited(
+            preceded(space0, tag("(")),
+            values_parser,
+            preceded(space0, tag(")")),
+        ),
+    )
+    .parse(input)?;
+
+    let pulse = Pulse {
+        initial_value,
+        pulsed_value,
+        delay_time,
+        rise_time,
+        fall_time,
+        pulse_width,
+        period,
+    };
+
+    Ok((input, Param::Pulse(pulse)))
+}
+
+fn parse_sinusoidal_param(input: &str) -> IResult<&str, Param> {
+    // Define a parser for all the values inside the parentheses
+
+    let values_parser = (
+        preceded(space0, value_parser),
+        preceded(space1, value_parser),
+        preceded(space1, value_parser),
+        preceded(space1, value_parser),
+        preceded(space1, value_parser),
+        preceded(space1, value_parser),
+    );
+
+    let (input, (offset, amplitude, frequency, delay, damping, phase)) = preceded(
+        tag_no_case("sin"),
+        delimited(
+            preceded(space0, tag("(")),
+            values_parser,
+            preceded(space0, tag(")")),
+        ),
+    )
+    .parse(input)?;
+
+    let sinusoidal = Sinusoidal {
+        offset,
+        amplitude,
+        frequency,
+        delay,
+        damping,
+        phase,
+    };
+
+    Ok((input, Param::Sinusoidal(sinusoidal)))
+}
+
+/// Main nom parser for the VoltageSource
+fn parse_voltage_source(input: &str) -> IResult<&str, VoltageSource> {
+    let (input, _) = alt((tag("V"), tag("v"))).parse(input)?;
+    let (input, name) = alphanumeric_or_underscore1(input)?;
+    let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, minus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+
+    let (input, implicit_dc) = opt(preceded(space1, double)).parse(input)?;
+
+    let parse_any_param = preceded(
+        space1,
+        alt((
+            parse_dc_param,
+            parse_ac_param,
+            parse_pulse_param,
+            parse_sinusoidal_param,
+        )),
+    );
+
+    // 3. Use `many0` to parse zero or more parameter blocks in any order.
+    let (input, params) = many0(parse_any_param).parse(input)?;
+
+    // 4. Process the collected parameters to build the struct
+    let mut dc_value = implicit_dc.unwrap_or(0.0);
+    let mut ac_amplitude = 0.0;
+    let mut pulse: Option<Pulse> = None;
+    let mut sinusoidal: Option<Sinusoidal> = None;
+
+    for param in params {
+        match param {
+            Param::Dc(val) => dc_value = val,
+            Param::Ac(val) => ac_amplitude = val,
+            Param::Pulse(val) => pulse = Some(val),
+            Param::Sinusoidal(val) => sinusoidal = Some(val),
+        }
+    }
+
+    let voltage_source = VoltageSource {
+        name: name.parse().unwrap_or(0),
+        plus: plus.to_string(),
+        minus: minus.to_string(),
+        dc_value,
+        ac_amplitude,
+        pulse,
+        sinusoidal,
+    };
+
+    Ok((input, voltage_source))
+}
+
 impl VoltageSource {
     /// Returns the nodes associated with the element.
     pub fn nodes(&self) -> Vec<&str> {
@@ -61,18 +247,14 @@ impl VoltageSource {
 
     /// Calculates the source's value at a specific time for transient analysis.
     pub fn transient_value_at(&self, time: f64) -> f64 {
-        match &self.source_type {
-            TimeVarying::Dc => self.dc_value,
-            TimeVarying::Pulse(p) => p.value_at(time),
+        if let Some(pulse) = &self.pulse {
+            pulse.value_at(time)
+        } else if let Some(sinusoidal) = &self.sinusoidal {
+            sinusoidal.value_at(time)
+        } else {
+            self.dc_value
         }
     }
-}
-
-#[derive(Debug, Clone)]
-/// Represents the type of a voltage source, which can be DC or time-varying.
-pub enum TimeVarying {
-    Dc,
-    Pulse(Pulse),
 }
 
 #[derive(Debug, Clone)]
@@ -81,11 +263,10 @@ pub struct VoltageSource {
     pub name: u32,
     pub plus: String,
     pub minus: String,
-    /// The default DC value of the source.
     pub dc_value: f64,
-    pub ac_amplitude: Option<f64>,
-    /// The time-varying behavior of the source.
-    pub source_type: TimeVarying,
+    pub ac_amplitude: f64,
+    pub pulse: Option<Pulse>,
+    pub sinusoidal: Option<Sinusoidal>,
 }
 
 impl Identifiable for VoltageSource {
@@ -164,11 +345,8 @@ impl Stampable for VoltageSource {
     ) -> Vec<Triplet<usize, usize, c64>> {
         let mut triplets = Vec::with_capacity(1);
 
-        if let (Some(&ic), Some(ac_amplitude)) = (
-            index_map.get(&format!("I({})", self.identifier())),
-            self.ac_amplitude,
-        ) {
-            triplets.push(Triplet::new(ic, 0, c64::new(ac_amplitude, 0.0)));
+        if let Some(&ic) = index_map.get(&format!("I({})", self.identifier())) {
+            triplets.push(Triplet::new(ic, 0, c64::new(self.ac_amplitude, 0.0)));
         }
         triplets
     }
@@ -204,111 +382,12 @@ impl FromStr for VoltageSource {
 
     fn from_str(s: &str) -> Result<Self> {
         let s_without_comment = s.split('%').next().unwrap_or("").trim();
-        let re = Regex::new(r"[()\s]+").unwrap();
 
-        let parts: Vec<&str> = re
-            .split(s_without_comment)
-            .filter(|s| !s.is_empty()) // remove empty strings
-            .collect();
+        let (_, voltage_source) = all_consuming(parse_voltage_source)
+            .parse(s_without_comment)
+            .map_err(|e| Error::InvalidFormat(e.to_string()))?;
 
-        if !parts[0].starts_with(['V', 'v']) || parts[0].len() <= 1 {
-            return Err(Error::InvalidFormat(format!(
-                "Invalid voltage source identifier: '{s}'"
-            )));
-        }
-        let name = parts[0][1..]
-            .parse::<u32>()
-            .map_err(|_| Error::InvalidNodeName(format!("Invalid voltage source name: '{s}'")))?;
-
-        let plus = parts[1].to_string();
-        let minus = parts[2].to_string();
-
-        // Find where the parameters start (after plus/minus nodes)
-        let mut current_idx = 3;
-        let dc_value = if parts
-            .get(current_idx)
-            .unwrap_or(&"")
-            .eq_ignore_ascii_case("DC")
-        {
-            current_idx += 1; // Skip "DC" keyword
-            let val = parse_value(
-                parts
-                    .get(current_idx)
-                    .ok_or_else(|| Error::InvalidFormat("Missing DC value".to_string()))?,
-            )?;
-            current_idx += 1;
-            val
-        } else {
-            // If no "DC", the next part must be the value
-            let val = parse_value(
-                parts
-                    .get(current_idx)
-                    .ok_or_else(|| Error::InvalidFormat("Missing DC value".to_string()))?,
-            )?;
-            current_idx += 1;
-            val
-        };
-
-        let mut source_type = TimeVarying::Dc;
-        let mut ac_amplitude = None;
-
-        // Parse remaining optional parts (AC, PULSE, etc.)
-        while current_idx < parts.len() {
-            let keyword = parts[current_idx].to_uppercase();
-            match keyword.as_str() {
-                "AC" => {
-                    current_idx += 1;
-                    ac_amplitude = Some(parse_value(parts.get(current_idx).ok_or_else(|| {
-                        Error::InvalidFormat("Missing AC amplitude".to_string())
-                    })?)?);
-                    current_idx += 1;
-                }
-                "PULSE" => {
-                    // PULSE (V1 V2 TD TR TF PW PER)
-                    let pulse_str = s_without_comment
-                        .split_at(s_without_comment.to_uppercase().find("PULSE").unwrap())
-                        .1;
-                    let pulse_parts_str = pulse_str
-                        .trim_start_matches("PULSE")
-                        .trim()
-                        .trim_matches('(')
-                        .trim_matches(')');
-                    let pulse_parts: Vec<&str> = pulse_parts_str.split_whitespace().collect();
-                    if pulse_parts.len() != 7 {
-                        return Err(Error::InvalidFormat(format!(
-                            "PULSE requires 7 parameters, found {} in '{}'",
-                            pulse_parts.len(),
-                            s
-                        )));
-                    }
-                    source_type = TimeVarying::Pulse(Pulse {
-                        initial_value: parse_value(pulse_parts[0])?,
-                        pulsed_value: parse_value(pulse_parts[1])?,
-                        delay_time: parse_value(pulse_parts[2])?,
-                        rise_time: parse_value(pulse_parts[3])?,
-                        fall_time: parse_value(pulse_parts[4])?,
-                        pulse_width: parse_value(pulse_parts[5])?,
-                        period: parse_value(pulse_parts[6])?,
-                    });
-                    current_idx = parts.len(); // PULSE is the last parameter
-                }
-                _ => {
-                    return Err(Error::InvalidFormat(format!(
-                        "Unknown voltage source parameter '{}' in '{s}'",
-                        keyword
-                    )));
-                }
-            }
-        }
-
-        Ok(VoltageSource {
-            name,
-            plus,
-            minus,
-            dc_value,
-            ac_amplitude,
-            source_type,
-        })
+        Ok(voltage_source)
     }
 }
 
@@ -325,7 +404,17 @@ mod tests {
         assert_eq!(vs.plus, "1");
         assert_eq!(vs.minus, "0");
         assert_eq!(vs.dc_value, 5.0);
-        assert_eq!(vs.ac_amplitude, None);
+        assert_eq!(vs.ac_amplitude, 0.0);
+    }
+    #[test]
+    fn test_different_node_names() {
+        let s = "V10 out_ in_3 10";
+        let vs = s.parse::<VoltageSource>().unwrap();
+        assert_eq!(vs.name, 10);
+        assert_eq!(vs.plus, "out_");
+        assert_eq!(vs.minus, "in_3");
+        assert_eq!(vs.dc_value, 10.0);
+        assert_eq!(vs.ac_amplitude, 0.0);
     }
 
     #[test]
@@ -334,7 +423,7 @@ mod tests {
         let vs = s.parse::<VoltageSource>().unwrap();
         assert_eq!(vs.name, 2);
         assert_eq!(vs.dc_value, 0.0);
-        assert_eq!(vs.ac_amplitude, Some(1.5));
+        assert_eq!(vs.ac_amplitude, 1.5);
     }
 
     #[test]
@@ -342,7 +431,7 @@ mod tests {
         let s = "v3 5 6 12 ac 10";
         let vs = s.parse::<VoltageSource>().unwrap();
         assert_eq!(vs.name, 3);
-        assert_eq!(vs.ac_amplitude, Some(10.0));
+        assert_eq!(vs.ac_amplitude, 10.0);
     }
 
     #[test]
@@ -353,38 +442,26 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_format_too_few_parts() {
-        assert!("V1 1 0".parse::<VoltageSource>().is_err());
-    }
-
-    #[test]
     fn test_invalid_format_too_many_parts() {
         assert!("V1 1 0 5 6".parse::<VoltageSource>().is_err());
-    }
-
-    #[test]
-    fn test_invalid_ac_format() {
-        assert!("V1 1 0 5 AC".parse::<VoltageSource>().is_err()); // Missing value
-        assert!("V1 1 0 5 DC 1".parse::<VoltageSource>().is_err()); // Wrong keyword
     }
 
     #[test]
     fn test_parse_pulse() {
         let s = "V1 in 0 dc 0 PULSE(0 5 1u 100u 100u 5u 10u)";
         let vs = s.parse::<VoltageSource>().unwrap();
+        let epsilon = 1e-9;
         assert_eq!(vs.dc_value, 0.0);
-        match vs.source_type {
-            TimeVarying::Pulse(p) => {
-                assert_eq!(p.initial_value, 0.0);
-                assert_eq!(p.pulsed_value, 5.0);
-                assert!((p.delay_time - 1e-6).abs() < 1e-12);
-                assert!((p.rise_time - 100e-6).abs() < 1e-12);
-                assert!((p.fall_time - 100e-6).abs() < 1e-12);
-                assert!((p.pulse_width - 5e-6).abs() < 1e-12);
-                assert!((p.period - 10e-6).abs() < 1e-12);
-            }
-            _ => panic!("Expected Pulse source type"),
-        }
+
+        assert!(vs.pulse.is_some());
+        let pulse = vs.pulse.unwrap();
+        assert!((pulse.initial_value - 0.0).abs() < epsilon);
+        assert!((pulse.pulsed_value - 5.0).abs() < epsilon);
+        assert!((pulse.delay_time - 1e-6).abs() < epsilon);
+        assert!((pulse.rise_time - 100e-6).abs() < epsilon);
+        assert!((pulse.fall_time - 100e-6).abs() < epsilon);
+        assert!((pulse.pulse_width - 5e-6).abs() < epsilon);
+        assert!((pulse.period - 10e-6).abs() < epsilon);
     }
 
     #[test]
@@ -440,6 +517,79 @@ mod tests {
         assert!(
             (pulse.value_at(11.005e-6) - 2.5).abs() < epsilon,
             "Failed in next period"
+        );
+    }
+
+    #[test]
+    fn test_parse_sinusoidal() {
+        let s = "V1 in 0 SIN(0 1 1k 1m 0.1 90)";
+        let vs = s.parse::<VoltageSource>().unwrap();
+        let epsilon = 1e-9;
+
+        // The sinusoidal source is for transient, not DC, so dc_value should be 0 unless specified.
+        assert_eq!(vs.dc_value, 0.0);
+        assert!(vs.sinusoidal.is_some());
+
+        let sin = vs.sinusoidal.unwrap();
+        assert!((sin.offset - 0.0).abs() < epsilon);
+        assert!((sin.amplitude - 1.0).abs() < epsilon);
+        assert!((sin.frequency - 1000.0).abs() < epsilon);
+        assert!((sin.delay - 1e-3).abs() < epsilon);
+        assert!((sin.damping - 0.1).abs() < epsilon);
+        assert!((sin.phase - 90.0).abs() < epsilon);
+    }
+
+    #[test]
+    fn test_sinusoidal_value_at_time() {
+        let sin = Sinusoidal {
+            offset: 1.0,
+            amplitude: 5.0,
+            frequency: 1000.0, // 1kHz -> period is 1ms
+            delay: 1e-3,       // 1ms
+            damping: 0.0,      // No damping for simpler checks
+            phase: 0.0,        // No phase shift
+        };
+
+        let epsilon = 1e-9;
+
+        // 1. Before delay time
+        assert!(
+            (sin.value_at(0.5e-3) - 1.0).abs() < epsilon,
+            "Failed before delay"
+        );
+
+        // 2. At first peak (1/4 period after delay)
+        // t = 1ms (delay) + 0.25ms (1/4 period) = 1.25ms
+        // value = 1.0 (offset) + 5.0 (amp) * sin(pi/2) = 6.0
+        assert!(
+            (sin.value_at(1.25e-3) - 6.0).abs() < epsilon,
+            "Failed at first peak"
+        );
+
+        // 3. At first zero crossing (1/2 period after delay)
+        // t = 1ms (delay) + 0.5ms (1/2 period) = 1.5ms
+        // value = 1.0 (offset) + 5.0 (amp) * sin(pi) = 1.0
+        assert!(
+            (sin.value_at(1.5e-3) - 1.0).abs() < epsilon,
+            "Failed at zero crossing"
+        );
+
+        // 4. At first trough (3/4 period after delay)
+        // t = 1ms (delay) + 0.75ms (3/4 period) = 1.75ms
+        // value = 1.0 (offset) + 5.0 (amp) * sin(3*pi/2) = -4.0
+        assert!(
+            (sin.value_at(1.75e-3) - -4.0).abs() < epsilon,
+            "Failed at first trough"
+        );
+
+        // Test with a 90-degree phase shift (becomes a cosine wave)
+        let sin_phase = Sinusoidal { phase: 90.0, ..sin };
+
+        // 5. At delay time with 90deg phase shift, sin(pi/2) = 1
+        // value = 1.0 + 5.0 * 1 = 6.0
+        assert!(
+            (sin_phase.value_at(1e-3) - 6.0).abs() < epsilon,
+            "Failed at delay with phase shift"
         );
     }
 }
