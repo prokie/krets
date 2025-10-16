@@ -79,8 +79,6 @@ mod tests {
                 let mut headers: Vec<_> = tran_solution[0].keys().collect();
                 headers.sort();
 
-                dbg!(&headers);
-
                 // Print header
                 for header in &headers {
                     print!("{:<18}", header);
@@ -154,7 +152,7 @@ mod tests {
         };
 
         let solution = solver.solve(Analysis::Transient(tran_analysis)).unwrap();
-        print_results_to_console(&solution);
+        // print_results_to_console(&solution);
         let transient_solution = solution.clone().into_transient();
     }
 
@@ -171,7 +169,7 @@ mod tests {
         };
 
         let solution = solver.solve(Analysis::Transient(tran_analysis)).unwrap();
-        print_results_to_console(&solution);
+        // print_results_to_console(&solution);
         let transient_solution = solution.clone().into_transient();
 
         // --- Check initial condition (t=0) ---
