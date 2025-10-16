@@ -5,8 +5,10 @@
 
 #set heading(numbering: "1.")
 #set math.equation(numbering: "(1)")
-
-
+#show figure.where(
+  kind: table,
+): set figure.caption(position: top)
+#show math.equation: set text(size: 11pt)
 
 = Krets
 
@@ -20,50 +22,98 @@
 
 === Capacitor
 
-Element stamps for a capacitor in the conductance matrix in group 1:
 
-$
-  mat(
-    delim: #none,
-    , , v^+, , v^-, , |, "RHS";
-    , , dots.v, , dots.v, , |, dots.v;
-    v^+, dots, +C, dots, -C, dots, |, dots.v;
-    v^-, dots, -C, dots, +C, dots, |, dots.v;
-    , , dots.v, , dots.v, , |, dots.v;
-  )
-$
+#figure(
+  table(
+    columns: 4,
+    align: horizon,
+    stroke: none,
+    table.header(
+      table.hline(),
+      [], $v^+$, $v^-$, "RHS",
+      table.hline(),
+      $v^+$, $+C$, $-C$, $$,
+      $v^-$, $-C$, $+C$, $$,
+      table.hline(),
+    ),
+  ),
+  caption: [Element stamps for a capacitor in the conductance matrix in group 1.],
+)
 
-Element stamps for a capacitor in the conductance matrix in group 2:
 
-$
-  mat(
-    delim: #none,
-    , , v^+, , v^-, , i_C, , |, "RHS";
-    , , dots.v, , dots.v, , dots.v, , |, ;
-    v^+, dots, dots, dots, dots, dots, dots, dots, |, ;
-    v^-, dots, dots, dots, dots, dots, dots, dots, |, ;
-    i_C, dots, -C, dots, C, dots, + 1, dots, |, ;
-    , , dots.v, , dots.v, , dots.v, , |, ;
-  )
-$
+
+#figure(
+  table(
+    columns: 5,
+    align: horizon,
+    stroke: none,
+    table.header(
+      table.hline(),
+      [], $v^+$, $v^-$, $i_C$, "RHS",
+      table.hline(),
+      $v^+$, [], [], $$, [],
+      $v^-$, [], [], $$, $$,
+      $i_C$, $-C$, $+C$, $+1$, $$,
+      table.hline(),
+    ),
+  ),
+  caption: [Element stamps for a capacitor in the conductance matrix in group 2.],
+)
+
+#figure(caption: "Capacitor Companion model for Backwards Euler.", zap.circuit({
+  import zap: *
+  set-style(zap: (variant: "ieee"))
+
+  wire((0, 0), (3, 0), i: $i_(n+1)$)
+  wire((3, 0), (3, -0.5))
+  wire((2, -0.5), (4, -0.5))
+  node("n1", (3, -0.5))
+  resistor("r1", (2, -0.5), (2, -3), label: $frac(h, C)$)
+  isource("i1", (4, -3), (4, -0.5), label: (content: $frac(C, h)u_n$, anchor: "south"))
+  wire((2, -3), (4, -3))
+  wire((3, -3), (3, -3.5))
+  node("n2", (3, -3))
+  wire((0, -3.5), (3, -3.5))
+  draw.line((1, -1.5), (1, -0.5), mark: (end: ">", fill: black))
+  draw.line((1, -2), (1, -3), mark: (end: ">", fill: black))
+  draw.content((1, -1.75), $u_(n+1)$)
+  draw.content((1, -3.25), $-$)
+  draw.content((1, -0.25), $+$)
+}))
+
+
+The dynamic element equation
+
+$ i(t_(n+1)) = C(u(t_(n+1)))u'(t_(n+1)) $
+
+using $i(t_(n+1)) approx i_(n+1)$ and $u(t_(n+1)) approx u_(n+1)$
+
+$ i_(n+1) = C(u_(n+1))u'(t_(n+1)) approx C(u_(n+1)) (frac(u_(n+1) - u_n,h)) $
+
+$ u_(n+1) = frac(h,C) i_(n+1) + u_n $
+
+so $ G_(n+1) = frac(h,C) "and" u_n = u_(n+1) -G_(n+1)i_(n+1) $
 
 
 
 === Current Source
 
-#table(
-  columns: 5,
-  align: horizon,
-  stroke: none,
-  table.header(
-    table.hline(),
-    [], $v^+$, $v^-$, $i$, "RHS",
-    table.hline(),
-    $v^+$, [], [], $+1$, [],
-    $v^-$, [], [], $-1$, $$,
-    $i$, [], [], $+1$, $I$,
-    table.hline(),
+#figure(
+  table(
+    columns: 5,
+    align: horizon,
+    stroke: none,
+    table.header(
+      table.hline(),
+      [], $v^+$, $v^-$, $i$, "RHS",
+      table.hline(),
+      $v^+$, [], [], $+1$, [],
+      $v^-$, [], [], $-1$, $$,
+      $i$, [], [], $+1$, $I$,
+      table.hline(),
+    ),
   ),
+  caption: [Element stamp for an independent current source in group 1],
 )
 
 === Diode
@@ -111,7 +161,7 @@ $ I_"eq" = I_D - G_"eq" V_D $
 #figure(caption: "Diode Companion model", zap.circuit({
   import zap: *
   set-style(zap: (variant: "ieee"))
-  wire((0, 0), (3, 0))
+  wire((0, 0), (3, 0), i: $I_D$)
   wire((3, 0), (3, -0.5))
   wire((2, -0.5), (4, -0.5))
   node("n1", (3, -0.5))
@@ -126,21 +176,65 @@ $ I_"eq" = I_D - G_"eq" V_D $
 
 The element stamps for the diode in the conductance matrix are given by:
 
-$
-  mat(
-    delim: #none,
-    , , v^+, , v^-, , |, "RHS";
-    , , dots.v, , dots.v, , |, dots.v;
-    n^+, dots, +G_"eq", dots, -G_"eq", dots, |, -I_"eq";
-    n^-, dots, -G_"eq", dots, +G_"eq", dots, |, +I_"eq";
-    , , dots.v, , dots.v, , |, dots.v;
-  )
-$
+
+#figure(
+  table(
+    columns: 4,
+    align: horizon,
+    stroke: none,
+    table.header(
+      table.hline(),
+      [], $v^+$, $v^-$, "RHS",
+      table.hline(),
+      $v^+$, $+G_"eq"$, $-G_"eq"$, $-I_"eq"$,
+      $v^-$, $-G_"eq"$, $+G_"eq"$, $+I_"eq"$,
+      table.hline(),
+    ),
+  ),
+  caption: [Element stamps for a diode in group 1.],
+)
+
 
 
 
 
 === Inductor
+
+
+
+The dynamic element equation
+
+$ u(t_(n+1)) = L(i(t_(n+1)))i'(t_(n+1)) $
+
+using $u(t_(n+1)) approx u_(n+1)$ and $i(t_(n+1)) approx i_(n+1)$ 
+
+
+$ u_(n+1) = L(i_(n+1))i'(t_(n+1)) approx L(i_(n+1)) (frac(i_(n+1) - i_n,h)) $
+
+$ i_(n+1) = frac(h,L)u_"n+1" + i_n $
+
+$ G_(n+1) = frac(h,L) "and" i_n = i_(n+1) -G_(n+1)u_(n+1) $
+
+#figure(caption: "Inductor companion model for Backwards Euler.", zap.circuit({
+  import zap: *
+  set-style(zap: (variant: "ieee"))
+
+  wire((0, 0), (3, 0), i: $i_(n+1)$)
+  wire((3, 0), (3, -0.5))
+  wire((2, -0.5), (4, -0.5))
+  node("n1", (3, -0.5))
+  resistor("r1", (2, -0.5), (2, -3), label: $frac(L, h)$)
+  isource("i1", (4, -0.5), (4, -3), label: $i_n$)
+  wire((2, -3), (4, -3))
+  wire((3, -3), (3, -3.5))
+  node("n2", (3, -3))
+  wire((0, -3.5), (3, -3.5))
+  draw.line((1, -1.5), (1, -0.5), mark: (end: ">", fill: black))
+  draw.line((1, -2), (1, -3), mark: (end: ">", fill: black))
+  draw.content((1, -1.75), $u_(n+1)$)
+  draw.content((1, -3.25), $-$)
+  draw.content((1, -0.25), $+$)
+}))
 
 === Mosfet
 
