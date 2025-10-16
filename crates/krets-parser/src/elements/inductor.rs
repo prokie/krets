@@ -114,6 +114,73 @@ impl Stampable for Inductor {
         // An ideal inductor is passive and has no internal sources.
         vec![]
     }
+
+    fn add_conductance_matrix_transient_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
+        _prev_solution: &HashMap<String, f64>,
+        h: f64,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        let index_plus = index_map.get(&format!("V({})", self.plus));
+        let index_minus = index_map.get(&format!("V({})", self.minus));
+
+        let mut triplets = Vec::with_capacity(4);
+        let conductance = self.value / h;
+
+        if let Some(&ip) = index_plus {
+            triplets.push(Triplet::new(ip, ip, conductance));
+        }
+        if let Some(&im) = index_minus {
+            triplets.push(Triplet::new(im, im, conductance));
+        }
+        if let (Some(&ip), Some(&im)) = (index_plus, index_minus) {
+            triplets.push(Triplet::new(ip, im, -conductance));
+            triplets.push(Triplet::new(im, ip, -conductance));
+        }
+
+        triplets
+    }
+
+    fn add_excitation_vector_transient_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        solution_map: &HashMap<String, f64>,
+        prev_solution: &HashMap<String, f64>,
+        h: f64,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        let index_plus = index_map.get(&format!("V({})", self.plus));
+        let index_minus = index_map.get(&format!("V({})", self.minus));
+
+        let i_prev = prev_solution
+            .get(&format!("I({})", self.identifier()))
+            .copied()
+            .unwrap_or(0.0);
+
+        let v_plus = solution_map
+            .get(&format!("V({})", self.plus))
+            .copied()
+            .unwrap_or(0.0);
+        let v_minus = solution_map
+            .get(&format!("V({})", self.minus))
+            .copied()
+            .unwrap_or(0.0);
+
+        let v = v_plus - v_minus;
+
+        let i_n = i_prev + (h / self.value) * v;
+
+        let mut triplets = Vec::with_capacity(2);
+
+        if let Some(&ip) = index_plus {
+            triplets.push(Triplet::new(ip, 0, -i_n));
+        }
+        if let Some(&im) = index_minus {
+            triplets.push(Triplet::new(im, 0, i_n));
+        }
+
+        triplets
+    }
 }
 
 impl FromStr for Inductor {
