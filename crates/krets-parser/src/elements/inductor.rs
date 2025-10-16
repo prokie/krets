@@ -1,6 +1,9 @@
-use faer::{c64, sparse::Triplet};
-
 use crate::prelude::*;
+use faer::{c64, sparse::Triplet};
+use nom::{
+    IResult, Parser, branch::alt, bytes::complete::tag, character::complete::space1,
+    combinator::all_consuming, sequence::preceded,
+};
 use std::{collections::HashMap, f64::consts::PI, str::FromStr};
 
 use super::{Identifiable, Stampable};
@@ -115,47 +118,33 @@ impl Stampable for Inductor {
         vec![]
     }
 }
+fn parse_inductor(input: &str) -> IResult<&str, Inductor> {
+    let (input, _) = alt((tag("L"), tag("l"))).parse(input)?;
+    let (input, name) = alphanumeric_or_underscore1(input)?;
+    let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, minus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, value) = preceded(space1, value_parser).parse(input)?;
+
+    let inductor = Inductor {
+        name: name.parse().unwrap_or(0),
+        plus: plus.to_string(),
+        minus: minus.to_string(),
+        value,
+    };
+
+    Ok((input, inductor))
+}
 
 impl FromStr for Inductor {
     type Err = crate::prelude::Error;
 
     fn from_str(s: &str) -> Result<Self> {
         let s_without_comment = s.split('%').next().unwrap_or("").trim();
-        let parts: Vec<&str> = s_without_comment.split_whitespace().collect();
+        let (_, inductor) = all_consuming(parse_inductor)
+            .parse(s_without_comment)
+            .map_err(|e| Error::InvalidFormat(e.to_string()))?;
 
-        if parts.len() != 4 {
-            return Err(Error::InvalidFormat(format!(
-                "Invalid inductor format: '{s}'"
-            )));
-        }
-
-        if !parts[0].starts_with(['L', 'l']) {
-            return Err(Error::InvalidFormat(format!(
-                "Invalid inductor identifier: '{s}'"
-            )));
-        }
-
-        if parts[0].len() <= 1 {
-            return Err(Error::InvalidFormat(format!(
-                "Inductor name is too short: '{s}'"
-            )));
-        }
-
-        let name = parts[0][1..]
-            .parse::<u32>()
-            .map_err(|_| Error::InvalidNodeName(format!("Invalid inductor name: '{s}'")))?;
-        let plus = parts[1].to_string();
-        let minus = parts[2].to_string();
-        let value = parse_value(parts[3]).map_err(|e| {
-            Error::InvalidFormat(format!("Invalid capacitor value in '{}': {}", s, e))
-        })?;
-
-        Ok(Inductor {
-            name,
-            value,
-            plus,
-            minus,
-        })
+        Ok(inductor)
     }
 }
 

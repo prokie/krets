@@ -1,6 +1,14 @@
 use super::{Identifiable, Stampable};
 use crate::prelude::*;
 use faer::{c64, sparse::Triplet};
+use nom::{
+    IResult, Parser,
+    branch::alt,
+    bytes::complete::{tag, tag_no_case},
+    character::complete::space1,
+    combinator::{all_consuming, opt},
+    sequence::preceded,
+};
 use std::{collections::HashMap, f64::consts::PI, str::FromStr};
 
 #[derive(Debug, Clone)]
@@ -171,63 +179,42 @@ impl Stampable for Capacitor {
         triplets
     }
 }
+fn parse_capacitor(input: &str) -> IResult<&str, Capacitor> {
+    let (input, _) = alt((tag("C"), tag("c"))).parse(input)?;
+    let (input, name) = alphanumeric_or_underscore1(input)?;
+    let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, minus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, value) = preceded(space1, value_parser).parse(input)?;
+    let (input, g2_opt) = opt(preceded(space1, tag_no_case("G2"))).parse(input)?;
+
+    let capacitor = Capacitor {
+        name: name.parse().unwrap_or(0),
+        plus: plus.to_string(),
+        minus: minus.to_string(),
+        value,
+        g2: g2_opt.is_some(),
+    };
+
+    Ok((input, capacitor))
+}
 
 impl FromStr for Capacitor {
     type Err = crate::prelude::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        // IMPROVEMENT: Handle comments more robustly by splitting the string
-        // at the comment character '%' before processing.
         let s_without_comment = s.split('%').next().unwrap_or("").trim();
-        let parts: Vec<&str> = s_without_comment.split_whitespace().collect();
 
-        if parts.len() < 4 || parts.len() > 5 {
-            return Err(Error::InvalidFormat(format!(
-                "Invalid capacitor format: '{s}'"
-            )));
-        }
+        let (_, capacitor) = all_consuming(parse_capacitor)
+            .parse(s_without_comment)
+            .map_err(|e| Error::InvalidFormat(e.to_string()))?;
 
-        // FIX: Add check for identifier prefix 'C'
-        if !parts[0].starts_with(['C', 'c']) {
-            return Err(Error::InvalidFormat(format!(
-                "Invalid capacitor identifier: '{s}'"
-            )));
-        }
-
-        if parts[0].len() <= 1 {
+        if capacitor.name == 0 || s_without_comment.split_whitespace().next().unwrap().len() <= 1 {
             return Err(Error::InvalidFormat(format!(
                 "Capacitor name is too short: '{s}'"
             )));
         }
 
-        let name = parts[0][1..]
-            .parse::<u32>()
-            .map_err(|_| Error::InvalidNodeName(format!("Invalid capacitor name: '{s}'")))?;
-        let plus = parts[1].to_string();
-        let minus = parts[2].to_string();
-        let value = parse_value(parts[3]).map_err(|e| {
-            Error::InvalidFormat(format!("Invalid capacitor value in '{}': {}", s, e))
-        })?;
-
-        let g2 = if parts.len() == 5 {
-            if parts[4].eq_ignore_ascii_case("G2") {
-                true
-            } else {
-                return Err(Error::InvalidFormat(format!(
-                    "Invalid 5th argument for capacitor: '{s}'. Expected 'G2'."
-                )));
-            }
-        } else {
-            false
-        };
-
-        Ok(Capacitor {
-            name,
-            value,
-            plus,
-            minus,
-            g2,
-        })
+        Ok(capacitor)
     }
 }
 
