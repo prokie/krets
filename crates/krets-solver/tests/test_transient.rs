@@ -9,6 +9,7 @@ mod tests {
         env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string())
     }
 
+    #[allow(dead_code)]
     fn print_results_to_console(result: &AnalysisResult) {
         match result {
             AnalysisResult::Op(op_solution) => {
@@ -151,9 +152,9 @@ mod tests {
             stop_time: 50e-3, // 20ms
         };
 
-        let solution = solver.solve(Analysis::Transient(tran_analysis)).unwrap();
+        solver.solve(Analysis::Transient(tran_analysis)).unwrap();
         // print_results_to_console(&solution);
-        let transient_solution = solution.clone().into_transient();
+        // let transient_solution = solution.clone().into_transient();
     }
 
     #[test]

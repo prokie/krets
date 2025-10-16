@@ -4,9 +4,9 @@ use faer::sparse::Triplet;
 use nom::{
     IResult, Parser,
     branch::alt,
-    bytes::complete::{is_not, tag, tag_no_case},
+    bytes::complete::{tag, tag_no_case},
     character::complete::{space0, space1},
-    combinator::{all_consuming, map, map_res, opt},
+    combinator::{all_consuming, map, opt},
     multi::many0,
     number::complete::double,
     sequence::{delimited, preceded},
@@ -115,15 +115,6 @@ fn parse_dc_param(input: &str) -> IResult<&str, Param> {
 /// Parses an AC parameter block, e.g., "ac 10 90"
 fn parse_ac_param(input: &str) -> IResult<&str, Param> {
     map(preceded((tag_no_case("ac"), space1), double), Param::Ac).parse(input)
-}
-
-/// A nom parser that recognizes a value token and parses it using our custom logic.
-fn value_parser(input: &str) -> IResult<&str, f64> {
-    // 1. Recognize a token (any sequence of chars that isn't a space or parenthesis).
-    let token_parser = is_not(" \t\r\n()");
-
-    // 2. Apply your custom parsing function to the recognized token.
-    map_res(token_parser, parse_value).parse(input)
 }
 
 fn parse_pulse_param(input: &str) -> IResult<&str, Param> {
