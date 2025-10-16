@@ -173,3 +173,43 @@ fn print_system(
         );
     }
 }
+
+/// A helper function to pretty-print the MNA matrix for debugging purposes.
+#[allow(dead_code)]
+fn print_matrix(
+    triplets: &[Triplet<usize, usize, f64>],
+    size: usize,
+    index_map: &HashMap<String, usize>,
+) {
+    // Create a reverse mapping from index to name for easier lookup of headers.
+    let mut rev_index_map: Vec<String> = vec![String::new(); size];
+    for (name, &idx) in index_map {
+        if idx < size {
+            rev_index_map[idx] = name.clone();
+        }
+    }
+
+    // Convert triplets to a HashMap for efficient (row, col) -> value lookups.
+    let matrix_map: HashMap<(usize, usize), f64> = triplets
+        .iter()
+        .map(|&Triplet { row, col, val }| ((row, col), val))
+        .collect();
+
+    // Print header row with column names.
+    print!("{:<12}", ""); // Spacer for row names column.
+    for i in 0..size {
+        print!("{:<12}", rev_index_map[i]);
+    }
+    println!();
+    println!("{}", "-".repeat(12 * (size + 1)));
+
+    // Print each row with its name and values.
+    for r in 0..size {
+        print!("{:<12}", rev_index_map[r]);
+        for c in 0..size {
+            let val = matrix_map.get(&(r, c)).unwrap_or(&0.0);
+            print!("{:<12.4}", val);
+        }
+        println!();
+    }
+}
