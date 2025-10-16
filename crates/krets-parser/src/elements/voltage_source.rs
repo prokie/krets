@@ -5,7 +5,7 @@ use nom::{
     IResult, Parser,
     branch::alt,
     bytes::complete::{is_not, tag, tag_no_case},
-    character::complete::{alphanumeric1, space0, space1},
+    character::complete::{space0, space1},
     combinator::{all_consuming, map, map_res, opt},
     multi::many0,
     number::complete::double,
@@ -201,9 +201,9 @@ fn parse_sinusoidal_param(input: &str) -> IResult<&str, Param> {
 /// Main nom parser for the VoltageSource
 fn parse_voltage_source(input: &str) -> IResult<&str, VoltageSource> {
     let (input, _) = alt((tag("V"), tag("v"))).parse(input)?;
-    let (input, name) = alphanumeric1(input)?;
-    let (input, plus) = preceded(space1, alphanumeric1).parse(input)?;
-    let (input, minus) = preceded(space1, alphanumeric1).parse(input)?;
+    let (input, name) = alphanumeric_or_underscore1(input)?;
+    let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, minus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
 
     let (input, implicit_dc) = opt(preceded(space1, double)).parse(input)?;
 
@@ -413,6 +413,16 @@ mod tests {
         assert_eq!(vs.plus, "1");
         assert_eq!(vs.minus, "0");
         assert_eq!(vs.dc_value, 5.0);
+        assert_eq!(vs.ac_amplitude, 0.0);
+    }
+    #[test]
+    fn test_different_node_names() {
+        let s = "V10 out_ in_3 10";
+        let vs = s.parse::<VoltageSource>().unwrap();
+        assert_eq!(vs.name, 10);
+        assert_eq!(vs.plus, "out_");
+        assert_eq!(vs.minus, "in_3");
+        assert_eq!(vs.dc_value, 10.0);
         assert_eq!(vs.ac_amplitude, 0.0);
     }
 
