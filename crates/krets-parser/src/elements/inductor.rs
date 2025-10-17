@@ -4,9 +4,17 @@ use nom::{
     IResult, Parser, branch::alt, bytes::complete::tag, character::complete::space1,
     combinator::all_consuming, sequence::preceded,
 };
-use std::{collections::HashMap, f64::consts::PI, str::FromStr};
+use once_cell::sync::Lazy;
+use std::{collections::HashMap, f64::consts::PI, str::FromStr, sync::Mutex};
 
 use super::{Identifiable, Stampable};
+
+// Global mutable HashMap
+pub static GLOBAL_MAP: Lazy<Mutex<HashMap<String, f64>>> = Lazy::new(|| {
+    let mut m = HashMap::new();
+    m.insert("i_prev".to_string(), 0.0);
+    Mutex::new(m)
+});
 
 #[derive(Debug, Clone)]
 /// Represents an inductor in a circuit.
@@ -129,7 +137,7 @@ impl Stampable for Inductor {
         let index_minus = index_map.get(&format!("V({})", self.minus));
 
         let mut triplets = Vec::with_capacity(4);
-        let conductance = self.value / h;
+        let conductance = 1.0 / self.value / h;
 
         if let Some(&ip) = index_plus {
             triplets.push(Triplet::new(ip, ip, conductance));
@@ -149,16 +157,15 @@ impl Stampable for Inductor {
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
-        prev_solution: &HashMap<String, f64>,
+        _prev_solution: &HashMap<String, f64>,
         h: f64,
     ) -> Vec<Triplet<usize, usize, f64>> {
         let index_plus = index_map.get(&format!("V({})", self.plus));
         let index_minus = index_map.get(&format!("V({})", self.minus));
 
-        let i_prev = prev_solution
-            .get(&format!("I({})", self.identifier()))
-            .copied()
-            .unwrap_or(0.0);
+        let mut map = GLOBAL_MAP.lock().unwrap();
+
+        let i_prev = map.get("i_prev").unwrap();
 
         let v_plus = solution_map
             .get(&format!("V({})", self.plus))
@@ -180,6 +187,10 @@ impl Stampable for Inductor {
         }
         if let Some(&im) = index_minus {
             triplets.push(Triplet::new(im, 0, i_n));
+        }
+
+        if let Some(value) = map.get_mut("i_prev") {
+            *value = i_n;
         }
 
         triplets
