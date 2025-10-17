@@ -1,9 +1,12 @@
 use faer::{c64, sparse::Triplet};
 
-use crate::prelude::*;
-use std::{collections::HashMap, str::FromStr};
-
 use super::{Identifiable, Stampable};
+use crate::prelude::*;
+use nom::{
+    IResult, Parser, branch::alt, bytes::complete::tag, character::complete::space1,
+    combinator::all_consuming, sequence::preceded,
+};
+use std::{collections::HashMap, str::FromStr};
 
 #[derive(Debug, Clone)]
 /// Represents a current source in a circuit.
@@ -102,50 +105,33 @@ impl Stampable for CurrentSource {
         }
     }
 }
+fn parse_current_source(input: &str) -> IResult<&str, CurrentSource> {
+    let (input, _) = alt((tag("I"), tag("i"))).parse(input)?;
+    let (input, name) = alphanumeric_or_underscore1.parse(input)?;
+    let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, minus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, value) = preceded(space1, value_parser).parse(input)?;
+
+    let current_source = CurrentSource {
+        name: name.parse().unwrap_or(0),
+        plus: plus.to_string(),
+        minus: minus.to_string(),
+        value,
+    };
+
+    Ok((input, current_source))
+}
 
 impl FromStr for CurrentSource {
     type Err = crate::prelude::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        // IMPROVEMENT: Handle comments robustly.
         let s_without_comment = s.split('%').next().unwrap_or("").trim();
-        let parts: Vec<&str> = s_without_comment.split_whitespace().collect();
+        let (_, current_source) = all_consuming(parse_current_source)
+            .parse(s_without_comment)
+            .map_err(|e| Error::InvalidFormat(e.to_string()))?;
 
-        // FIX: A current source definition should have exactly 4 parts.
-        if parts.len() != 4 {
-            return Err(Error::InvalidFormat(format!(
-                "Invalid current source format: '{s}'"
-            )));
-        }
-
-        // IMPROVEMENT: Add check for identifier prefix 'I'.
-        if !parts[0].starts_with(['I', 'i']) {
-            return Err(Error::InvalidFormat(format!(
-                "Invalid current source identifier: '{s}'"
-            )));
-        }
-
-        if parts[0].len() <= 1 {
-            return Err(Error::InvalidFormat(format!(
-                "Current source name is too short: '{s}'"
-            )));
-        }
-
-        let name = parts[0][1..]
-            .parse::<u32>()
-            .map_err(|_| Error::InvalidNodeName(format!("Invalid current source name: '{s}'")))?;
-        let plus = parts[1].to_string();
-        let minus = parts[2].to_string();
-        let value = parts[3].parse::<f64>().map_err(|_| {
-            Error::InvalidFloatValue(format!("Invalid current source value: '{s}'"))
-        })?;
-
-        Ok(CurrentSource {
-            name,
-            value,
-            plus,
-            minus,
-        })
+        Ok(current_source)
     }
 }
 

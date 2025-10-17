@@ -152,8 +152,8 @@ mod tests {
             stop_time: 50e-3, // 20ms
         };
 
-        solver.solve(Analysis::Transient(tran_analysis)).unwrap();
-        // print_results_to_console(&solution);
+        let solution = solver.solve(Analysis::Transient(tran_analysis)).unwrap();
+        print_results_to_console(&solution);
         // let transient_solution = solution.clone().into_transient();
     }
 

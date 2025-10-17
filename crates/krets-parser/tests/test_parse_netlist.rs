@@ -25,6 +25,10 @@ R6 3 4 0.1
 R7 8 0 1e3
 R8 4 0 10";
         let circuit = parse_circuit_description(netlist);
+
+        if let Err(e) = &circuit {
+            println!("Parsing failed with error: {:?}", e);
+        }
         assert!(circuit.is_ok());
 
         let circuit = circuit.unwrap();
