@@ -1,5 +1,5 @@
 use clap::Parser;
-use krets_parser::analyses::{Analysis, AnalysisResult};
+use krets_parser::analyses::{Analysis, AnalysisResult, DcAnalysis};
 use krets_result::{write_dc_results_to_parquet, write_op_results_to_parquet};
 use krets_solver::{config::SolverConfig, solver::Solver};
 
@@ -38,7 +38,12 @@ fn main() {
     let mut solver = Solver::new(circuit, config);
 
     // 4. Define the analysis to run (TODO: This should be driven by CLI args).
-    let analysis = Analysis::Op;
+    let analysis = DcAnalysis {
+        element: "V1".to_string(),
+        start: 0.0,
+        stop: 1.0,
+        step_size: 0.1,
+    };
 
     println!(
         "Running {:?} analysis on '{}'...",
@@ -46,7 +51,7 @@ fn main() {
     );
 
     // 5. Run the solver and handle the result.
-    match solver.solve(analysis) {
+    match solver.solve(Analysis::Dc(analysis)) {
         Ok(result) => {
             println!("\n--- Analysis successful ---");
 

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-parquet = "56.2.0"
+parquet = { workspace = true }
 polars = { version = "0.51.0", features = ["parquet"] }
 
 [lints]
