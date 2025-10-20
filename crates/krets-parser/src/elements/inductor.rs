@@ -137,7 +137,7 @@ impl Stampable for Inductor {
         let index_minus = index_map.get(&format!("V({})", self.minus));
 
         let mut triplets = Vec::with_capacity(4);
-        let conductance = 1.0 / self.value / h;
+        let conductance = h / self.value;
 
         if let Some(&ip) = index_plus {
             triplets.push(Triplet::new(ip, ip, conductance));

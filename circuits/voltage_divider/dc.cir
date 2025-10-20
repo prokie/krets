@@ -1,0 +1,11 @@
+* Voltage Divider
+
+V1 in 0 1
+R1 in out 1000
+R2 out 0 2000
+
+
+.control
+dc V1 0 1 0.1
+print all
+.endc

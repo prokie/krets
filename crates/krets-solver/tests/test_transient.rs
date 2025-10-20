@@ -200,8 +200,8 @@ mod tests {
         let mut solver = Solver::new(circuit, config);
 
         let tran_analysis = TransientAnalysis {
-            time_step: 10e-8, // 10us
-            stop_time: 2e-5,  // 2ms
+            time_step: 10e-6, // 10us
+            stop_time: 2e-3,  // 2ms
         };
 
         let solution = solver.solve(Analysis::Transient(tran_analysis)).unwrap();

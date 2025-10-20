@@ -10,19 +10,6 @@ use faer::{
 use krets_parser::{analyses::TransientAnalysis, circuit::Circuit, elements::Stampable};
 
 /// Solves for the transient (time-domain) response of a circuit using a fixed time step.
-///
-/// This function follows the overall simulation flow described in Figure 5.25 of "Circuit Simulation" by Farid N. Najm.
-///
-/// # Algorithm
-/// 1.  **Initial Condition:** It first solves for the DC operating point at t=0.
-/// 2.  **Time-Stepping Loop:** It then iterates from t=0 to the specified stop time.
-/// 3.  **Newton-Raphson at Each Time Step:** At each point in time, it uses an inner Newton-Raphson
-///     loop to solve the non-linear system of algebraic equations that results from discretizing
-///     the dynamic elements (capacitors and inductors).
-///
-/// # Note on Time Step
-/// This is a fixed-step implementation. A more advanced solver would implement adaptive time-stepping
-/// based on Local Truncation Error (LTE) estimation, as described in the user-provided pseudo-code.
 pub fn solve(
     circuit: &Circuit,
     config: &SolverConfig,
