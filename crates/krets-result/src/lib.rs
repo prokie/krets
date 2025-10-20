@@ -20,14 +20,26 @@ pub fn write_op_results_to_parquet(
 ) -> Result<(), PolarsError> {
     let filename = ensure_parquet_extension(filename);
 
-    let names: Vec<String> = data.keys().cloned().collect();
-    let values: Vec<f64> = data.values().copied().collect();
+    // Create a vector of Series, where each Series is a new column.
+    let series: Vec<Series> = data
+        .iter()
+        // For each (key, value) pair...
+        .map(|(name, value)| {
+            // Create a Series. The 'name' is the column header.
+            // The value is wrapped in a slice `&[*value]` to create a column with a single row.
+            Series::new(name.into(), &[*value])
+        })
+        .collect();
 
-    let mut df = df![
-        "name" => names,
-        "value" => values,
-    ]?;
+    let mut columns = vec![];
+    for serie in series {
+        columns.push(serie.into_column());
+    }
 
+    // Create a DataFrame from the vector of columns.
+    let mut df = DataFrame::new(columns)?;
+
+    // Write the DataFrame to the Parquet file.
     let mut file = File::create(&filename).map_err(PolarsError::from)?;
     ParquetWriter::new(&mut file).finish(&mut df)?;
 
