@@ -99,14 +99,13 @@ impl eframe::App for KretsApp {
                 let table = TableBuilder::new(ui)
                     .striped(true)
                     .resizable(true)
-                    // We will have 3 columns: Column Name, Min, Max
-                    .columns(Column::auto(), 3)
+                    .columns(Column::auto(), 4)
                     .sense(egui::Sense::click());
 
                 table
                     .header(20.0, |mut header| {
                         header.col(|ui| {
-                            ui.strong("Column");
+                            ui.strong("Name");
                         });
                         header.col(|ui| {
                             ui.strong("Min");
@@ -114,12 +113,15 @@ impl eframe::App for KretsApp {
                         header.col(|ui| {
                             ui.strong("Max");
                         });
+                        header.col(|ui| {
+                            ui.strong("Select");
+                        });
                     })
                     .body(|mut body| {
                         // Iterate over the *columns* in the batch.
                         // Each column will be a *row* in our new table.
-                        for (col_index, array) in data.batch.columns().iter().enumerate() {
-                            let column_name = &data.headers[col_index];
+                        for (index, array) in data.batch.columns().iter().enumerate() {
+                            let column_name = &data.headers[index];
 
                             // Get the min/max statistics for this array
                             let (min_str, max_str) = get_col_stats(array);
@@ -138,20 +140,24 @@ impl eframe::App for KretsApp {
                                     ui.label(max_str);
                                 });
 
-                                let response = row.response();
-                                if response.clicked() {
-                                    // This is the logic from the example's `toggle_row_selection`
-                                    if self.selection.contains(&col_index) {
-                                        self.selection.remove(&col_index);
-                                    } else {
-                                        // Use this for multi-selection:
-                                        self.selection.insert(col_index);
+                                row.col(|ui| {
+                                    // Check if this row's index is already in the selection
+                                    let mut is_checked = self.selection.contains(&index);
 
-                                        // Or use this for single-selection:
-                                        // self.selection.clear();
-                                        // self.selection.insert(col_index);
+                                    // Create a checkbox. `ui.checkbox` will modify `is_checked` if clicked.
+                                    let response = ui.checkbox(&mut is_checked, ""); // Use an empty label
+
+                                    // If the checkbox was clicked, update the HashSet
+                                    if response.changed() {
+                                        if is_checked {
+                                            // If it's now checked, add the index
+                                            self.selection.insert(index);
+                                        } else {
+                                            // If it's now unchecked, remove the index
+                                            self.selection.remove(&index);
+                                        }
                                     }
-                                }
+                                });
                             });
                         }
                     });
@@ -159,7 +165,6 @@ impl eframe::App for KretsApp {
                 ui.label("Select a .parquet file from the explorer to view its data.");
             }
 
-            // You can keep the plot or remove it. For this example, I'll keep it.
             ui.separator();
             ui.heading("Plot Viewer");
             let my_plot = Plot::new("My Plot").legend(Legend::default());
