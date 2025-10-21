@@ -1,4 +1,13 @@
 use crate::{elements::Stampable, prelude::*};
+use nom::{
+    IResult,
+    Parser,
+    branch::alt,
+    bytes::complete::tag,
+    character::complete::{alphanumeric1, space1}, // Use alpha1 for type, alphanumeric1 for name part
+    combinator::{all_consuming, opt},
+    sequence::preceded,
+};
 use std::str::FromStr;
 
 use super::Identifiable;
@@ -16,15 +25,19 @@ pub enum BjtType {
 /// Represents a BJT (Bipolar Junction Transistor) in a circuit.
 pub struct BJT {
     /// Name of the BJT.
-    pub name: u32,
+    pub name: String,
     /// Collector node of the BJT.
     pub collector: String,
     /// Base node of the BJT.
     pub base: String,
     /// Emitter node of the BJT.
     pub emitter: String,
-    /// Value of the BJT.
-    pub value: Option<f64>,
+    /// Value or model name associated with the BJT (optional).
+    /// NOTE: SPICE often uses a model name here instead of a simple value.
+    ///       The parser now accepts an alphanumeric string, but the `value` field
+    ///       remains Option<f64>. This might need adjustment based on how models are handled.
+    ///       For now, we attempt to parse it as a value if present.
+    pub value: Option<f64>, // Kept as Option<f64> for now
     /// Type of the BJT.
     pub bjt_type: BjtType,
 }
@@ -37,11 +50,13 @@ impl Identifiable for BJT {
 }
 
 impl Stampable for BJT {
+    // --- Stamping methods remain unchanged ---
     fn add_conductance_matrix_dc_stamp(
         &self,
         _index_map: &std::collections::HashMap<String, usize>,
         _solution_map: &std::collections::HashMap<String, f64>,
     ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
+        // TODO: Implement BJT DC conductance stamp
         todo!()
     }
 
@@ -50,6 +65,7 @@ impl Stampable for BJT {
         _index_map: &std::collections::HashMap<String, usize>,
         _solution_map: &std::collections::HashMap<String, f64>,
     ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
+        // TODO: Implement BJT DC excitation stamp
         todo!()
     }
 
@@ -59,7 +75,8 @@ impl Stampable for BJT {
         _solution_map: &std::collections::HashMap<String, f64>,
         _frequency: f64,
     ) -> Vec<faer::sparse::Triplet<usize, usize, faer::c64>> {
-        todo!()
+        // BJTs are passive for small-signal AC excitation
+        vec![]
     }
 
     fn add_conductance_matrix_ac_stamp(
@@ -68,74 +85,79 @@ impl Stampable for BJT {
         _solution_map: &std::collections::HashMap<String, f64>,
         _frequency: f64,
     ) -> Vec<faer::sparse::Triplet<usize, usize, faer::c64>> {
+        // TODO: Implement BJT AC conductance stamp (small-signal model)
         todo!()
     }
 }
 
+// Nom parser for BJT
+fn parse_bjt(input: &str) -> IResult<&str, BJT> {
+    // Parse the initial 'Q' (case-insensitive)
+    let (input, _) = alt((tag("Q"), tag("q"))).parse(input)?;
+
+    // Parse the type character (N or P, case-insensitive)
+    let (input, type_char) = alt((tag("N"), tag("n"), tag("P"), tag("p"))).parse(input)?;
+    let bjt_type = match type_char.to_ascii_uppercase().as_str() {
+        "N" => BjtType::NPN,
+        "P" => BjtType::PNP,
+        _ => unreachable!(), // Should be caught by the alt parser
+    };
+
+    // Parse the numeric name part
+    let (input, name) = alphanumeric1(input)?; // Allows QN123 etc.
+
+    dbg!(name);
+
+    // Parse nodes: collector, base, emitter
+    let (input, collector) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, base) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+    let (input, emitter) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
+
+    dbg!(&collector, &base, &emitter);
+
+    // Optionally parse the value/model
+    let (input, value) = opt(preceded(space1, value_parser)).parse(input)?; // Changed to alphanumeric for model names
+
+    dbg!(&value);
+
+    let bjt = BJT {
+        name: name.to_string(),
+        collector: collector.to_string(),
+        base: base.to_string(),
+        emitter: emitter.to_string(),
+        value,
+        bjt_type,
+    };
+
+    Ok((input, bjt))
+}
+
+// Updated FromStr using the nom parser
 impl FromStr for BJT {
     type Err = crate::prelude::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let parts: Vec<&str> = s.split_whitespace().collect();
-
-        if parts.len() < 4 || parts.len() > 5 {
-            return Err(Error::InvalidFormat(format!(
-                "Invalid BJT format: Expected 4 or 5 parts, but found {}",
-                parts.len()
-            )));
-        }
-
-        let identifier = parts[0];
-        if !identifier.starts_with(['Q', 'q']) {
+        let s_without_comment = s.split(['%', '*']).next().unwrap_or("").trim();
+        if s_without_comment.is_empty() {
             return Err(Error::InvalidFormat(
-                "Invalid BJT identifier: Must start with 'Q'.".to_string(),
+                "Empty line after comment removal".to_string(),
             ));
         }
 
-        let bjt_type = match identifier.chars().nth(1) {
-            Some('N') | Some('n') => BjtType::NPN,
-            Some('P') | Some('p') => BjtType::PNP,
-            _ => {
-                // FIX: Corrected the error message from "MOSFET" to "BJT".
-                return Err(Error::InvalidFormat(
-                    "Invalid BJT type in identifier. Expected 'N' or 'P' after 'Q'.".to_string(),
-                ));
+        match all_consuming(parse_bjt).parse(s_without_comment) {
+            Ok((_, bjt)) => {
+                // Could add checks for node names == "0" if needed, etc.
+                Ok(bjt)
             }
-        };
-
-        // This check is now safer because we've already confirmed the first two chars
-        if identifier.len() < 3 {
-            return Err(Error::InvalidFormat(
-                "Invalid BJT identifier: Missing number after type.".to_string(),
-            ));
+            Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(Error::InvalidFormat(format!(
+                "Failed to parse BJT line '{}': {:?}",
+                s_without_comment, e.code
+            ))),
+            Err(nom::Err::Incomplete(_)) => Err(Error::InvalidFormat(format!(
+                "Incomplete parse for BJT line: '{}'",
+                s_without_comment
+            ))),
         }
-
-        let name = identifier[2..]
-            .parse::<u32>()
-            .map_err(|_| Error::InvalidNodeName("Invalid BJT name number".to_string()))?;
-
-        let collector = parts[1].to_string();
-        let base = parts[2].to_string();
-        let emitter = parts[3].to_string();
-
-        let value = if parts.len() == 5 {
-            Some(
-                parts[4]
-                    .parse::<f64>()
-                    .map_err(|_| Error::InvalidFloatValue("Invalid BJT value".to_string()))?,
-            )
-        } else {
-            None
-        };
-
-        Ok(BJT {
-            name,
-            collector,
-            base,
-            emitter,
-            value,
-            bjt_type,
-        })
     }
 }
 
@@ -144,25 +166,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_npn_bjt() {
-        let bjt_str = "QN1 1 2 3 0.7";
+    fn test_parse_npn_bjt_with_value() {
+        let bjt_str = "QN1 1 2 0 0.7"; // Emitter to ground
         let bjt = bjt_str.parse::<BJT>().unwrap();
 
-        assert_eq!(bjt.name, 1);
+        assert_eq!(bjt.name, "1");
         assert_eq!(bjt.collector, "1");
         assert_eq!(bjt.base, "2");
-        assert_eq!(bjt.emitter, "3");
+        assert_eq!(bjt.emitter, "0");
         assert_eq!(bjt.value, Some(0.7));
         assert_eq!(bjt.bjt_type, BjtType::NPN);
         assert_eq!(bjt.identifier(), "Q1");
     }
 
     #[test]
-    fn test_parse_pnp_bjt() {
+    fn test_parse_pnp_bjt_with_value() {
         let bjt_str = "QP1 4 5 6 0.8";
         let bjt = bjt_str.parse::<BJT>().unwrap();
 
-        assert_eq!(bjt.name, 1);
+        assert_eq!(bjt.name, "1");
         assert_eq!(bjt.collector, "4");
         assert_eq!(bjt.base, "5");
         assert_eq!(bjt.emitter, "6");
@@ -173,43 +195,66 @@ mod tests {
 
     #[test]
     fn test_parse_bjt_without_value() {
-        let bjt_str = "QN2 7 8 9";
+        let bjt_str = "qN2 C B E"; // Case-insensitive, symbolic nodes
         let bjt = bjt_str.parse::<BJT>().unwrap();
 
-        assert_eq!(bjt.name, 2);
-        assert_eq!(bjt.collector, "7");
-        assert_eq!(bjt.base, "8");
-        assert_eq!(bjt.emitter, "9");
+        assert_eq!(bjt.name, "2");
+        assert_eq!(bjt.collector, "C");
+        assert_eq!(bjt.base, "B");
+        assert_eq!(bjt.emitter, "E");
         assert_eq!(bjt.value, None);
         assert_eq!(bjt.bjt_type, BjtType::NPN);
         assert_eq!(bjt.identifier(), "Q2");
     }
 
     #[test]
+    fn test_parse_with_comment() {
+        let s = "Qp10 coll base emit * My PNP";
+        let bjt = s.parse::<BJT>().unwrap();
+        assert_eq!(bjt.name, "10");
+        assert_eq!(bjt.bjt_type, BjtType::PNP);
+        assert_eq!(bjt.value, None);
+    }
+
+    #[test]
     fn test_invalid_bjt_format_parts() {
-        let bjt_str = "QN1 1 2";
+        let bjt_str = "QN1 1 2"; // Missing emitter node
         let result = bjt_str.parse::<BJT>();
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_bjt_format_extra_parts() {
+        let bjt_str = "QN1 1 2 0 0.7 Extra";
+        let result = bjt_str.parse::<BJT>();
+        assert!(result.is_err()); // Due to all_consuming
     }
 
     #[test]
     fn test_invalid_bjt_type() {
-        let bjt_str = "QX1 1 2 3";
+        let bjt_str = "QX1 1 2 3"; // Invalid type 'X'
         let result = bjt_str.parse::<BJT>();
         assert!(result.is_err());
     }
 
     #[test]
-    fn test_invalid_bjt_name() {
-        let bjt_str = "QNa 1 2 3";
-        let result = bjt_str.parse::<BJT>();
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_malformed_identifier() {
+    fn test_malformed_identifier_no_type_or_name() {
         let bjt_str = "Q 1 2 3";
         let result = bjt_str.parse::<BJT>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_malformed_identifier_no_name() {
+        let bjt_str = "QN 1 2 3";
+        let result = bjt_str.parse::<BJT>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_prefix() {
+        let s = "R1 1 2 3 100";
+        let result = s.parse::<BJT>();
         assert!(result.is_err());
     }
 }
