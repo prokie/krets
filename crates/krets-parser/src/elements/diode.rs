@@ -34,6 +34,29 @@ impl Identifiable for Diode {
     }
 }
 
+impl Diode {
+    pub fn apply_model_parameter(&mut self, parameter: (&String, &f64)) -> Result<()> {
+        match parameter.0.to_lowercase().as_str() {
+            "is" => {
+                self.options.saturation_current = *parameter.1;
+                Ok(())
+            }
+            "rs" => {
+                self.options.parasitic_resistance = *parameter.1;
+                Ok(())
+            }
+            "n" => {
+                self.options.emission_coefficient = *parameter.1;
+                Ok(())
+            }
+            _ => Err(Error::InvalidModelParameter(format!(
+                "Invalid parameter '{}' for Diode model",
+                parameter.0
+            ))),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 /// Options for the diode, including saturation current, parasitic resistance, and emission coefficient.
 pub struct DiodeOptions {

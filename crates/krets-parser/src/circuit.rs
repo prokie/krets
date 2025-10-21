@@ -15,7 +15,7 @@ pub struct Circuit {
     pub nodes: Vec<String>,
 
     /// A list of models in the circuit.
-    pub models: Vec<Model>,
+    pub models: HashMap<String, Model>,
 }
 
 impl Circuit {
@@ -24,7 +24,7 @@ impl Circuit {
         elements: Vec<Element>,
         index_map: HashMap<String, usize>,
         nodes: Vec<String>,
-        models: Vec<Model>,
+        models: HashMap<String, Model>,
     ) -> Self {
         Circuit {
             elements,

@@ -43,4 +43,16 @@ pub enum Error {
 
     #[error("TOML deserialization error: {0}")]
     Toml(#[from] toml::de::Error),
+
+    // Error indicating that a model is not defined
+    #[error("Model '{0}' is not defined")]
+    UndefinedModel(String),
+
+    /// Error for invalid model parameter
+    #[error("Invalid model parameter: {0}")]
+    InvalidModelParameter(String),
+
+    /// Error for invalid model type
+    #[error("Invalid model type: {0}")]
+    InvalidModelType(String),
 }
