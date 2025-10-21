@@ -76,7 +76,7 @@ pub fn solve(circuit: &Circuit, config: &SolverConfig) -> Result<HashMap<String,
         }
 
         // Move current result to previous_result for the next iteration.
-        previous_result = result.clone();
+        previous_result.clone_from(&result);
 
         if iter == config.maximum_iterations - 1 {
             println!("Warning: Maximum iterations reached without convergence.");
@@ -99,7 +99,7 @@ fn print_matrix(
     let mut rev_index_map: Vec<String> = vec![String::new(); size];
     for (name, &idx) in index_map {
         if idx < size {
-            rev_index_map[idx] = name.clone();
+            rev_index_map[idx].clone_from(name);
         }
     }
 
@@ -112,17 +112,17 @@ fn print_matrix(
     // Print header row with column names.
     print!("{:<12}", ""); // Spacer for row names column.
     for col_name in &rev_index_map {
-        print!("{:<12}", col_name);
+        print!("{col_name:<12}");
     }
     println!();
     println!("{}", "-".repeat(12 * (size + 1)));
 
     // Print each row with its name and values.
     for (r, row_name) in rev_index_map.iter().enumerate() {
-        print!("{:<12}", row_name);
+        print!("{row_name:<12}");
         for c in 0..size {
             let val = matrix_map.get(&(r, c)).unwrap_or(&0.0);
-            print!("{:<12.4}", val);
+            print!("{val:<12.4}");
         }
         println!();
     }

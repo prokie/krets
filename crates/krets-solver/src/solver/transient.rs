@@ -29,7 +29,10 @@ pub fn solve(
 
     // Check if the circuit contains any non-linear elements. If not, the solver
     // only needs to run for one iteration.
-    let has_nonlinear_elements = &circuit.elements.iter().any(|e| e.is_nonlinear());
+    let has_nonlinear_elements = &circuit
+        .elements
+        .iter()
+        .any(krets_parser::elements::Element::is_nonlinear);
 
     println!(
         "Starting transient analysis from t=0 to t={}s with a {}s time step.",
@@ -98,14 +101,13 @@ pub fn solve(
             if convergence_check(&previous_nr_guess, &op_result_at_t, config) {
                 break; // Newton-Raphson converged for this time step.
             }
-            previous_nr_guess = op_result_at_t.clone();
-
+            previous_nr_guess.clone_from(&op_result_at_t);
             if iter == config.maximum_iterations - 1 {
                 return Err(Error::MaximumIterationsExceeded(config.maximum_iterations));
             }
         }
 
-        println!("Converged at t = {}s", current_time);
+        println!("Converged at t = {current_time}s");
         all_results.push(op_result_at_t);
     }
     Ok(all_results)
@@ -123,7 +125,7 @@ fn print_system(
     let mut rev_index_map: Vec<String> = vec![String::new(); size];
     for (name, &idx) in index_map {
         if idx < size {
-            rev_index_map[idx] = name.clone();
+            rev_index_map[idx].clone_from(name);
         }
     }
 
@@ -135,7 +137,7 @@ fn print_system(
     // Print header
     print!("{:<12}", ""); // Spacer for row names
     for name in &rev_index_map {
-        print!("{:<12}", name);
+        print!("{name:<12}");
     }
     println!(
         "{:<15}   {:<15}",
@@ -145,10 +147,10 @@ fn print_system(
 
     // Print each row of the system
     for (r, row_name) in rev_index_map.iter().enumerate() {
-        print!("{:<12}", row_name);
+        print!("{row_name:<12}");
         for c in 0..size {
             let val = matrix_map.get(&(r, c)).unwrap_or(&0.0);
-            print!("{:<12.4}", val);
+            print!("{val:<12.4}");
         }
         println!(
             "| {:<15.6e} | {:<15.6e}",
@@ -169,7 +171,7 @@ fn print_matrix(
     let mut rev_index_map: Vec<String> = vec![String::new(); size];
     for (name, &idx) in index_map {
         if idx < size {
-            rev_index_map[idx] = name.clone();
+            rev_index_map[idx].clone_from(name);
         }
     }
 
@@ -182,17 +184,17 @@ fn print_matrix(
     // Print header row with column names.
     print!("{:<12}", ""); // Spacer for row names column.
     for col_name in &rev_index_map {
-        print!("{:<12}", col_name);
+        print!("{col_name:<12}");
     }
     println!();
     println!("{}", "-".repeat(12 * (size + 1)));
 
     // Print each row with its name and values.
     for (r, row_name) in rev_index_map.iter().enumerate() {
-        print!("{:<12}", row_name);
+        print!("{row_name:<12}");
         for c in 0..size {
             let val = matrix_map.get(&(r, c)).unwrap_or(&0.0);
-            print!("{:<12.4}", val);
+            print!("{val:<12.4}");
         }
         println!();
     }

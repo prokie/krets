@@ -36,7 +36,7 @@ impl Solver {
             }
             Analysis::Dc(dc_params) => {
                 // Pass the circuit mutably to allow the sweep to temporarily change element values.
-                let result = dc::solve(&mut self.circuit, &self.config, dc_params)?;
+                let result = dc::solve(&mut self.circuit, &self.config, &dc_params)?;
                 Ok(AnalysisResult::Dc(result))
             }
             Analysis::Ac { frequency } => {

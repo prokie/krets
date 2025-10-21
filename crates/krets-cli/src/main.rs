@@ -78,7 +78,7 @@ fn main() {
 
     // 4. Run the specified analysis.
     let result = solver.solve(analysis).unwrap_or_else(|e| {
-        eprintln!("Error during analysis: {}", e);
+        eprintln!("Error during analysis: {e}");
         std::process::exit(1);
     });
 
@@ -90,13 +90,13 @@ fn main() {
         match &result {
             AnalysisResult::Op(op_solution) => {
                 write_op_results_to_parquet(op_solution, &output_path).unwrap_or_else(|e| {
-                    eprintln!("Error writing OP results to Parquet: {}", e);
+                    eprintln!("Error writing OP results to Parquet: {e}");
                     std::process::exit(1);
                 });
             }
             AnalysisResult::Dc(dc_solution) => {
                 write_dc_results_to_parquet(dc_solution, &output_path).unwrap_or_else(|e| {
-                    eprintln!("Error writing DC results to Parquet: {}", e);
+                    eprintln!("Error writing DC results to Parquet: {e}");
                     std::process::exit(1);
                 });
             }
@@ -105,12 +105,12 @@ fn main() {
             }
             AnalysisResult::Transient(tran_solution) => {
                 write_tran_results_to_parquet(tran_solution, &output_path).unwrap_or_else(|e| {
-                    eprintln!("Error writing Transient results to Parquet: {}", e);
+                    eprintln!("Error writing Transient results to Parquet: {e}");
                     std::process::exit(1);
                 });
             }
         }
-        println!("Results written to '{}'.", output_path);
+        println!("Results written to '{output_path}'.");
     }
 }
 
@@ -130,7 +130,7 @@ fn print_results_to_console(result: &AnalysisResult) {
                 } else {
                     "A"
                 };
-                println!("{:<15} | {:>14.6e} {}", node_or_branch, value, unit);
+                println!("{node_or_branch:<15} | {value:>14.6e} {unit}");
             }
         }
         AnalysisResult::Dc(dc_solution) => {
@@ -144,7 +144,7 @@ fn print_results_to_console(result: &AnalysisResult) {
 
             // Print header
             for header in &headers {
-                print!("{:<18}", header);
+                print!("{header:<18}");
             }
             println!();
             println!("{:-<width$}", "", width = headers.len() * 18);
@@ -153,7 +153,7 @@ fn print_results_to_console(result: &AnalysisResult) {
             for step_result in dc_solution {
                 for header in &headers {
                     if let Some(value) = step_result.get(*header) {
-                        print!("{:<18.6e}", value);
+                        print!("{value:<18.6e}");
                     } else {
                         print!("{:<18}", "N/A");
                     }
@@ -173,7 +173,7 @@ fn print_results_to_console(result: &AnalysisResult) {
 
             for (node, value) in sorted_results {
                 let (mag, phase_deg) = (value.norm(), value.arg().to_degrees());
-                println!("{:<15} | {:>19.6e} | {:>19.6e}", node, mag, phase_deg);
+                println!("{node:<15} | {mag:>19.6e} | {phase_deg:>19.6e}");
             }
         }
         AnalysisResult::Transient(tran_solution) => {
@@ -187,7 +187,7 @@ fn print_results_to_console(result: &AnalysisResult) {
 
             // Print header
             for header in &headers {
-                print!("{:<18}", header);
+                print!("{header:<18}");
             }
             println!();
             println!("{:-<width$}", "", width = headers.len() * 18);
@@ -196,7 +196,7 @@ fn print_results_to_console(result: &AnalysisResult) {
             for step_result in tran_solution {
                 for header in &headers {
                     if let Some(value) = step_result.get(*header) {
-                        print!("{:<18.6e}", value);
+                        print!("{value:<18.6e}");
                     } else {
                         print!("{:<18}", "N/A");
                     }

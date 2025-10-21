@@ -19,7 +19,7 @@ use krets_parser::{
 pub fn solve(
     circuit: &mut Circuit,
     config: &SolverConfig,
-    dc_analysis: DcAnalysis,
+    dc_analysis: &DcAnalysis,
 ) -> Result<Vec<HashMap<String, f64>>> {
     let index_map = &circuit.index_map;
     let size = index_map.len();
@@ -107,14 +107,14 @@ pub fn solve(
             if convergence_check(&previous_op_result, &op_result, config) {
                 break; // Converged for this sweep point.
             }
-            previous_op_result = op_result.clone();
+            previous_op_result.clone_from(&op_result);
 
             if iter == config.maximum_iterations - 1 {
                 return Err(Error::MaximumIterationsExceeded(config.maximum_iterations));
             }
         }
 
-        last_op_solution = op_result.clone();
+        last_op_solution.clone_from(&op_result);
         all_results.push(op_result);
     }
 

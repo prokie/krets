@@ -16,7 +16,7 @@ struct DirectoryEntry {
 struct TableData {
     /// The column names.
     headers: Vec<String>,
-    /// The data itself, held as an Arrow RecordBatch.
+    /// The data itself, held as an Arrow `RecordBatch`.
     batch: RecordBatch,
 }
 
@@ -44,197 +44,29 @@ impl Default for KretsApp {
         app
     }
 }
-
 impl eframe::App for KretsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // This will be set by the file explorer UI if navigation is requested.
         let mut path_to_navigate = None;
 
         egui::SidePanel::left("file_panel").show(ctx, |ui| {
-            ui.heading("Circuit File Explorer");
-            ui.separator();
-
-            ui.horizontal(|ui| {
-                if ui.button("⬆ Up").clicked()
-                    && let Some(parent) = self.current_path.parent()
-                {
-                    path_to_navigate = Some(parent.to_path_buf());
-                }
-                ui.label(format!("Path: {}", self.current_path.display()));
-            });
-
-            ui.separator();
-
-            if let Some(error) = &self.error_message {
-                ui.colored_label(egui::Color32::RED, error);
-            } else {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    for entry in &self.entries {
-                        let icon = if entry.is_directory { "📁" } else { "📄" };
-                        let file_name =
-                            entry.path.file_name().unwrap_or_default().to_string_lossy();
-
-                        // Make all entries buttons to handle clicks.
-                        if ui.button(format!("{icon} {file_name}")).clicked() {
-                            if entry.is_directory {
-                                // Navigate into the directory if it's a directory.
-                                path_to_navigate = Some(entry.path.clone());
-                            } else {
-                                // If it's a file, check if it's a parquet file and set it for loading.
-                                if entry.path.extension().is_some_and(|ext| ext == "parquet") {
-                                    self.file_to_load = Some(entry.path.clone());
-                                }
-                            }
-                        }
-                    }
-                });
-            }
+            // Delegate file explorer UI and logic
+            path_to_navigate = self.ui_file_explorer(ui);
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Data Viewer");
-
-            // Display column statistics (Min/Max) instead of the raw data table.
-            if let Some(data) = &self.table_data {
-                // Use a TableBuilder to display the column stats.
-                let table = TableBuilder::new(ui)
-                    .striped(true)
-                    .resizable(true)
-                    .columns(Column::auto(), 4)
-                    .sense(egui::Sense::click());
-
-                table
-                    .header(20.0, |mut header| {
-                        header.col(|ui| {
-                            ui.strong("Name");
-                        });
-                        header.col(|ui| {
-                            ui.strong("Min");
-                        });
-                        header.col(|ui| {
-                            ui.strong("Max");
-                        });
-                        header.col(|ui| {
-                            ui.strong("Select");
-                        });
-                    })
-                    .body(|mut body| {
-                        // Iterate over the *columns* in the batch.
-                        // Each column will be a *row* in our new table.
-                        for (index, array) in data.batch.columns().iter().enumerate() {
-                            let column_name = &data.headers[index];
-
-                            // Get the min/max statistics for this array
-                            let (min_str, max_str) = get_col_stats(array);
-
-                            body.row(18.0, |mut row| {
-                                // First cell is the column name
-                                row.col(|ui| {
-                                    ui.label(column_name);
-                                });
-                                // Second cell is the min value
-                                row.col(|ui| {
-                                    ui.label(min_str);
-                                });
-                                // Third cell is the max value
-                                row.col(|ui| {
-                                    ui.label(max_str);
-                                });
-
-                                row.col(|ui| {
-                                    // Check if this row's index is already in the selection
-                                    let mut is_checked = self.selection.contains(&index);
-
-                                    // Create a checkbox. `ui.checkbox` will modify `is_checked` if clicked.
-                                    let response = ui.checkbox(&mut is_checked, ""); // Use an empty label
-
-                                    // If the checkbox was clicked, update the HashSet
-                                    if response.changed() {
-                                        if is_checked {
-                                            // If it's now checked, add the index
-                                            self.selection.insert(index);
-                                        } else {
-                                            // If it's now unchecked, remove the index
-                                            self.selection.remove(&index);
-                                        }
-                                    }
-                                });
-                            });
-                        }
-                    });
-            } else {
-                ui.label("Select a .parquet file from the explorer to view its data.");
-            }
-
-            ui.separator();
-            ui.heading("Plot Viewer");
-            let my_plot = Plot::new("My Plot").legend(Legend::default());
-            my_plot.show(ui, |plot_ui| {
-                // Only plot if we have data and *at least* two columns are selected
-                if let Some(data) = &self.table_data {
-                    if self.selection.len() >= 2 {
-                        // Get the selected indices.
-                        // We sort them so the X-axis is deterministic
-                        // (lowest index will be X, all others will be Y).
-                        let mut indices: Vec<usize> = self.selection.iter().copied().collect();
-                        indices.sort();
-
-                        let idx_x = indices[0];
-                        let name_x = &data.headers[idx_x];
-                        let col_x_arr = &data.batch.columns()[idx_x];
-
-                        // Try to get the X-axis data
-                        if let Some(x_vals) = get_column_as_f64(col_x_arr) {
-                            // Now, iterate over all *other* selected columns and plot them as Y
-                            let mut plotted_anything = false;
-                            for &idx_y in &indices[1..] {
-                                let name_y = &data.headers[idx_y];
-                                let col_y_arr = &data.batch.columns()[idx_y];
-
-                                // Try to get the Y-axis data
-                                if let Some(y_vals) = get_column_as_f64(col_y_arr) {
-                                    let line_name = format!("{} (Y) vs. {} (X)", name_y, name_x);
-
-                                    // Combine the X and Y vectors into PlotPoints
-                                    let points: PlotPoints = x_vals
-                                        .iter()
-                                        .zip(y_vals.iter())
-                                        .map(|(&x, &y)| [x, y])
-                                        .collect();
-
-                                    plot_ui.line(Line::new(line_name, points));
-                                    plotted_anything = true;
-                                }
-                                // If a specific Y column isn't numeric, we just skip it.
-                            }
-
-                            if !plotted_anything {
-                                // plot_ui.text("X-axis is plottable, but no selected Y-axis columns are plottable.");
-                            }
-                        } else {
-                            // This handles cases where the X-axis column is not numeric
-                            // plot_ui.text("The first selected column (lowest index) is not plottable.");
-                        }
-                    } else {
-                        // This handles 0 or 1 selected columns
-                        // plot_ui.text("Select at least two numeric columns to plot (first selected = X, others = Y).");
-                    }
-                } else {
-                    // This handles the case before a file is loaded
-                    // plot_ui.text(Text::new(
-                    //     "Load a Parquet file and select columns to plot.",
-                    //     PlotPoint::new(-3.0, -3.0),
-                    //     "here",
-                    // ));
-                }
-            });
+            // Delegate central panel UI and logic
+            self.ui_central_panel(ui);
         });
 
+        // --- Post-UI Logic ---
+        // Handle navigation requested from the side panel
         if let Some(new_path) = path_to_navigate {
             self.current_path = new_path;
             self.refresh_entries();
         }
 
-        // If a file was selected for loading, process it now.
+        // Handle file loading requested from the side panel
         if let Some(path) = self.file_to_load.take() {
             self.load_parquet_file(&path);
         }
@@ -242,6 +74,185 @@ impl eframe::App for KretsApp {
 }
 
 impl KretsApp {
+    /// Renders the file explorer side panel.
+    /// Returns an `Option<PathBuf>` if navigation is requested.
+    fn ui_file_explorer(&mut self, ui: &mut egui::Ui) -> Option<PathBuf> {
+        let mut path_to_navigate = None;
+
+        ui.heading("Circuit File Explorer");
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            if ui.button("⬆ Up").clicked()
+                && let Some(parent) = self.current_path.parent()
+            {
+                path_to_navigate = Some(parent.to_path_buf());
+            }
+            ui.label(format!("Path: {}", self.current_path.display()));
+        });
+
+        ui.separator();
+
+        if let Some(error) = &self.error_message {
+            ui.colored_label(egui::Color32::RED, error);
+        } else {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                for entry in &self.entries {
+                    let icon = if entry.is_directory { "📁" } else { "📄" };
+                    let file_name = entry.path.file_name().unwrap_or_default().to_string_lossy();
+
+                    // Make all entries buttons to handle clicks.
+                    if ui.button(format!("{icon} {file_name}")).clicked() {
+                        if entry.is_directory {
+                            // Navigate into the directory if it's a directory.
+                            path_to_navigate = Some(entry.path.clone());
+                        } else {
+                            // If it's a file, check if it's a parquet file and set it for loading.
+                            if entry.path.extension().is_some_and(|ext| ext == "parquet") {
+                                self.file_to_load = Some(entry.path.clone());
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Return the navigation request to the main update loop
+        path_to_navigate
+    }
+
+    /// Renders the central panel, delegating to table and plot methods.
+    fn ui_central_panel(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Data Viewer");
+        self.ui_stats_table(ui);
+
+        ui.separator();
+        ui.heading("Plot Viewer");
+        self.ui_plot_viewer(ui);
+    }
+
+    /// Renders the column statistics table.
+    fn ui_stats_table(&mut self, ui: &mut egui::Ui) {
+        if let Some(data) = &self.table_data {
+            // Use a TableBuilder to display the column stats.
+            let table = TableBuilder::new(ui)
+                .striped(true)
+                .resizable(true)
+                .columns(Column::auto(), 4)
+                .sense(egui::Sense::click());
+
+            table
+                .header(20.0, |mut header| {
+                    header.col(|ui| {
+                        ui.strong("Name");
+                    });
+                    header.col(|ui| {
+                        ui.strong("Min");
+                    });
+                    header.col(|ui| {
+                        ui.strong("Max");
+                    });
+                    header.col(|ui| {
+                        ui.strong("Select");
+                    });
+                })
+                .body(|mut body| {
+                    // Iterate over the *columns* in the batch.
+                    // Each column will be a *row* in our new table.
+                    for (index, array) in data.batch.columns().iter().enumerate() {
+                        let column_name = &data.headers[index];
+
+                        // Get the min/max statistics for this array
+                        let (min_str, max_str) = get_col_stats(array);
+
+                        body.row(18.0, |mut row| {
+                            // First cell is the column name
+                            row.col(|ui| {
+                                ui.label(column_name);
+                            });
+                            // Second cell is the min value
+                            row.col(|ui| {
+                                ui.label(min_str);
+                            });
+                            // Third cell is the max value
+                            row.col(|ui| {
+                                ui.label(max_str);
+                            });
+
+                            row.col(|ui| {
+                                // Check if this row's index is already in the selection
+                                let mut is_checked = self.selection.contains(&index);
+
+                                // Create a checkbox. `ui.checkbox` will modify `is_checked` if clicked.
+                                let response = ui.checkbox(&mut is_checked, ""); // Use an empty label
+
+                                // If the checkbox was clicked, update the HashSet
+                                if response.changed() {
+                                    if is_checked {
+                                        // If it's now checked, add the index
+                                        self.selection.insert(index);
+                                    } else {
+                                        // If it's now unchecked, remove the index
+                                        self.selection.remove(&index);
+                                    }
+                                }
+                            });
+                        });
+                    }
+                });
+        } else {
+            ui.label("Select a .parquet file from the explorer to view its data.");
+        }
+    }
+
+    /// Renders the plot viewer.
+    fn ui_plot_viewer(&mut self, ui: &mut egui::Ui) {
+        let my_plot = Plot::new("My Plot").legend(Legend::default());
+        my_plot.show(ui, |plot_ui| {
+            // Only plot if we have data and *at least* two columns are selected
+            if let Some(data) = &self.table_data
+                && self.selection.len() >= 2
+            {
+                // Get the selected indices.
+                // We sort them so the X-axis is deterministic
+                // (lowest index will be X, all others will be Y).
+                let mut indices: Vec<usize> = self.selection.iter().copied().collect();
+                indices.sort_unstable();
+
+                let idx_x = indices[0];
+                let name_x = &data.headers[idx_x];
+                let col_x_arr = &data.batch.columns()[idx_x];
+
+                // Try to get the X-axis data
+                if let Some(x_vals) = get_column_as_f64(col_x_arr) {
+                    // Now, iterate over all *other* selected columns and plot them as Y
+                    // let mut plotted_anything = false;
+                    for &idx_y in &indices[1..] {
+                        let name_y = &data.headers[idx_y];
+                        let col_y_arr = &data.batch.columns()[idx_y];
+
+                        // Try to get the Y-axis data
+                        if let Some(y_vals) = get_column_as_f64(col_y_arr) {
+                            let line_name = format!("{name_y} (Y) vs. {name_x} (X)");
+
+                            // Combine the X and Y vectors into PlotPoints
+                            let points: PlotPoints = x_vals
+                                .iter()
+                                .zip(y_vals.iter())
+                                .map(|(&x, &y)| [x, y])
+                                .collect();
+
+                            plot_ui.line(Line::new(line_name, points));
+                            // plotted_anything = true;
+                        }
+                        // If a specific Y column isn't numeric, we just skip it.
+                    }
+                    // ... placeholder text comments removed for clarity ...
+                }
+            }
+        });
+    }
+
     fn refresh_entries(&mut self) {
         match fs::read_dir(&self.current_path) {
             Ok(entries) => {
@@ -259,7 +270,7 @@ impl KretsApp {
                 self.error_message = None;
             }
             Err(e) => {
-                self.error_message = Some(format!("Failed to read directory: {}", e));
+                self.error_message = Some(format!("Failed to read directory: {e}"));
             }
         }
     }
@@ -291,15 +302,15 @@ impl KretsApp {
                             }
                         }
                         Err(e) => {
-                            self.error_message = Some(format!("Failed to read Parquet: {}", e))
+                            self.error_message = Some(format!("Failed to read Parquet: {e}"));
                         }
                     },
                     Err(e) => {
-                        self.error_message = Some(format!("Failed to build Parquet reader: {}", e))
+                        self.error_message = Some(format!("Failed to build Parquet reader: {e}"));
                     }
                 }
             }
-            Err(e) => self.error_message = Some(format!("Failed to open file: {}", e)),
+            Err(e) => self.error_message = Some(format!("Failed to open file: {e}")),
         }
     }
 }
@@ -307,13 +318,14 @@ impl KretsApp {
 /// Helper to get min/max stats for an Arrow array as strings.
 fn get_col_stats(array: &arrow::array::ArrayRef) -> (String, String) {
     // Local imports for this helper function
-    use arrow::array::*;
+    use arrow::array::{
+        Array, Float32Array, Float64Array, Int8Array, Int16Array, Int32Array, Int64Array,
+    };
     use arrow::compute::kernels::aggregate::{max, min};
 
     // Helper to format Option<T> where T: ToString
     fn format_opt<T: ToString>(opt: Option<T>) -> String {
-        opt.map(|v| v.to_string())
-            .unwrap_or_else(|| "NULL".to_string())
+        opt.map_or_else(|| "NULL".to_string(), |v| v.to_string())
     }
 
     match array.data_type() {
@@ -335,22 +347,14 @@ fn get_col_stats(array: &arrow::array::ArrayRef) -> (String, String) {
         }
         arrow::datatypes::DataType::Float32 => {
             let arr = array.as_any().downcast_ref::<Float32Array>().unwrap();
-            let min_str = min(arr)
-                .map(|v| format!("{:.4}", v))
-                .unwrap_or_else(|| "NULL".to_string());
-            let max_str = max(arr)
-                .map(|v| format!("{:.4}", v))
-                .unwrap_or_else(|| "NULL".to_string());
+            let min_str = min(arr).map_or_else(|| "NULL".to_string(), |v| format!("{v:.4}"));
+            let max_str = max(arr).map_or_else(|| "NULL".to_string(), |v| format!("{v:.4}"));
             (min_str, max_str)
         }
         arrow::datatypes::DataType::Float64 => {
             let arr = array.as_any().downcast_ref::<Float64Array>().unwrap();
-            let min_str = min(arr)
-                .map(|v| format!("{:.4}", v))
-                .unwrap_or_else(|| "NULL".to_string());
-            let max_str = max(arr)
-                .map(|v| format!("{:.4}", v))
-                .unwrap_or_else(|| "NULL".to_string());
+            let min_str = min(arr).map_or_else(|| "NULL".to_string(), |v| format!("{v:.4}"));
+            let max_str = max(arr).map_or_else(|| "NULL".to_string(), |v| format!("{v:.4}"));
             (min_str, max_str)
         }
 
@@ -362,7 +366,10 @@ fn get_col_stats(array: &arrow::array::ArrayRef) -> (String, String) {
 /// Returns `None` if the array is not a supported numeric type.
 /// Nulls in the array are converted to `f64::NAN`.
 fn get_column_as_f64(array: &arrow::array::ArrayRef) -> Option<Vec<f64>> {
-    use arrow::array::*;
+    use arrow::array::{
+        Array, Float32Array, Float64Array, Int8Array, Int16Array, Int32Array, Int64Array,
+        UInt8Array, UInt16Array, UInt32Array, UInt64Array,
+    };
 
     // Macro to simplify conversion for different numeric types
     macro_rules! convert_numeric_array {

@@ -9,11 +9,11 @@ fn ensure_parquet_extension(filename: &str) -> String {
     if path.extension().and_then(|e| e.to_str()) == Some("parquet") {
         filename.to_string()
     } else {
-        format!("{}.parquet", filename)
+        format!("{filename}.parquet")
     }
 }
 
-/// Writes a single operating point result (HashMap<String, f64>) to a Parquet file.
+/// Writes a single operating point result (`HashMap`<String, f64>) to a Parquet file.
 pub fn write_op_results_to_parquet(
     data: &HashMap<String, f64>,
     filename: &str,
@@ -43,11 +43,11 @@ pub fn write_op_results_to_parquet(
     let mut file = File::create(&filename).map_err(PolarsError::from)?;
     ParquetWriter::new(&mut file).finish(&mut df)?;
 
-    println!("Saved OP results to {}", filename);
+    println!("Saved OP results to {filename}");
     Ok(())
 }
 
-/// Writes DC sweep results (Vec<HashMap<String, f64>>) to a Parquet file.
+/// Writes DC sweep results (Vec<`HashMap`<String, f64>>) to a Parquet file.
 pub fn write_dc_results_to_parquet(
     data: &[HashMap<String, f64>],
     filename: &str,
@@ -80,7 +80,7 @@ pub fn write_dc_results_to_parquet(
     let mut file = File::create(&filename).map_err(PolarsError::from)?;
     ParquetWriter::new(&mut file).finish(&mut df)?;
 
-    println!("Saved DC sweep results to {}", filename);
+    println!("Saved DC sweep results to {filename}");
     Ok(())
 }
 
@@ -121,6 +121,6 @@ pub fn write_tran_results_to_parquet(
     let mut file = File::create(&filename).map_err(PolarsError::from)?;
     ParquetWriter::new(&mut file).finish(&mut df)?;
 
-    println!("Saved transient results to {}", filename);
+    println!("Saved transient results to {filename}");
     Ok(())
 }
