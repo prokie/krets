@@ -1,7 +1,7 @@
 use arrow::record_batch::RecordBatch;
 use eframe::egui;
 use egui_extras::{Column, TableBuilder};
-use egui_plot::{Legend, Line, Plot, PlotPoint, PlotPoints, Text};
+use egui_plot::{Legend, Line, Plot, PlotPoints};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use std::collections::HashSet;
 use std::{fs, path::PathBuf};

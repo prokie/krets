@@ -4,17 +4,10 @@ use nom::{
     IResult, Parser, branch::alt, bytes::complete::tag, character::complete::space1,
     combinator::all_consuming, sequence::preceded,
 };
-use once_cell::sync::Lazy;
-use std::{collections::HashMap, f64::consts::PI, str::FromStr, sync::Mutex};
+
+use std::{collections::HashMap, f64::consts::PI, str::FromStr};
 
 use super::{Identifiable, Stampable};
-
-// Global mutable HashMap
-pub static GLOBAL_MAP: Lazy<Mutex<HashMap<String, f64>>> = Lazy::new(|| {
-    let mut m = HashMap::new();
-    m.insert("i_prev".to_string(), 0.0);
-    Mutex::new(m)
-});
 
 #[derive(Debug, Clone)]
 /// Represents an inductor in a circuit.
@@ -135,19 +128,22 @@ impl Stampable for Inductor {
     ) -> Vec<Triplet<usize, usize, f64>> {
         let index_plus = index_map.get(&format!("V({})", self.plus));
         let index_minus = index_map.get(&format!("V({})", self.minus));
+        let index_current = index_map.get(&format!("I({})", self.identifier()));
 
-        let mut triplets = Vec::with_capacity(4);
-        let conductance = h / self.value;
+        let mut triplets = Vec::with_capacity(5);
 
-        if let Some(&ip) = index_plus {
-            triplets.push(Triplet::new(ip, ip, conductance));
+        if let Some(&ic) = index_current {
+            triplets.push(Triplet::new(ic, ic, -self.value / h));
         }
-        if let Some(&im) = index_minus {
-            triplets.push(Triplet::new(im, im, conductance));
+
+        if let (Some(&ip), Some(&ic)) = (index_plus, index_current) {
+            triplets.push(Triplet::new(ip, ic, 1.0));
+            triplets.push(Triplet::new(ic, ip, 1.0));
         }
-        if let (Some(&ip), Some(&im)) = (index_plus, index_minus) {
-            triplets.push(Triplet::new(ip, im, -conductance));
-            triplets.push(Triplet::new(im, ip, -conductance));
+
+        if let (Some(&im), Some(&ic)) = (index_minus, index_current) {
+            triplets.push(Triplet::new(im, ic, -1.0));
+            triplets.push(Triplet::new(ic, im, -1.0));
         }
 
         triplets
@@ -156,44 +152,22 @@ impl Stampable for Inductor {
     fn add_excitation_vector_transient_stamp(
         &self,
         index_map: &HashMap<String, usize>,
-        solution_map: &HashMap<String, f64>,
-        _prev_solution: &HashMap<String, f64>,
+        _solution_map: &HashMap<String, f64>,
+        prev_solution: &HashMap<String, f64>,
         h: f64,
     ) -> Vec<Triplet<usize, usize, f64>> {
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
+        let index_current = index_map.get(&format!("I({})", self.identifier()));
 
-        let mut map = GLOBAL_MAP.lock().unwrap();
-
-        let i_prev = map.get("i_prev").unwrap();
-
-        let v_plus = solution_map
-            .get(&format!("V({})", self.plus))
+        let i_prev = prev_solution
+            .get(&format!("I({})", self.identifier()))
             .copied()
-            .unwrap_or(0.0);
-        let v_minus = solution_map
-            .get(&format!("V({})", self.minus))
-            .copied()
-            .unwrap_or(0.0);
+            .unwrap();
 
-        let v = v_plus - v_minus;
-
-        let i_n = i_prev + (h / self.value) * v;
-
-        let mut triplets = Vec::with_capacity(2);
-
-        if let Some(&ip) = index_plus {
-            triplets.push(Triplet::new(ip, 0, -i_n));
+        if let Some(&ic) = index_current {
+            vec![Triplet::new(ic, 0, -(self.value / h) * i_prev)]
+        } else {
+            vec![]
         }
-        if let Some(&im) = index_minus {
-            triplets.push(Triplet::new(im, 0, i_n));
-        }
-
-        if let Some(value) = map.get_mut("i_prev") {
-            *value = i_n;
-        }
-
-        triplets
     }
 }
 fn parse_inductor(input: &str) -> IResult<&str, Inductor> {

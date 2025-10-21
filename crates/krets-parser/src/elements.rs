@@ -102,7 +102,7 @@ impl Element {
         match self {
             // Voltage sources and inductors are always group 2.
             Element::VoltageSource(_) => true,
-            Element::Inductor(_) => false,
+            Element::Inductor(_) => true,
             // The parser determines if these are Group 2.
             Element::Resistor(e) => e.g2,
             Element::Capacitor(e) => e.g2,
