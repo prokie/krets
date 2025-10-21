@@ -45,7 +45,7 @@ impl Solver {
             }
             Analysis::Transient(transient_params) => {
                 // Pass the circuit mutably to allow time-dependent elements to update their state.
-                let result = transient::solve(&mut self.circuit, &self.config, &transient_params)?;
+                let result = transient::solve(&self.circuit, &self.config, &transient_params)?;
                 Ok(AnalysisResult::Transient(result))
             }
         }

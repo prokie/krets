@@ -6,6 +6,7 @@ pub mod capacitor;
 pub mod current_source;
 pub mod diode;
 pub mod inductor;
+pub mod model;
 pub mod mosfet;
 pub mod resistor;
 pub mod voltage_source;

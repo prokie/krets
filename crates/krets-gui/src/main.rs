@@ -54,10 +54,10 @@ impl eframe::App for KretsApp {
             ui.separator();
 
             ui.horizontal(|ui| {
-                if ui.button("⬆ Up").clicked() {
-                    if let Some(parent) = self.current_path.parent() {
-                        path_to_navigate = Some(parent.to_path_buf());
-                    }
+                if ui.button("⬆ Up").clicked()
+                    && let Some(parent) = self.current_path.parent()
+                {
+                    path_to_navigate = Some(parent.to_path_buf());
                 }
                 ui.label(format!("Path: {}", self.current_path.display()));
             });
@@ -80,7 +80,7 @@ impl eframe::App for KretsApp {
                                 path_to_navigate = Some(entry.path.clone());
                             } else {
                                 // If it's a file, check if it's a parquet file and set it for loading.
-                                if entry.path.extension().map_or(false, |ext| ext == "parquet") {
+                                if entry.path.extension().is_some_and(|ext| ext == "parquet") {
                                     self.file_to_load = Some(entry.path.clone());
                                 }
                             }

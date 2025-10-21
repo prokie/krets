@@ -29,7 +29,6 @@ impl AnalysisSpec {
 /// Defines the type of analysis to be performed and its parameters.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-
 pub enum Analysis {
     /// DC Operating Point Analysis.
     Op,

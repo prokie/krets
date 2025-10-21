@@ -134,8 +134,8 @@ fn print_system(
 
     // Print header
     print!("{:<12}", ""); // Spacer for row names
-    for i in 0..size {
-        print!("{:<12}", rev_index_map[i]);
+    for name in &rev_index_map {
+        print!("{:<12}", name);
     }
     println!(
         "{:<15}   {:<15}",
@@ -144,8 +144,8 @@ fn print_system(
     println!("{}", "-".repeat(12 * (size + 1) + 32));
 
     // Print each row of the system
-    for r in 0..size {
-        print!("{:<12}", rev_index_map[r]);
+    for (r, row_name) in rev_index_map.iter().enumerate() {
+        print!("{:<12}", row_name);
         for c in 0..size {
             let val = matrix_map.get(&(r, c)).unwrap_or(&0.0);
             print!("{:<12.4}", val);
@@ -181,15 +181,15 @@ fn print_matrix(
 
     // Print header row with column names.
     print!("{:<12}", ""); // Spacer for row names column.
-    for i in 0..size {
-        print!("{:<12}", rev_index_map[i]);
+    for col_name in &rev_index_map {
+        print!("{:<12}", col_name);
     }
     println!();
     println!("{}", "-".repeat(12 * (size + 1)));
 
     // Print each row with its name and values.
-    for r in 0..size {
-        print!("{:<12}", rev_index_map[r]);
+    for (r, row_name) in rev_index_map.iter().enumerate() {
+        print!("{:<12}", row_name);
         for c in 0..size {
             let val = matrix_map.get(&(r, c)).unwrap_or(&0.0);
             print!("{:<12.4}", val);
