@@ -45,7 +45,6 @@ pub fn solve(
     let mut all_results = Vec::new();
     let mut last_op_solution = HashMap::new(); // Use last solution as a "warm start" for the next step
 
-    // --- Outer loop for the DC sweep ---
     // Use an integer-based loop to avoid floating-point precision issues.
     let num_steps =
         ((dc_analysis.stop - dc_analysis.start) / dc_analysis.step_size).abs() as usize + 1;
@@ -60,7 +59,6 @@ pub fn solve(
             _ => unreachable!(),
         }
 
-        // --- Inner Newton-Raphson loop to solve the OP for this sweep step ---
         let mut op_result = HashMap::new();
         let mut previous_op_result = last_op_solution.clone(); // Warm start from previous sweep point
 

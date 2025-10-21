@@ -13,7 +13,7 @@ use super::{Identifiable, Stampable};
 /// Represents an inductor in a circuit.
 pub struct Inductor {
     /// Name of the inductor.
-    pub name: u32,
+    pub name: String,
     /// Value of the inductor in Henries.
     pub value: f64,
     /// Positive node of the inductor.
@@ -178,7 +178,7 @@ fn parse_inductor(input: &str) -> IResult<&str, Inductor> {
     let (input, value) = preceded(space1, value_parser).parse(input)?;
 
     let inductor = Inductor {
-        name: name.parse().unwrap_or(0),
+        name: name.to_string(),
         plus: plus.to_string(),
         minus: minus.to_string(),
         value,
@@ -209,7 +209,7 @@ mod tests {
         let inductor_str = "L1 1 0 0.001";
         let inductor = inductor_str.parse::<Inductor>().unwrap();
 
-        assert_eq!(inductor.name, 1);
+        assert_eq!(inductor.name, "1");
         assert_eq!(inductor.plus, "1");
         assert_eq!(inductor.minus, "0");
         assert_eq!(inductor.value, 0.001);
@@ -220,7 +220,7 @@ mod tests {
         let inductor_str = "L1 1 0 0.001 % This is a comment";
         let inductor = inductor_str.parse::<Inductor>().unwrap();
 
-        assert_eq!(inductor.name, 1);
+        assert_eq!(inductor.name, "1");
         assert_eq!(inductor.value, 0.001);
     }
 
@@ -228,7 +228,7 @@ mod tests {
     fn test_parse_lowercase_and_scientific() {
         let s = "l2 vcc out 1e-6";
         let inductor = s.parse::<Inductor>().unwrap();
-        assert_eq!(inductor.name, 2);
+        assert_eq!(inductor.name, "2");
         assert_eq!(inductor.value, 1e-6);
     }
 

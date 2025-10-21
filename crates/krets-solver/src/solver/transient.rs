@@ -36,12 +36,10 @@ pub fn solve(
         tran_analysis.stop_time, time_step
     );
 
-    // --- Main time-stepping loop (Outer Loop) ---
     for step in 1..=num_steps {
         let current_time = step as f64 * time_step;
         let prev_solution = all_results.last().unwrap();
 
-        // --- Inner Newton-Raphson loop to solve for the current time step `t_n` ---
         let mut op_result_at_t = HashMap::new();
         // Use the solution from the previous time step as the initial guess (a "warm start").
         let mut previous_nr_guess = prev_solution.clone();
@@ -82,7 +80,6 @@ pub fn solve(
 
             // #[cfg(debug_assertions)]
             // {
-            //     println!("\n--- System State at Iteration: {} ---", iter);
             //     print_system(&g_stamps_summed, &b, &x, index_map);
             // }
 

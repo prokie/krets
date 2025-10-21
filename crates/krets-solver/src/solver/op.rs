@@ -34,7 +34,6 @@ pub fn solve(circuit: &Circuit, config: &SolverConfig) -> Result<HashMap<String,
     let mut previous_result = HashMap::new();
 
     for iter in 0..config.maximum_iterations {
-        // --- Rebuild MNA matrices in each iteration ---
         // This is the core of the Newton-Raphson method. The Jacobian (g_stamps)
         // and the RHS vector (e_stamps) are recalculated based on the solution from
         // the previous iteration (`previous_result`).
@@ -50,9 +49,9 @@ pub fn solve(circuit: &Circuit, config: &SolverConfig) -> Result<HashMap<String,
         let e_stamps_summed = sum_triplets(&e_stamps);
 
         let lu = SparseColMat::try_new_from_triplets(size, size, &g_stamps_summed)
-            .expect("Failed to build sparse matrix")
+            .map_err(|_| Error::MatrixBuild)?
             .sp_lu()
-            .expect("LU decomposition failed");
+            .map_err(|_| Error::MatrixDecomposition)?;
 
         let mut b = Mat::zeros(size, 1);
         for &Triplet { row, col, val } in &e_stamps_summed {

@@ -227,7 +227,7 @@ fn parse_voltage_source(input: &str) -> IResult<&str, VoltageSource> {
     }
 
     let voltage_source = VoltageSource {
-        name: name.parse().unwrap_or(0),
+        name: name.to_string(),
         plus: plus.to_string(),
         minus: minus.to_string(),
         dc_value,
@@ -260,7 +260,7 @@ impl VoltageSource {
 #[derive(Debug, Clone)]
 /// Represents a voltage source in a circuit.
 pub struct VoltageSource {
-    pub name: u32,
+    pub name: String,
     pub plus: String,
     pub minus: String,
     pub dc_value: f64,
@@ -395,12 +395,11 @@ impl FromStr for VoltageSource {
 mod tests {
     use super::*;
 
-    // --- Parser Tests ---
     #[test]
     fn test_parse_voltage_source() {
         let s = "V1 1 0 5";
         let vs = s.parse::<VoltageSource>().unwrap();
-        assert_eq!(vs.name, 1);
+        assert_eq!(vs.name, "1");
         assert_eq!(vs.plus, "1");
         assert_eq!(vs.minus, "0");
         assert_eq!(vs.dc_value, 5.0);
@@ -410,7 +409,7 @@ mod tests {
     fn test_different_node_names() {
         let s = "V10 out_ in_3 10";
         let vs = s.parse::<VoltageSource>().unwrap();
-        assert_eq!(vs.name, 10);
+        assert_eq!(vs.name, "10");
         assert_eq!(vs.plus, "out_");
         assert_eq!(vs.minus, "in_3");
         assert_eq!(vs.dc_value, 10.0);
@@ -421,7 +420,7 @@ mod tests {
     fn test_parse_with_ac() {
         let s = "V2 3 4 0 AC 1.5";
         let vs = s.parse::<VoltageSource>().unwrap();
-        assert_eq!(vs.name, 2);
+        assert_eq!(vs.name, "2");
         assert_eq!(vs.dc_value, 0.0);
         assert_eq!(vs.ac_amplitude, 1.5);
     }
@@ -430,7 +429,7 @@ mod tests {
     fn test_parse_case_insensitive() {
         let s = "v3 5 6 12 ac 10";
         let vs = s.parse::<VoltageSource>().unwrap();
-        assert_eq!(vs.name, 3);
+        assert_eq!(vs.name, "3");
         assert_eq!(vs.ac_amplitude, 10.0);
     }
 

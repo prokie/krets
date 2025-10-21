@@ -25,4 +25,12 @@ pub enum Error {
     // Error indicating that a float value could not be parsed.
     #[error("Decomposition failed")]
     DecompositionFailed,
+
+    // Error indicating that the matrix could not be built.
+    #[error("Matrix build failed")]
+    MatrixBuild,
+
+    // Error indicating that the matrix could not be decomposed.
+    #[error("Matrix decomposition failed")]
+    MatrixDecomposition,
 }

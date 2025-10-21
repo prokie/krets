@@ -15,7 +15,7 @@ use std::{collections::HashMap, f64::consts::PI, str::FromStr};
 /// Represents a capacitor in a circuit.
 pub struct Capacitor {
     /// Name of the capacitor.
-    pub name: u32,
+    pub name: String,
     /// Value of the capacitor.
     pub value: f64,
     /// Positive node of the capacitor.
@@ -188,7 +188,7 @@ fn parse_capacitor(input: &str) -> IResult<&str, Capacitor> {
     let (input, g2_opt) = opt(preceded(space1, tag_no_case("G2"))).parse(input)?;
 
     let capacitor = Capacitor {
-        name: name.parse().unwrap_or(0),
+        name: name.to_string(),
         plus: plus.to_string(),
         minus: minus.to_string(),
         value,
@@ -208,12 +208,6 @@ impl FromStr for Capacitor {
             .parse(s_without_comment)
             .map_err(|e| Error::InvalidFormat(e.to_string()))?;
 
-        if capacitor.name == 0 || s_without_comment.split_whitespace().next().unwrap().len() <= 1 {
-            return Err(Error::InvalidFormat(format!(
-                "Capacitor name is too short: '{s}'"
-            )));
-        }
-
         Ok(capacitor)
     }
 }
@@ -227,7 +221,7 @@ mod tests {
         let capacitor_str = "C1 1 0 0.000001";
         let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
 
-        assert_eq!(capacitor.name, 1);
+        assert_eq!(capacitor.name, "1");
         assert_eq!(capacitor.plus, "1");
         assert_eq!(capacitor.minus, "0");
         assert_eq!(capacitor.value, 0.000001);
@@ -239,7 +233,7 @@ mod tests {
         let capacitor_str = "C1 1 0 0.000001 G2";
         let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
 
-        assert_eq!(capacitor.name, 1);
+        assert_eq!(capacitor.name, "1");
         assert_eq!(capacitor.plus, "1");
         assert_eq!(capacitor.minus, "0");
         assert_eq!(capacitor.value, 0.000001);
@@ -251,7 +245,7 @@ mod tests {
         let capacitor_str = "C1 1 0 0.000001 % This is a comment";
         let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
 
-        assert_eq!(capacitor.name, 1);
+        assert_eq!(capacitor.name, "1");
         assert_eq!(capacitor.plus, "1");
         assert_eq!(capacitor.minus, "0");
         assert_eq!(capacitor.value, 0.000001);
@@ -263,7 +257,7 @@ mod tests {
         let capacitor_str = "C1 1 0 1e-6%This is a comment";
         let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
 
-        assert_eq!(capacitor.name, 1);
+        assert_eq!(capacitor.name, "1");
         assert_eq!(capacitor.value, 1e-6);
         assert!(!capacitor.g2);
     }
@@ -273,7 +267,7 @@ mod tests {
         let capacitor_str = "c2 3 4 10e-9 G2 % comment";
         let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
 
-        assert_eq!(capacitor.name, 2);
+        assert_eq!(capacitor.name, "2");
         assert_eq!(capacitor.value, 10e-9);
         assert!(capacitor.g2);
     }
@@ -283,7 +277,7 @@ mod tests {
         let capacitor_str = "c1 1 0 1e-6 g2";
         let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
 
-        assert_eq!(capacitor.name, 1);
+        assert_eq!(capacitor.name, "1");
         assert!(capacitor.g2);
     }
 

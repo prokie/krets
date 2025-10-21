@@ -12,7 +12,7 @@ use std::{collections::HashMap, str::FromStr};
 /// Represents a current source in a circuit.
 pub struct CurrentSource {
     /// The name of the current source.
-    pub name: u32,
+    pub name: String,
     /// The value of the current source in Amperes.
     pub value: f64,
     /// The positive node of the current source.
@@ -113,7 +113,7 @@ fn parse_current_source(input: &str) -> IResult<&str, CurrentSource> {
     let (input, value) = preceded(space1, value_parser).parse(input)?;
 
     let current_source = CurrentSource {
-        name: name.parse().unwrap_or(0),
+        name: name.to_string(),
         plus: plus.to_string(),
         minus: minus.to_string(),
         value,
@@ -144,7 +144,7 @@ mod tests {
         let current_source_str = "I1 1 0 0.001";
         let current_source = current_source_str.parse::<CurrentSource>().unwrap();
 
-        assert_eq!(current_source.name, 1);
+        assert_eq!(current_source.name, "1");
         assert_eq!(current_source.plus, "1");
         assert_eq!(current_source.minus, "0");
         assert_eq!(current_source.value, 0.001);
@@ -154,7 +154,7 @@ mod tests {
     fn test_parse_with_comment() {
         let s = "I2 5 3 1.5 % Amperes";
         let source = s.parse::<CurrentSource>().unwrap();
-        assert_eq!(source.name, 2);
+        assert_eq!(source.name, "2");
         assert_eq!(source.value, 1.5);
     }
 
@@ -162,7 +162,7 @@ mod tests {
     fn test_parse_lowercase_identifier() {
         let s = "i5 vdd gnd 10";
         let source = s.parse::<CurrentSource>().unwrap();
-        assert_eq!(source.name, 5);
+        assert_eq!(source.name, "5");
         assert_eq!(source.plus, "vdd");
     }
 

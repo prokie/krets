@@ -15,7 +15,7 @@ use std::str::FromStr;
 /// Represents a resistor in a circuit.
 pub struct Resistor {
     /// Name of the resistor.
-    pub name: u32,
+    pub name: String,
     /// Value of the resistor in Ohms.
     pub value: f64,
     /// Positive node of the resistor.
@@ -167,7 +167,7 @@ fn parse_resistor(input: &str) -> IResult<&str, Resistor> {
     let (input, value) = preceded(space1, value_parser).parse(input)?;
 
     let resistor = Resistor {
-        name: name.parse().unwrap_or(0),
+        name: name.to_string(),
         plus: plus.to_string(),
         minus: minus.to_string(),
         value,
@@ -205,7 +205,7 @@ mod tests {
         let resistor_str = "R1 1 0 1000";
         let resistor = resistor_str.parse::<Resistor>().unwrap();
 
-        assert_eq!(resistor.name, 1);
+        assert_eq!(resistor.name, "1");
         assert_eq!(resistor.plus, "1");
         assert_eq!(resistor.minus, "0");
         assert_eq!(resistor.value, 1000.0);
@@ -234,7 +234,6 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // NEW: Test for invalid prefix.
     #[test]
     fn test_invalid_prefix() {
         let s = "C1 1 0 1000";
@@ -248,7 +247,6 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // NEW: Test for zero-value resistance.
     #[test]
     fn test_error_on_zero_value() {
         let s = "R1 1 0 0";
@@ -260,5 +258,12 @@ mod tests {
         let resistor_str = "R1 1 0 abc";
         let result = resistor_str.parse::<Resistor>();
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_resistor_name_long() {
+        let resistor_str = "Rin 1 0 1000";
+        let resistor = resistor_str.parse::<Resistor>().unwrap();
+        assert_eq!(resistor.name, "in");
     }
 }

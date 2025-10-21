@@ -40,7 +40,6 @@ macro_rules! dispatch {
     };
 }
 
-// --- From trait implementations for ergonomic conversion ---
 impl From<voltage_source::VoltageSource> for Element {
     fn from(item: voltage_source::VoltageSource) -> Self {
         Element::VoltageSource(item)

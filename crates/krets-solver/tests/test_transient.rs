@@ -131,7 +131,6 @@ mod tests {
         // print_results_to_console(&solution);
         let transient_solution = solution.clone().into_transient();
 
-        // --- Check initial condition (t=0) ---
         let result_t0 = &transient_solution[0];
         assert!((result_t0.get("V(in)").unwrap() - 0.0).abs() < 1e-3);
         assert!((result_t0.get("V(out)").unwrap() - 0.0).abs() < 1e-3);
@@ -173,7 +172,6 @@ mod tests {
         // print_results_to_console(&solution);
         let transient_solution = solution.clone().into_transient();
 
-        // --- Check initial condition (t=0) ---
         let result_t0 = &transient_solution[0];
         assert!((result_t0.get("V(in)").unwrap() - 0.0).abs() < 1e-3);
         assert!((result_t0.get("V(out)").unwrap() - 0.0).abs() < 1e-3);
@@ -208,7 +206,6 @@ mod tests {
         print_results_to_console(&solution);
         let transient_solution = solution.clone().into_transient();
 
-        // --- Check initial condition (t=0) ---
         let result_t0 = &transient_solution[0];
         assert!((result_t0.get("V(in)").unwrap() - 0.0).abs() < 1e-3);
         assert!((result_t0.get("V(out)").unwrap() - 0.0).abs() < 1e-3);

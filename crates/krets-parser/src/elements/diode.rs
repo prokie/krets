@@ -16,7 +16,7 @@ use super::Identifiable;
 /// Represents a diode in a circuit.
 pub struct Diode {
     /// Name of the diode.
-    pub name: u32,
+    pub name: String,
     /// The name of the diode model to use.
     pub model_name: String,
     /// Model parameters for the diode.
@@ -199,7 +199,7 @@ fn parse_diode(input: &str) -> IResult<&str, Diode> {
     let (input, model_name) = opt(preceded(space1, alphanumeric_or_underscore1)).parse(input)?;
 
     let diode = Diode {
-        name: name.parse().unwrap_or(0),
+        name: name.to_string(),
         plus: plus.to_string(),
         minus: minus.to_string(),
         model_name: model_name.unwrap_or("default").to_string(),
@@ -232,7 +232,7 @@ mod tests {
         let diode_str = "D1 1 0";
         let diode = diode_str.parse::<Diode>().unwrap();
 
-        assert_eq!(diode.name, 1);
+        assert_eq!(diode.name, "1");
         assert_eq!(diode.plus, "1");
         assert_eq!(diode.minus, "0");
         assert_eq!(diode.model_name, "default");
@@ -243,7 +243,7 @@ mod tests {
         let diode_str = "D1 1 0 1N4148";
         let diode = diode_str.parse::<Diode>().unwrap();
 
-        assert_eq!(diode.name, 1);
+        assert_eq!(diode.name, "1");
         assert_eq!(diode.plus, "1");
         assert_eq!(diode.minus, "0");
         assert_eq!(diode.model_name, "1N4148");
@@ -254,7 +254,7 @@ mod tests {
         let diode_str = "D1 1 0 % This is a comment";
         let diode = diode_str.parse::<Diode>().unwrap();
 
-        assert_eq!(diode.name, 1);
+        assert_eq!(diode.name, "1");
         assert_eq!(diode.plus, "1");
         assert_eq!(diode.minus, "0");
     }
