@@ -5,9 +5,9 @@ use std::{
     path::Path,
 };
 
-use crate::circuit::Circuit;
 use crate::elements::Element;
 use crate::prelude::*;
+use crate::{circuit::Circuit, model::Model};
 
 /// Parses a SPICE-like netlist and extracts circuit elements into structured data.
 ///
@@ -30,6 +30,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
     let mut elements: Vec<Element> = Vec::new();
     let mut index_map: HashMap<String, usize> = HashMap::new();
     let mut nodes: HashSet<String> = HashSet::new();
+    let mut models: Vec<Model> = Vec::new();
     let mut index_counter = 0;
     let mut inside_control_block = false;
 
@@ -78,6 +79,12 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
             }
         };
 
+        if line.to_lowercase().starts_with(".model") {
+            let model: Model = line.parse()?;
+            models.push(model);
+            continue;
+        }
+
         match parse_with_context(line) {
             Ok(element) => {
                 if element.is_g2() {
@@ -115,7 +122,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
 
     // Convert HashSet to Vec for the final Circuit struct if needed
     let nodes_vec = nodes.into_iter().collect();
-    let circuit = Circuit::new(elements, index_map, nodes_vec);
+    let circuit = Circuit::new(elements, index_map, nodes_vec, models);
 
     Ok(circuit)
 }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::elements::Element;
+use crate::{elements::Element, model::Model};
 
 #[derive(Debug, Clone)]
 /// A structured representation of a circuit element.
@@ -13,6 +13,9 @@ pub struct Circuit {
 
     /// A list of nodes in the circuit.
     pub nodes: Vec<String>,
+
+    /// A list of models in the circuit.
+    pub models: Vec<Model>,
 }
 
 impl Circuit {
@@ -21,11 +24,13 @@ impl Circuit {
         elements: Vec<Element>,
         index_map: HashMap<String, usize>,
         nodes: Vec<String>,
+        models: Vec<Model>,
     ) -> Self {
         Circuit {
             elements,
             index_map,
             nodes,
+            models,
         }
     }
 }
