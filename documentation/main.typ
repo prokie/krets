@@ -350,6 +350,38 @@ $ G_(n+1) = frac(h, L) "and" i_n = i_(n+1) -G_(n+1)u_(n+1) $
 
 === Mosfet
 
+#figure(caption: "Mosfet companion model", zap.circuit({
+  import zap: *
+  set-style(zap: (variant: "ieee"))
+  nmos("id", (0, 0))
+  node("above_d", (rel: (0, 1), to: "id.d"), label: (content: $d$, anchor: "west"))
+  node("left_g", (rel: (-1, 0), to: "id.g"), label: $g$)
+  node("below_s", (rel: (0, -1), to: "id.s"), label: (content: $s$, anchor: "west"))
+  wire("above_d", "id.d", i: (content: $i_d$, anchor: "west"))
+  wire("left_g", "id.g", i: (content: $i_g$, anchor: "south"))
+  wire("below_s", "id.s", i: (content: $i_s$, anchor: "west"))
+}))
+
+Transconductance parameter:
+$ beta = mu_n C_(o x) frac(W, L) $
+
+Channel-length modulation parameter #sym.lambda. Can be set to zero to disable the effect. Usually in the range 0.01 - 0.05 $V^(-1)$.
+
+
+
+$
+  i_d = cases(
+    0"," & "if" v_(g s) < V_(t h),
+    beta [(v_(g s) - V_(t h)) v_(d s) - frac(v_(d s)^2, 2)]"," & "if" 0 <= v_(d s) <= v_(g s) - V_(t h) "(linear region)",
+    frac(beta, 2) (v_(g s) - V_(t h))^2 (1 + lambda v_(d s)) "," & "if" 0 <= v_(g s) - V_(t h) <= v_(d s) "(saturation region)",
+  )
+$
+
+with:
+$ i_s = -i_d "and" i_g = 0 $
+
+
+
 
 === Voltage Source
 
