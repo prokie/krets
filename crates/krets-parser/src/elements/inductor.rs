@@ -4,6 +4,7 @@ use nom::{
     IResult, Parser, branch::alt, bytes::complete::tag, character::complete::space1,
     combinator::all_consuming, sequence::preceded,
 };
+
 use std::{collections::HashMap, f64::consts::PI, str::FromStr};
 
 use super::{Identifiable, Stampable};
@@ -116,6 +117,57 @@ impl Stampable for Inductor {
     ) -> Vec<Triplet<usize, usize, c64>> {
         // An ideal inductor is passive and has no internal sources.
         vec![]
+    }
+
+    fn add_conductance_matrix_transient_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
+        _prev_solution: &HashMap<String, f64>,
+        h: f64,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        let index_plus = index_map.get(&format!("V({})", self.plus));
+        let index_minus = index_map.get(&format!("V({})", self.minus));
+        let index_current = index_map.get(&format!("I({})", self.identifier()));
+
+        let mut triplets = Vec::with_capacity(5);
+
+        if let Some(&ic) = index_current {
+            triplets.push(Triplet::new(ic, ic, -self.value / h));
+        }
+
+        if let (Some(&ip), Some(&ic)) = (index_plus, index_current) {
+            triplets.push(Triplet::new(ip, ic, 1.0));
+            triplets.push(Triplet::new(ic, ip, 1.0));
+        }
+
+        if let (Some(&im), Some(&ic)) = (index_minus, index_current) {
+            triplets.push(Triplet::new(im, ic, -1.0));
+            triplets.push(Triplet::new(ic, im, -1.0));
+        }
+
+        triplets
+    }
+
+    fn add_excitation_vector_transient_stamp(
+        &self,
+        index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
+        prev_solution: &HashMap<String, f64>,
+        h: f64,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        let index_current = index_map.get(&format!("I({})", self.identifier()));
+
+        let i_prev = prev_solution
+            .get(&format!("I({})", self.identifier()))
+            .copied()
+            .unwrap();
+
+        if let Some(&ic) = index_current {
+            vec![Triplet::new(ic, 0, -(self.value / h) * i_prev)]
+        } else {
+            vec![]
+        }
     }
 }
 fn parse_inductor(input: &str) -> IResult<&str, Inductor> {

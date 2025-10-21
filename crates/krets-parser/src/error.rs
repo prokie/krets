@@ -37,4 +37,10 @@ pub enum Error {
     /// Error indicating a parsing failure on a specific line of the netlist.
     #[error("Parse error on line {line}: {message}")]
     ParseError { line: usize, message: String },
+
+    #[error("IO error reading file: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("TOML deserialization error: {0}")]
+    Toml(#[from] toml::de::Error),
 }

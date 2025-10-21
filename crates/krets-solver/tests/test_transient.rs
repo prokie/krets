@@ -191,4 +191,31 @@ mod tests {
 
         // print_results_to_console(&solution);
     }
+
+    #[test]
+    fn test_high_pass_filter_transient() {
+        let path = Path::new(&circuits_dir()).join("high_pass_filter/transient.cir");
+        let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
+        let config = SolverConfig::default();
+        let mut solver = Solver::new(circuit, config);
+
+        let tran_analysis = TransientAnalysis {
+            time_step: 10e-6, // 10us
+            stop_time: 2e-3,  // 2ms
+        };
+
+        let solution = solver.solve(Analysis::Transient(tran_analysis)).unwrap();
+        print_results_to_console(&solution);
+        let transient_solution = solution.clone().into_transient();
+
+        // --- Check initial condition (t=0) ---
+        let result_t0 = &transient_solution[0];
+        assert!((result_t0.get("V(in)").unwrap() - 0.0).abs() < 1e-3);
+        assert!((result_t0.get("V(out)").unwrap() - 0.0).abs() < 1e-3);
+
+        let result_last = transient_solution.last().unwrap();
+        assert!((result_last.get("V(out)").unwrap() - 1.0).abs() < 1e-3);
+
+        // print_results_to_console(&solution);
+    }
 }

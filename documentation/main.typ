@@ -18,6 +18,76 @@
 
 == Elements
 
+
+=== Resistor
+
+#figure(caption: "A resistor.", zap.circuit({
+  import zap: *
+  set-style(zap: (variant: "ieee"))
+  node("n1", (1, 0), label: (content: "n+", anchor: "west"))
+  node("n2", (3, 0), label: (content: "n-", anchor: "east"))
+
+  resistor("r1", (1, 0), (3, 0))
+  draw.line((1.1, 0.5), (2.9, 0.5), mark: (end: ">", fill: black))
+  draw.content((2, 0.8), $i_R$)
+}))
+
+
+
+The current through a resistor is given by Ohm's law:
+
+$ i_R = frac(v^+ - v^-, R) = G(v^+ - v^-) $
+
+To get the element stamps for the resistor in the conductance matrix, we use Kirchhoff's Current Law (KCL) at nodes n+ and n-.
+
+At node n+:
+$ i_(n+) = i_R = G(v^+ - v^-) $
+At node n-:
+$ i_(n-) = -i_R = -G(v^+ - v^-) $
+
+This leads to the following conductance matrix stamps:
+
+#figure(
+  table(
+    columns: 4,
+    align: horizon,
+    stroke: none,
+    table.header(
+      table.hline(),
+      [], $v^+$, $v^-$, "RHS",
+      table.hline(),
+      $v^+$, $+G$, $-G$, $$,
+      $v^-$, $-G$, $+G$, $$,
+      table.hline(),
+    ),
+  ),
+  caption: [Element stamps for a resistor in the conductance matrix in group 1.],
+)
+
+To get the stamps in group 2, we introduce a current variable $i_R$ for the resistor:
+
+$ v^+ - v^- = R i_R => v^+ - v^- - R i_R = 0 $
+
+#figure(
+  table(
+    columns: 5,
+    align: horizon,
+    stroke: none,
+    table.header(
+      table.hline(),
+      [], $v^+$, $v^-$, $i_R$, "RHS",
+      table.hline(),
+      $v^+$, [], [], $+1$, [],
+      $v^-$, [], [], $-1$, $$,
+      $i_R$, $+1$, $-1$, $-R$, $$,
+      table.hline(),
+    ),
+  ),
+  caption: [Element stamps for a resistor in the conductance matrix in group 2.],
+)
+
+
+
 === BJT
 
 === Capacitor
@@ -88,15 +158,57 @@ $ i(t_(n+1)) = C(u(t_(n+1)))u'(t_(n+1)) $
 
 using $i(t_(n+1)) approx i_(n+1)$ and $u(t_(n+1)) approx u_(n+1)$
 
-$ i_(n+1) = C(u_(n+1))u'(t_(n+1)) approx C(u_(n+1)) (frac(u_(n+1) - u_n,h)) $
+$ i_(n+1) = C(u_(n+1))u'(t_(n+1)) approx C(u_(n+1)) (frac(u_(n+1) - u_n, h)) $
 
-$ u_(n+1) = frac(h,C) i_(n+1) + u_n $
+$ u_(n+1) = frac(h, C) i_(n+1) + u_n $
 
-so $ G_(n+1) = frac(h,C) "and" u_n = u_(n+1) -G_(n+1)i_(n+1) $
+so $ G_(n+1) = frac(h, C) "and" u_n = u_(n+1) -G_(n+1)i_(n+1) $
 
 
 
 === Current Source
+
+#figure(caption: "A current source.", zap.circuit({
+  import zap: *
+  set-style(zap: (variant: "ieee"))
+  node("n1", (1, 0), label: (content: "n+", anchor: "west"))
+  node("n2", (3, 0), label: (content: "n-", anchor: "east"))
+  isource("i1", (1, 0), (3, 0), label: $i_S$)
+}))
+
+The current through an independent current source is given by:
+$ i_S = I $
+To get the element stamps for the independent current source in the conductance matrix, we use Kirchhoff's Current Law (KCL) at nodes n+ and n-.
+
+At node n+:
+$ i_(n+) = i_S = I $
+At node n-:
+$ i_(n-) = -i_S = -I $
+
+This leads to the following conductance matrix stamps:
+
+#figure(
+  table(
+    columns: 4,
+    align: horizon,
+    stroke: none,
+    table.header(
+      table.hline(),
+      [], $v^+$, $v^-$, "RHS",
+      table.hline(),
+      $v^+$, [], [], $+I$,
+      $v^-$, [], [], $-I$,
+      table.hline(),
+    ),
+  ),
+  caption: [Element stamp for an independent current source in group 1],
+)
+
+
+
+
+
+
 
 #figure(
   table(
@@ -113,7 +225,7 @@ so $ G_(n+1) = frac(h,C) "and" u_n = u_(n+1) -G_(n+1)i_(n+1) $
       table.hline(),
     ),
   ),
-  caption: [Element stamp for an independent current source in group 1],
+  caption: [Element stamp for an independent current source in group 2],
 )
 
 === Diode
@@ -206,14 +318,14 @@ The dynamic element equation
 
 $ u(t_(n+1)) = L(i(t_(n+1)))i'(t_(n+1)) $
 
-using $u(t_(n+1)) approx u_(n+1)$ and $i(t_(n+1)) approx i_(n+1)$ 
+using $u(t_(n+1)) approx u_(n+1)$ and $i(t_(n+1)) approx i_(n+1)$
 
 
-$ u_(n+1) = L(i_(n+1))i'(t_(n+1)) approx L(i_(n+1)) (frac(i_(n+1) - i_n,h)) $
+$ u_(n+1) = L(i_(n+1))i'(t_(n+1)) approx L(i_(n+1)) (frac(i_(n+1) - i_n, h)) $
 
-$ i_(n+1) = frac(h,L)u_"n+1" + i_n $
+$ i_(n+1) = frac(h, L)u_"n+1" + i_n $
 
-$ G_(n+1) = frac(h,L) "and" i_n = i_(n+1) -G_(n+1)u_(n+1) $
+$ G_(n+1) = frac(h, L) "and" i_n = i_(n+1) -G_(n+1)u_(n+1) $
 
 #figure(caption: "Inductor companion model for Backwards Euler.", zap.circuit({
   import zap: *
@@ -237,22 +349,6 @@ $ G_(n+1) = frac(h,L) "and" i_n = i_(n+1) -G_(n+1)u_(n+1) $
 }))
 
 === Mosfet
-
-=== Resistor
-
-
-$
-  mat(
-    delim: #none,
-    , , v^+, , v^-, , i_R, , |, "RHS";
-    , , dots.v, , dots.v, , dots.v, , |, ;
-    v^+, dots, dots, dots, dots, dots, +1, dots, |, ;
-    v^-, dots, dots, dots, dots, dots, -1, dots, |, ;
-    i_R, dots, +1, dots, -1, dots, - R, dots, |, ;
-    , , dots.v, , dots.v, , dots.v, , |, ;
-  )
-$
-
 
 
 === Voltage Source

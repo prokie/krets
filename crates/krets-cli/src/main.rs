@@ -1,17 +1,17 @@
 use clap::Parser;
-use krets_parser::analyses::{Analysis, AnalysisResult, DcAnalysis};
-use krets_result::{write_dc_results_to_parquet, write_op_results_to_parquet};
+use krets_parser::analyses::{AnalysisResult, AnalysisSpec};
+use krets_result::{
+    write_dc_results_to_parquet, write_op_results_to_parquet, write_tran_results_to_parquet,
+};
 use krets_solver::{config::SolverConfig, solver::Solver};
-
-use std::path::Path;
 
 /// Krets is a SPICE-like circuit simulator written in Rust.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Path to the circuit netlist file to simulate.
+    /// Path to the krets file to simulate.
     #[arg()]
-    circuit_file: String,
+    krets_file: String,
 
     /// Optional path to save the results to a Parquet file.
     #[arg(short, long)]
@@ -20,13 +20,44 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let circuit_path = Path::new(&args.circuit_file);
+
+    let krets_spec = AnalysisSpec::from_file(&args.krets_file).unwrap_or_else(|e| {
+        eprintln!("Error reading krets spec from '{}': {}", args.krets_file, e);
+        std::process::exit(1);
+    });
+
+    // Resolve circuit path: prefer path relative to the krets spec file, otherwise accept an absolute path.
+    let krets_file_path = std::path::Path::new(&args.krets_file);
+    let krets_parent = krets_file_path
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."));
+
+    // First try the path interpreted relative to the krets file.
+    let rel_candidate = krets_parent.join(&krets_spec.circuit_path);
+    let circuit_path_resolved = if rel_candidate.exists() {
+        rel_candidate
+    } else if krets_spec.circuit_path.is_absolute() && krets_spec.circuit_path.exists() {
+        // Fallback: if the given path is absolute and exists, use it.
+        krets_spec.circuit_path.clone()
+    } else {
+        eprintln!(
+            "Circuit file not found.\nTried:\n  - relative to krets file: {}\n  - as given (absolute or relative to cwd): {}\n\nProvide a path that exists either relative to the krets file or as an absolute path.",
+            rel_candidate.display(),
+            krets_spec.circuit_path.display()
+        );
+        std::process::exit(1);
+    };
 
     // 1. Parse the circuit description file with robust error handling.
-    let circuit = match krets_parser::parser::parse_circuit_description_file(circuit_path) {
+    let circuit = match krets_parser::parser::parse_circuit_description_file(&circuit_path_resolved)
+    {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("Error parsing circuit file '{}': {}", args.circuit_file, e);
+            eprintln!(
+                "Error parsing circuit file '{}': {}",
+                circuit_path_resolved.display(),
+                e
+            );
             std::process::exit(1);
         }
     };
@@ -37,51 +68,49 @@ fn main() {
     // 3. Instantiate the solver.
     let mut solver = Solver::new(circuit, config);
 
-    // 4. Define the analysis to run (TODO: This should be driven by CLI args).
-    let analysis = DcAnalysis {
-        element: "V1".to_string(),
-        start: 0.0,
-        stop: 1.0,
-        step_size: 0.1,
-    };
+    let analysis = krets_spec.analysis;
 
     println!(
         "Running {:?} analysis on '{}'...",
-        analysis, args.circuit_file
+        analysis,
+        krets_spec.circuit_path.display()
     );
 
-    // 5. Run the solver and handle the result.
-    match solver.solve(Analysis::Dc(analysis)) {
-        Ok(result) => {
-            println!("\n--- Analysis successful ---");
+    // 4. Run the specified analysis.
+    let result = solver.solve(analysis).unwrap_or_else(|e| {
+        eprintln!("Error during analysis: {}", e);
+        std::process::exit(1);
+    });
 
-            if let Some(filename) = args.output {
-                // If an output file is specified, write to Parquet.
-                let write_result = match &result {
-                    AnalysisResult::Op(data) => write_op_results_to_parquet(data, &filename),
-                    AnalysisResult::Dc(data) => write_dc_results_to_parquet(data, &filename),
-                    AnalysisResult::Ac(_) => {
-                        println!("Parquet export for AC analysis is not yet supported.");
-                        Ok(())
-                    }
-                    AnalysisResult::Transient(_) => {
-                        println!("Parquet export for Transient analysis is not yet supported.");
-                        Ok(())
-                    }
-                };
-                if let Err(e) = write_result {
-                    eprintln!("Error writing to Parquet file: {}", e);
-                }
-            } else {
-                // Otherwise, print to console.
-                print_results_to_console(&result);
+    // 5. Print results to console.
+    print_results_to_console(&result);
+
+    // 6. Optionally write results to Parquet file.
+    if let Some(output_path) = args.output {
+        match &result {
+            AnalysisResult::Op(op_solution) => {
+                write_op_results_to_parquet(op_solution, &output_path).unwrap_or_else(|e| {
+                    eprintln!("Error writing OP results to Parquet: {}", e);
+                    std::process::exit(1);
+                });
+            }
+            AnalysisResult::Dc(dc_solution) => {
+                write_dc_results_to_parquet(dc_solution, &output_path).unwrap_or_else(|e| {
+                    eprintln!("Error writing DC results to Parquet: {}", e);
+                    std::process::exit(1);
+                });
+            }
+            AnalysisResult::Ac(_) => {
+                eprintln!("AC results Parquet export not implemented yet.");
+            }
+            AnalysisResult::Transient(tran_solution) => {
+                write_tran_results_to_parquet(tran_solution, &output_path).unwrap_or_else(|e| {
+                    eprintln!("Error writing Transient results to Parquet: {}", e);
+                    std::process::exit(1);
+                });
             }
         }
-        Err(e) => {
-            eprintln!("\n--- Error during simulation ---");
-            eprintln!("{}", e);
-            std::process::exit(1);
-        }
+        println!("Results written to '{}'.", output_path);
     }
 }
 

@@ -168,9 +168,64 @@ impl eframe::App for KretsApp {
             ui.separator();
             ui.heading("Plot Viewer");
             let my_plot = Plot::new("My Plot").legend(Legend::default());
-            let graph: Vec<[f64; 2]> = vec![[0.0, 1.0], [2.0, 3.0], [3.0, 2.0]];
             my_plot.show(ui, |plot_ui| {
-                plot_ui.line(Line::new("curve", PlotPoints::from(graph)));
+                // Only plot if we have data and *at least* two columns are selected
+                if let Some(data) = &self.table_data {
+                    if self.selection.len() >= 2 {
+                        // Get the selected indices.
+                        // We sort them so the X-axis is deterministic
+                        // (lowest index will be X, all others will be Y).
+                        let mut indices: Vec<usize> = self.selection.iter().copied().collect();
+                        indices.sort();
+
+                        let idx_x = indices[0];
+                        let name_x = &data.headers[idx_x];
+                        let col_x_arr = &data.batch.columns()[idx_x];
+
+                        // Try to get the X-axis data
+                        if let Some(x_vals) = get_column_as_f64(col_x_arr) {
+                            // Now, iterate over all *other* selected columns and plot them as Y
+                            let mut plotted_anything = false;
+                            for &idx_y in &indices[1..] {
+                                let name_y = &data.headers[idx_y];
+                                let col_y_arr = &data.batch.columns()[idx_y];
+
+                                // Try to get the Y-axis data
+                                if let Some(y_vals) = get_column_as_f64(col_y_arr) {
+                                    let line_name = format!("{} (Y) vs. {} (X)", name_y, name_x);
+
+                                    // Combine the X and Y vectors into PlotPoints
+                                    let points: PlotPoints = x_vals
+                                        .iter()
+                                        .zip(y_vals.iter())
+                                        .map(|(&x, &y)| [x, y])
+                                        .collect();
+
+                                    plot_ui.line(Line::new(line_name, points));
+                                    plotted_anything = true;
+                                }
+                                // If a specific Y column isn't numeric, we just skip it.
+                            }
+
+                            if !plotted_anything {
+                                // plot_ui.text("X-axis is plottable, but no selected Y-axis columns are plottable.");
+                            }
+                        } else {
+                            // This handles cases where the X-axis column is not numeric
+                            // plot_ui.text("The first selected column (lowest index) is not plottable.");
+                        }
+                    } else {
+                        // This handles 0 or 1 selected columns
+                        // plot_ui.text("Select at least two numeric columns to plot (first selected = X, others = Y).");
+                    }
+                } else {
+                    // This handles the case before a file is loaded
+                    // plot_ui.text(Text::new(
+                    //     "Load a Parquet file and select columns to plot.",
+                    //     PlotPoint::new(-3.0, -3.0),
+                    //     "here",
+                    // ));
+                }
             });
         });
 
@@ -300,6 +355,41 @@ fn get_col_stats(array: &arrow::array::ArrayRef) -> (String, String) {
         }
 
         _ => ("N/A".to_string(), "N/A".to_string()),
+    }
+}
+
+/// Helper to get all values from a numeric Arrow array as `Vec<f64>`.
+/// Returns `None` if the array is not a supported numeric type.
+/// Nulls in the array are converted to `f64::NAN`.
+fn get_column_as_f64(array: &arrow::array::ArrayRef) -> Option<Vec<f64>> {
+    use arrow::array::*;
+
+    // Macro to simplify conversion for different numeric types
+    macro_rules! convert_numeric_array {
+        ($arr_type:ty) => {{
+            let arr = array.as_any().downcast_ref::<$arr_type>().unwrap();
+            // Iterate, convert nulls to NAN, and cast all values to f64
+            Some(
+                arr.iter()
+                    .map(|v| v.map_or(f64::NAN, |val| val as f64))
+                    .collect(),
+            )
+        }};
+    }
+
+    match array.data_type() {
+        arrow::datatypes::DataType::Int8 => convert_numeric_array!(Int8Array),
+        arrow::datatypes::DataType::Int16 => convert_numeric_array!(Int16Array),
+        arrow::datatypes::DataType::Int32 => convert_numeric_array!(Int32Array),
+        arrow::datatypes::DataType::Int64 => convert_numeric_array!(Int64Array),
+        arrow::datatypes::DataType::UInt8 => convert_numeric_array!(UInt8Array),
+        arrow::datatypes::DataType::UInt16 => convert_numeric_array!(UInt16Array),
+        arrow::datatypes::DataType::UInt32 => convert_numeric_array!(UInt32Array),
+        arrow::datatypes::DataType::UInt64 => convert_numeric_array!(UInt64Array),
+        arrow::datatypes::DataType::Float32 => convert_numeric_array!(Float32Array),
+        arrow::datatypes::DataType::Float64 => convert_numeric_array!(Float64Array),
+        // Other types are not considered plottable
+        _ => None,
     }
 }
 

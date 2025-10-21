@@ -1,8 +1,35 @@
+use crate::prelude::*;
 use faer::c64;
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
+
+// Add a small struct that pairs a circuit file path with an analysis to run.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalysisSpec {
+    /// Path to the circuit file (relative or absolute).
+    pub circuit_path: PathBuf,
+    /// The analysis to perform for the circuit.
+    pub analysis: Analysis,
+}
+
+impl AnalysisSpec {
+    /// Read an AnalysisSpec from a TOML file on disk.
+    ///
+    /// Returns Err(...) if the file cannot be read or the TOML fails to deserialize.
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let s = std::fs::read_to_string(path)?;
+        let spec: AnalysisSpec = toml::from_str(&s)?;
+        Ok(spec)
+    }
+}
 
 /// Defines the type of analysis to be performed and its parameters.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+
 pub enum Analysis {
     /// DC Operating Point Analysis.
     Op,
@@ -18,7 +45,7 @@ pub enum Analysis {
 }
 
 /// Contains the parameters for a DC Sweep analysis.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DcAnalysis {
     /// The identifier of the element to sweep (e.g., "V1").
     pub element: String,
@@ -30,7 +57,7 @@ pub struct DcAnalysis {
     pub step_size: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransientAnalysis {
     pub time_step: f64,
     pub stop_time: f64,
@@ -102,6 +129,55 @@ impl AnalysisResult {
         match self {
             AnalysisResult::Transient(result) => result,
             _ => panic!("Called `into_transient()` on a non-Transient result"),
+        }
+    }
+}
+
+// Add a small test that parses a transient TOML block.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn parse_transient_toml() {
+        let toml_str = r#"
+[transient]
+time_step = 1e-6
+stop_time = 1e-3
+"#;
+        let parsed: Analysis =
+            toml::from_str(toml_str).expect("failed to parse TOML into Analysis");
+        match parsed {
+            Analysis::Transient(t) => {
+                assert_eq!(t.time_step, 1e-6);
+                assert_eq!(t.stop_time, 1e-3);
+            }
+            other => panic!("expected Transient analysis, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_analysis_spec_from_toml_str() {
+        let toml_str = r#"
+circuit_path = "any_path/krets.toml"
+
+[analysis.transient]
+time_step = 1e-6
+stop_time = 1e-3
+"#;
+        let spec: AnalysisSpec =
+            toml::from_str(toml_str).expect("failed to parse TOML into AnalysisSpec");
+
+        assert!(spec.circuit_path.ends_with("krets.toml"));
+
+        match spec.analysis {
+            Analysis::Transient(t) => {
+                assert_eq!(t.time_step, 1e-6);
+                assert_eq!(t.stop_time, 1e-3);
+            }
+            other => panic!(
+                "expected Transient analysis in AnalysisSpec, got {:?}",
+                other
+            ),
         }
     }
 }

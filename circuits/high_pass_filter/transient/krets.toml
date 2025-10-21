@@ -1,0 +1,5 @@
+circuit_path = "transient.cir"
+
+[analysis.transient]
+time_step = 10e-6
+stop_time = 2e-3
