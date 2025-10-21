@@ -83,3 +83,44 @@ pub fn write_dc_results_to_parquet(
     println!("Saved DC sweep results to {}", filename);
     Ok(())
 }
+
+pub fn write_tran_results_to_parquet(
+    data: &[HashMap<String, f64>],
+    filename: &str,
+) -> Result<(), PolarsError> {
+    if data.is_empty() {
+        return Ok(());
+    }
+
+    let filename = ensure_parquet_extension(filename);
+
+    // Collect all unique headers
+    let mut all_headers = data
+        .iter()
+        .flat_map(|row| row.keys().cloned())
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+
+    // If a "time" column exists, ensure it's first
+    all_headers.sort();
+    if let Some(pos) = all_headers.iter().position(|h| h == "time") {
+        all_headers.remove(pos);
+        all_headers.insert(0, "time".to_string());
+    }
+
+    // Build columns
+    let mut columns = Vec::with_capacity(all_headers.len());
+    for header in &all_headers {
+        let values: Vec<Option<f64>> = data.iter().map(|row| row.get(header).copied()).collect();
+        let series = Series::new(header.to_string().into(), values);
+        columns.push(series.into_column());
+    }
+
+    let mut df = DataFrame::new(columns)?;
+    let mut file = File::create(&filename).map_err(PolarsError::from)?;
+    ParquetWriter::new(&mut file).finish(&mut df)?;
+
+    println!("Saved transient results to {}", filename);
+    Ok(())
+}
