@@ -1,7 +1,5 @@
 use crate::prelude::*;
 
-;
-
 pub mod bjt;
 pub mod capacitor;
 pub mod current_source;
