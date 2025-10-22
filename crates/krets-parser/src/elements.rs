@@ -1,5 +1,6 @@
-use faer::{c64, sparse::Triplet};
-use std::collections::HashMap;
+use crate::prelude::*;
+
+;
 
 pub mod bjt;
 pub mod capacitor;

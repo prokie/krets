@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use crate::prelude::*;
 
-use crate::{elements::Element, model::Model};
+use crate::model::Model;
 
 #[derive(Debug, Clone)]
 /// A structured representation of a circuit element.

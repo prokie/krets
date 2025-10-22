@@ -4,12 +4,8 @@ use nom::{
     combinator::all_consuming, sequence::preceded,
 };
 
-use super::{Identifiable, Stampable};
 use crate::prelude::*;
-use faer::c64;
-use std::collections::HashMap;
 use std::fmt;
-use std::str::FromStr;
 
 #[derive(Debug, Clone)]
 /// Represents a resistor in a circuit.

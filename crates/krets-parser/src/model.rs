@@ -9,7 +9,6 @@ use nom::{
     multi::many0,
     sequence::{delimited, pair, preceded, separated_pair},
 };
-use std::{collections::HashMap, str::FromStr};
 
 #[derive(Debug, PartialEq, Clone)]
 /// Enum representing the different types of devices supported by the .model card.

@@ -1,16 +1,13 @@
-use crate::{elements::Stampable, prelude::*};
+use crate::prelude::*;
+
 use nom::{
-    IResult,
-    Parser,
+    IResult, Parser,
     branch::alt,
     bytes::complete::tag,
-    character::complete::{digit1, space1}, // Added digit1
+    character::complete::{digit1, space1},
     combinator::{all_consuming, map_res},
     sequence::preceded,
 };
-use std::str::FromStr;
-
-use super::Identifiable;
 
 #[derive(Debug, PartialEq, Clone)]
 /// Represents the type of a MOSFET (Metal-Oxide-Semiconductor Field-Effect Transistor).
@@ -42,6 +39,23 @@ pub struct MOSFET {
     pub mosfet_type: MosfetType,
 }
 
+impl MOSFET {
+    fn threshold_voltage(&self) -> f64 {
+        // Placeholder: In a real implementation, this would look up the model parameters.
+        0.0
+    }
+
+    fn beta_parameter(&self) -> f64 {
+        // Placeholder: In a real implementation, this would look up the model parameters.
+        0.1
+    }
+
+    fn lambda_parameter(&self) -> f64 {
+        // Placeholder: In a real implementation, this would look up the model parameters.
+        0.0
+    }
+}
+
 impl Identifiable for MOSFET {
     /// Returns the identifier of the MOSFET in the format `M{name}`.
     fn identifier(&self) -> String {
@@ -52,35 +66,95 @@ impl Identifiable for MOSFET {
 impl Stampable for MOSFET {
     fn add_conductance_matrix_dc_stamp(
         &self,
-        _index_map: &std::collections::HashMap<String, usize>,
-        _solution_map: &std::collections::HashMap<String, f64>,
-    ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
-        todo!()
+        index_map: &HashMap<String, usize>,
+        solution_map: &HashMap<String, f64>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        let v_g = solution_map
+            .get(&format!("V({})", self.gate))
+            .unwrap_or(&0.0);
+        let v_s = solution_map
+            .get(&format!("V({})", self.source))
+            .unwrap_or(&0.0);
+        let v_d = solution_map
+            .get(&format!("V({})", self.drain))
+            .unwrap_or(&0.0);
+
+        let v_gs = v_g - v_s;
+        let v_ds = v_d - v_s;
+        let v_th = self.threshold_voltage();
+        let beta = self.beta_parameter();
+        let lambda = self.lambda_parameter();
+
+        let mut g_ds = 0.0;
+        let mut g_m = 0.0;
+
+        let mut triplets = Vec::new();
+
+        if v_gs <= v_th {
+            // Cut-off region: No conduction
+            g_ds = 0.0;
+            g_m = 0.0;
+        } else if v_ds >= 0.0 && v_ds <= (v_gs - v_th) {
+            // Linear region
+            g_ds = beta * (v_gs - v_th - v_ds);
+            g_m = beta * v_ds;
+        } else if v_ds >= (v_gs - v_th) && v_ds >= 0.0 {
+            // Saturation region
+            g_ds = (beta / 2.0) * lambda * (v_gs - v_th).powi(2);
+            g_m = beta * (v_gs - v_th) * (1.0 + lambda * v_ds);
+        }
+
+        let index_d = index_map.get(&self.drain);
+        let index_s = index_map.get(&self.source);
+        let index_g = index_map.get(&self.gate);
+
+        if let Some(&id) = index_d {
+            triplets.push(Triplet::new(id, id, g_ds));
+        }
+
+        if let Some(&is) = index_s {
+            triplets.push(Triplet::new(is, is, g_ds + g_m));
+        }
+
+        if let (Some(&id), Some(&is)) = (index_d, index_s) {
+            triplets.push(Triplet::new(id, is, -(g_ds + g_m)));
+            triplets.push(Triplet::new(is, id, g_ds + g_m));
+        }
+
+        if let (Some(&is), Some(&ig)) = (index_s, index_g) {
+            triplets.push(Triplet::new(is, ig, g_m));
+        }
+
+        if let (Some(&id), Some(&ig)) = (index_d, index_g) {
+            triplets.push(Triplet::new(id, ig, g_m));
+        }
+
+        triplets
     }
 
     fn add_excitation_vector_dc_stamp(
         &self,
-        _index_map: &std::collections::HashMap<String, usize>,
-        _solution_map: &std::collections::HashMap<String, f64>,
-    ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
         todo!()
     }
 
     fn add_excitation_vector_ac_stamp(
         &self,
-        _index_map: &std::collections::HashMap<String, usize>,
-        _solution_map: &std::collections::HashMap<String, f64>,
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
         _frequency: f64,
-    ) -> Vec<faer::sparse::Triplet<usize, usize, faer::c64>> {
+    ) -> Vec<Triplet<usize, usize, faer::c64>> {
         vec![]
     }
 
     fn add_conductance_matrix_ac_stamp(
         &self,
-        _index_map: &std::collections::HashMap<String, usize>,
-        _solution_map: &std::collections::HashMap<String, f64>,
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
         _frequency: f64,
-    ) -> Vec<faer::sparse::Triplet<usize, usize, faer::c64>> {
+    ) -> Vec<Triplet<usize, usize, faer::c64>> {
         todo!()
     }
 }

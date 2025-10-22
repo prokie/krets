@@ -350,7 +350,7 @@ $ G_(n+1) = frac(h, L) "and" i_n = i_(n+1) -G_(n+1)u_(n+1) $
 
 === Mosfet
 
-#figure(caption: "Mosfet companion model", zap.circuit({
+#figure(caption: "An n-channel Mosfet.", zap.circuit({
   import zap: *
   set-style(zap: (variant: "ieee"))
   nmos("id", (0, 0))
@@ -379,6 +379,46 @@ $
 
 with:
 $ i_s = -i_d "and" i_g = 0 $
+
+
+$
+  G_(d s) = frac(partial i_d, partial v_(d s)) = cases(
+    0"," & "if" v_(g s) <= v_(t h) "(cut-off)"
+    , beta (v_(g s) - V_(t h) - v_(d s)) "," & "if" 0 <= v_(d s) <= v_(g s) - V_(t h) "(linear region)",
+    frac(beta, 2) lambda (v_(g s) - V_(t h))^2"," & "if" 0 <= v_(g s) - V_(t h) <= v_(d s) "(saturation region)",
+  ),
+$
+
+$
+  g_m = frac(partial i_d, partial v_(g s)) = cases(
+    0"," & "if" v_(g s) <= V_(t h) "(cut-off)",
+    beta v_(d s) "," & "if" 0 <= v_(d s) <= v_(g s) - V_(t h) "(linear region)",
+    beta (v_(g s) - V_(t h)) (1 + lambda v_(d s)) "," & "if" 0 <= v_(g s) - V_(t h) <= v_(d s) "(saturation region)",
+  ),
+$
+
+$ I_(e q) = i_d - G_(d s) v_(d s) - g_m v_(g s) $
+
+
+
+#figure(
+  table(
+    columns: 5,
+    align: horizon,
+    stroke: none,
+    table.header(
+      table.hline(),
+      [], $d$, $s$, $g$, "RHS",
+      table.hline(),
+      $d$, $+G_(d s)$, $-(G_(d s)+g_m)$, $g_m$, $-I_"eq"$,
+      $s$, $-G_(d s)$, $+(G_(d s)+g_m)$, $g_m$, $+I_"eq"$,
+      $g$, $0$, $0$, $0$, $+0$,
+      table.hline(),
+    ),
+  ),
+  caption: [Element stamps for a Mosfet in group 1.],
+)
+
 
 
 

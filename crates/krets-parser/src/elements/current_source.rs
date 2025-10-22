@@ -1,12 +1,8 @@
-use faer::{c64, sparse::Triplet};
-
-use super::{Identifiable, Stampable};
 use crate::prelude::*;
 use nom::{
     IResult, Parser, branch::alt, bytes::complete::tag, character::complete::space1,
     combinator::all_consuming, sequence::preceded,
 };
-use std::{collections::HashMap, str::FromStr};
 
 #[derive(Debug, Clone)]
 /// Represents a current source in a circuit.

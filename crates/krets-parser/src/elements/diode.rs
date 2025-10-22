@@ -1,5 +1,5 @@
-use crate::{constants::THERMAL_VOLTAGE, elements::Stampable, prelude::*};
-use faer::{c64, sparse::Triplet};
+use crate::{constants::THERMAL_VOLTAGE, prelude::*};
+
 use nom::{
     IResult,
     Parser,
@@ -9,9 +9,6 @@ use nom::{
     combinator::{all_consuming, map_res, opt}, // Added map_res
     sequence::preceded,
 };
-use std::{collections::HashMap, str::FromStr};
-
-use super::Identifiable;
 
 #[derive(Debug, Clone)]
 /// Represents a diode in a circuit.

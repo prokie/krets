@@ -1,10 +1,6 @@
 use crate::prelude::*;
-use faer::c64;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 // Add a small struct that pairs a circuit file path with an analysis to run.
 #[derive(Debug, Clone, Serialize, Deserialize)]

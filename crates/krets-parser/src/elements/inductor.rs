@@ -1,13 +1,11 @@
 use crate::prelude::*;
-use faer::{c64, sparse::Triplet};
+
 use nom::{
     IResult, Parser, branch::alt, bytes::complete::tag, character::complete::space1,
     combinator::all_consuming, sequence::preceded,
 };
 
-use std::{collections::HashMap, f64::consts::PI, str::FromStr};
-
-use super::{Identifiable, Stampable};
+use std::f64::consts::PI;
 
 #[derive(Debug, Clone)]
 /// Represents an inductor in a circuit.

@@ -1,6 +1,5 @@
-use super::{Identifiable, Stampable};
 use crate::prelude::*;
-use faer::{c64, sparse::Triplet};
+
 use nom::{
     IResult, Parser,
     branch::alt,
@@ -9,7 +8,7 @@ use nom::{
     combinator::{all_consuming, opt},
     sequence::preceded,
 };
-use std::{collections::HashMap, f64::consts::PI, str::FromStr};
+use std::f64::consts::PI;
 
 #[derive(Debug, Clone)]
 /// Represents a capacitor in a circuit.

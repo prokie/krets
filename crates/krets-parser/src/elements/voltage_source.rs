@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use faer::c64;
 use faer::sparse::Triplet;
 use nom::{
     IResult, Parser,
@@ -11,10 +10,7 @@ use nom::{
     number::complete::double,
     sequence::{delimited, preceded},
 };
-use std::str::FromStr;
-use std::{collections::HashMap, fmt};
-
-use super::{Identifiable, Stampable};
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
 /// Defines the parameters for a PULSE voltage source.
@@ -302,10 +298,10 @@ impl Stampable for VoltageSource {
 
     fn add_conductance_matrix_ac_stamp(
         &self,
-        index_map: &std::collections::HashMap<String, usize>,
+        index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
         _frequency: f64,
-    ) -> Vec<faer::sparse::Triplet<usize, usize, c64>> {
+    ) -> Vec<Triplet<usize, usize, c64>> {
         let index_plus = index_map.get(&format!("V({})", self.plus));
         let index_minus = index_map.get(&format!("V({})", self.minus));
         let index_current = index_map.get(&format!("I({})", self.identifier()));

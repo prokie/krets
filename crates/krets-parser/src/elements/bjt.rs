@@ -1,4 +1,4 @@
-use crate::{elements::Stampable, prelude::*};
+use crate::prelude::*;
 use nom::{
     IResult,
     Parser,
@@ -8,9 +8,6 @@ use nom::{
     combinator::{all_consuming, opt},
     sequence::preceded,
 };
-use std::str::FromStr;
-
-use super::Identifiable;
 
 #[derive(Debug, PartialEq, Clone)]
 /// Represents the type of a BJT (Bipolar Junction Transistor).
@@ -53,38 +50,38 @@ impl Stampable for BJT {
     // --- Stamping methods remain unchanged ---
     fn add_conductance_matrix_dc_stamp(
         &self,
-        _index_map: &std::collections::HashMap<String, usize>,
-        _solution_map: &std::collections::HashMap<String, f64>,
-    ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
         // TODO: Implement BJT DC conductance stamp
         todo!()
     }
 
     fn add_excitation_vector_dc_stamp(
         &self,
-        _index_map: &std::collections::HashMap<String, usize>,
-        _solution_map: &std::collections::HashMap<String, f64>,
-    ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
         // TODO: Implement BJT DC excitation stamp
         todo!()
     }
 
     fn add_excitation_vector_ac_stamp(
         &self,
-        _index_map: &std::collections::HashMap<String, usize>,
-        _solution_map: &std::collections::HashMap<String, f64>,
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
         _frequency: f64,
-    ) -> Vec<faer::sparse::Triplet<usize, usize, faer::c64>> {
+    ) -> Vec<Triplet<usize, usize, faer::c64>> {
         // BJTs are passive for small-signal AC excitation
         vec![]
     }
 
     fn add_conductance_matrix_ac_stamp(
         &self,
-        _index_map: &std::collections::HashMap<String, usize>,
-        _solution_map: &std::collections::HashMap<String, f64>,
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
         _frequency: f64,
-    ) -> Vec<faer::sparse::Triplet<usize, usize, faer::c64>> {
+    ) -> Vec<Triplet<usize, usize, faer::c64>> {
         // TODO: Implement BJT AC conductance stamp (small-signal model)
         todo!()
     }
