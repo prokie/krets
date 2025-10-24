@@ -3017,6 +3017,7 @@ name = "krets-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "krets-gui",
  "krets-parser",
  "krets-result",
  "krets-solver",

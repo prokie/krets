@@ -1,10 +1,10 @@
 use clap::Parser;
+use krets_gui::run_gui;
 use krets_parser::analyses::{AnalysisResult, AnalysisSpec};
 use krets_result::{
     write_dc_results_to_parquet, write_op_results_to_parquet, write_tran_results_to_parquet,
 };
 use krets_solver::{config::SolverConfig, solver::Solver};
-
 /// Krets is a SPICE-like circuit simulator written in Rust.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -18,7 +18,7 @@ struct Args {
     output: Option<String>,
 
     /// Whether to launch the GUI.
-    #[arg(short, long, default_value_t = false)]
+    #[arg(short, long, default_value_t = true)]
     gui: bool,
 }
 
@@ -115,6 +115,11 @@ fn main() {
             }
         }
         println!("Results written to '{output_path}'.");
+    }
+
+    // 7. Optionally launch the GUI.
+    if args.gui {
+        run_gui();
     }
 }
 

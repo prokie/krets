@@ -400,7 +400,9 @@ fn get_column_as_f64(array: &arrow::array::ArrayRef) -> Option<Vec<f64>> {
     }
 }
 
-fn main() -> eframe::Result {
+/// This function launches the native eframe GUI application.
+/// It's made public so it can be called from krets-cli.
+pub fn run_gui() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([1024.0, 768.0]),
         ..Default::default()
