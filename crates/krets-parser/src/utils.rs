@@ -1,7 +1,9 @@
 use nom::{
     IResult, Parser,
-    bytes::complete::{is_not, take_while1},
+    bytes::complete::{is_not, tag, take_while1},
+    character::complete::space0,
     combinator::map_res,
+    sequence::{preceded, separated_pair},
 };
 
 use crate::prelude::*;
@@ -73,6 +75,16 @@ pub fn value_parser(input: &str) -> IResult<&str, f64> {
 
     // 2. Apply your custom parsing function to the recognized token.
     map_res(token_parser, parse_value).parse(input)
+}
+
+/// Parses a key=value pair within the model parameters.
+pub fn parse_key_value(input: &str) -> IResult<&str, (&str, f64)> {
+    separated_pair(
+        alphanumeric_or_underscore1,    // Key (parameter name)
+        preceded(space0, tag("=")),     // Separator '=' with optional spaces
+        preceded(space0, value_parser), // Value (parsed number)
+    )
+    .parse(input)
 }
 
 #[cfg(test)]

@@ -4,8 +4,9 @@ use nom::{
     IResult, Parser,
     branch::alt,
     bytes::complete::tag,
-    character::complete::{digit1, space1},
+    character::complete::{digit1, space0, space1},
     combinator::{all_consuming, map_res},
+    multi,
     sequence::preceded,
 };
 
@@ -37,6 +38,12 @@ pub struct MOSFET {
     pub model_name: String,
     /// Type of the MOSFET (inferred from name, e.g., MN or MP).
     pub mosfet_type: MosfetType,
+    /// Multiplicity factor. Simulates "m" parallel devices
+    pub multiplicity: Option<usize>,
+    /// Width of the MOSFET.
+    pub width: Option<f64>,
+    /// Length of the MOSFET.
+    pub length: Option<f64>,
 }
 
 impl MOSFET {
@@ -184,8 +191,27 @@ fn parse_mosfet(input: &str) -> IResult<&str, MOSFET> {
     // Parse the required model name
     let (input, model_name) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
 
-    // NOTE: Removed optional value parser, as it's not standard for the main definition line.
-    // Parameters like W, L are usually separate or on the model card.
+    // Each parameter is expected to be separated by at least one space from the previous token.
+    let (input, params) = multi::many0(preceded(space1, parse_key_value)).parse(input)?;
+
+    // consume any trailing whitespace
+    let (input, _) = space0.parse(input)?;
+
+    let mut multiplicity: Option<usize> = None;
+    let mut width: Option<f64> = None;
+    let mut length: Option<f64> = None;
+    for (k, v) in params {
+        if k.eq_ignore_ascii_case("m") {
+            multiplicity = Some(v as usize);
+        }
+
+        if k.eq_ignore_ascii_case("w") {
+            width = Some(v);
+        }
+        if k.eq_ignore_ascii_case("l") {
+            length = Some(v);
+        }
+    }
 
     let mosfet = MOSFET {
         name,
@@ -195,6 +221,9 @@ fn parse_mosfet(input: &str) -> IResult<&str, MOSFET> {
         bulk: bulk.to_string(), // Added bulk field
         model_name: model_name.to_string(),
         mosfet_type,
+        multiplicity,
+        width,
+        length,
     };
 
     Ok((input, mosfet))
@@ -274,6 +303,7 @@ mod tests {
         assert_eq!(mosfet.mosfet_type, MosfetType::PChannel);
         assert_eq!(mosfet.model_name, "P_FET");
         assert_eq!(mosfet.bulk, "0");
+        assert_eq!(mosfet.multiplicity, None);
     }
 
     #[test]
@@ -331,5 +361,12 @@ mod tests {
         let mosfet_str = "MN2 7 8 9 0 N_Model 1.5";
         let result = mosfet_str.parse::<MOSFET>();
         assert!(result.is_err()); // Should fail because "1.5" is an extra part
+    }
+
+    #[test]
+    fn test_parse_mosfet_with_multiplicity() {
+        let mosfet_str = "MN2 7 8 9 0 N_Model         m=3    ";
+        let mosfet = mosfet_str.parse::<MOSFET>().unwrap();
+        assert_eq!(mosfet.multiplicity, Some(3))
     }
 }

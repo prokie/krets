@@ -362,8 +362,11 @@ $ G_(n+1) = frac(h, L) "and" i_n = i_(n+1) -G_(n+1)u_(n+1) $
   wire("below_s", "id.s", i: (content: $i_s$, anchor: "west"))
 }))
 
-Transconductance parameter:
+The device transconductance parameter:
 $ beta = mu_n C_(o x) frac(W, L) $
+
+The process transconductance parameter is denoted $mu_n C_(o x)$.
+
 
 Channel-length modulation parameter #sym.lambda. Can be set to zero to disable the effect. Usually in the range 0.01 - 0.05 $V^(-1)$.
 
