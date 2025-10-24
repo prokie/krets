@@ -7,56 +7,62 @@ use nom::{
     combinator::{all_consuming, map, map_res, opt},
     error::context,
     multi::many0,
-    sequence::{delimited, pair, preceded, separated_pair},
+    sequence::{delimited, pair, preceded},
 };
 
 #[derive(Debug, PartialEq, Clone)]
 /// Enum representing the different types of devices supported by the .model card.
 pub enum ModelType {
-    Resistor,        // R
-    Capacitor,       // C
-    Inductor,        // L
-    VoltageSwitch,   // SW
-    CurrentSwitch,   // CSW
-    UniformRC,       // URC
-    LossyTransLine,  // LTRA
-    Diode,           // D
-    NpnBjt,          // NPN
-    PnpBjt,          // PNP
-    NChannelJfet,    // NJF
-    PChannelJfet,    // PJF
-    NChannelMosfet,  // NMOS
-    PChannelMosfet,  // PMOS
-    NChannelMesfet,  // NMF
-    PChannelMesfet,  // PMF
-    PowerMosfet,     // VDMOS
-    Unknown(String), // Catch-all for unsupported or future types
+    Diode,  // D
+    Mosfet, // MOSFET
 }
 
-impl FromStr for ModelType {
+pub struct MosfetModel {
+    // Name
+    pub name: String,
+    // The width of the MOSFET channel in meters.
+    // In netlist is specified with parameter "W"
+    pub width: f64,
+    // The length of the MOSFET channel in meters.
+    // In netlist is specified with parameter "L"
+    pub length: f64,
+    // The voltage threshold of the MOSFET in volts.
+    // In netlist is specified with parameter "VTO"
+    pub voltage_threshold: f64,
+    // The device transconductance of the MOSFET in A/V^2.
+    // In netlist is specified with parameter "K"
+    pub process_transconductance: f64,
+    // Channel length modulation parameter in 1/V.
+    // In netlist is specified with parameter "LAMBDA"
+    pub channel_length_modulation: f64,
+}
+
+impl MosfetModel {
+    /// Creates a new `MosfetModel` with default parameter values.
+    pub fn default() -> Self {
+        MosfetModel {
+            name: "default".to_string(),
+            width: 1e-6,                     // Default width of 1 micrometer
+            length: 1e-6,                    // Default length of 1 micrometer
+            voltage_threshold: 0.0,          // Default threshold voltage of 0.0 V
+            process_transconductance: 2e-5,  // Default process transconductance
+            channel_length_modulation: 0.02, // Default channel length modulation
+        }
+    }
+
+    /// Calculates the beta parameter of the MOSFET.
+    /// Beta is defined as: β = K * (W / L), where K is the process transconductance,
+    /// W is the width, and L is the length of the MOSFET channel.
+    pub fn beta(&self) -> f64 {
+        self.process_transconductance * (self.width / self.length)
+    }
+}
+
+impl FromStr for MosfetModel {
     type Err = Error; // Use your crate's error type
 
     fn from_str(s: &str) -> Result<Self> {
-        Ok(match s.to_uppercase().as_str() {
-            "R" => ModelType::Resistor,
-            "C" => ModelType::Capacitor,
-            "L" => ModelType::Inductor,
-            "SW" => ModelType::VoltageSwitch,
-            "CSW" => ModelType::CurrentSwitch,
-            "URC" => ModelType::UniformRC,
-            "LTRA" => ModelType::LossyTransLine,
-            "D" => ModelType::Diode,
-            "NPN" => ModelType::NpnBjt,
-            "PNP" => ModelType::PnpBjt,
-            "NJF" => ModelType::NChannelJfet,
-            "PJF" => ModelType::PChannelJfet,
-            "NMOS" => ModelType::NChannelMosfet,
-            "PMOS" => ModelType::PChannelMosfet,
-            "NMF" => ModelType::NChannelMesfet,
-            "PMF" => ModelType::PChannelMesfet,
-            "VDMOS" => ModelType::PowerMosfet,
-            _ => ModelType::Unknown(s.to_string()), // Or return an error: Err(Error::InvalidFormat(format!("Unknown model type: {}", s))),
-        })
+        todo!()
     }
 }
 
@@ -72,16 +78,6 @@ pub struct Model {
 }
 
 // --- Nom Parsers ---
-
-/// Parses a key=value pair within the model parameters.
-fn parse_key_value(input: &str) -> IResult<&str, (&str, f64)> {
-    separated_pair(
-        alphanumeric_or_underscore1,    // Key (parameter name)
-        preceded(space0, tag("=")),     // Separator '=' with optional spaces
-        preceded(space0, value_parser), // Value (parsed number)
-    )
-    .parse(input)
-}
 
 /// Parses the parameters within the parentheses `(...)`.
 fn parse_parameters(input: &str) -> IResult<&str, HashMap<String, f64>> {
