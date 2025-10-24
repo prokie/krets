@@ -16,6 +16,10 @@ struct Args {
     /// Optional path to save the results to a Parquet file.
     #[arg(short, long)]
     output: Option<String>,
+
+    /// Whether to launch the GUI.
+    #[arg(short, long, default_value_t = false)]
+    gui: bool,
 }
 
 fn main() {
