@@ -119,7 +119,7 @@ fn main() {
 
     // 7. Optionally launch the GUI.
     if args.gui {
-        run_gui();
+        let _ = run_gui();
     }
 }
 
