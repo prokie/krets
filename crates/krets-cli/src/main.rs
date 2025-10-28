@@ -13,10 +13,6 @@ struct Args {
     #[arg()]
     krets_file: String,
 
-    /// Optional path to save the results to a Parquet file.
-    #[arg(short, long)]
-    output: Option<String>,
-
     /// Whether to launch the GUI.
     #[arg(short, long, default_value_t = true)]
     gui: bool,
@@ -35,6 +31,10 @@ fn main() {
     let krets_parent = krets_file_path
         .parent()
         .unwrap_or_else(|| std::path::Path::new("."));
+
+    // decide output file path: always write result.parquet next to the krets file
+    let output_path_buf = krets_parent.join("result.parquet");
+    let output_file_str = output_path_buf.to_string_lossy().into_owned();
 
     // First try the path interpreted relative to the krets file.
     let rel_candidate = krets_parent.join(&krets_spec.circuit_path);
@@ -87,52 +87,45 @@ fn main() {
     });
 
     // 5. Print results to console.
-    print_results_to_console(&result);
+    // print_results_to_console(&result);
 
-    // 6. Optionally write results to Parquet file.
-    if let Some(output_path) = &args.output {
-        match &result {
-            AnalysisResult::Op(op_solution) => {
-                write_op_results_to_parquet(op_solution, &output_path).unwrap_or_else(|e| {
-                    eprintln!("Error writing OP results to Parquet: {e}");
-                    std::process::exit(1);
-                });
-            }
-            AnalysisResult::Dc(dc_solution) => {
-                write_dc_results_to_parquet(dc_solution, &output_path).unwrap_or_else(|e| {
-                    eprintln!("Error writing DC results to Parquet: {e}");
-                    std::process::exit(1);
-                });
-            }
-            AnalysisResult::Ac(_) => {
-                eprintln!("AC results Parquet export not implemented yet.");
-            }
-            AnalysisResult::Transient(tran_solution) => {
-                write_tran_results_to_parquet(tran_solution, &output_path).unwrap_or_else(|e| {
-                    eprintln!("Error writing Transient results to Parquet: {e}");
-                    std::process::exit(1);
-                });
-            }
+    match &result {
+        AnalysisResult::Op(op_solution) => {
+            write_op_results_to_parquet(op_solution, &output_file_str).unwrap_or_else(|e| {
+                eprintln!("Error writing OP results to Parquet: {e}");
+                std::process::exit(1);
+            });
         }
-        println!("Results written to '{output_path}'.");
+        AnalysisResult::Dc(dc_solution) => {
+            write_dc_results_to_parquet(dc_solution, &output_file_str).unwrap_or_else(|e| {
+                eprintln!("Error writing DC results to Parquet: {e}");
+                std::process::exit(1);
+            });
+        }
+        AnalysisResult::Ac(_) => {
+            eprintln!("AC results Parquet export not implemented yet.");
+        }
+        AnalysisResult::Transient(tran_solution) => {
+            write_tran_results_to_parquet(tran_solution, &output_file_str).unwrap_or_else(|e| {
+                eprintln!("Error writing Transient results to Parquet: {e}");
+                std::process::exit(1);
+            });
+        }
     }
 
     // 7. Optionally launch the GUI.
     if args.gui {
-        if let Some(output_path) = &args.output {
-            let _ = run_gui(
-                circuit_path_resolved
-                    .parent()
-                    .unwrap_or_else(|| std::path::Path::new("."))
-                    .to_path_buf(),
-                Some(output_path.into()),
-            );
-        } else {
-            let _ = run_gui(circuit_path_resolved, None);
-        }
+        let _ = run_gui(
+            circuit_path_resolved
+                .parent()
+                .unwrap_or_else(|| std::path::Path::new("."))
+                .to_path_buf(),
+            Some(output_path_buf.clone()),
+        );
     }
 }
 
+#[allow(dead_code)]
 /// Prints the analysis results to the console in a human-readable format.
 fn print_results_to_console(result: &AnalysisResult) {
     match result {

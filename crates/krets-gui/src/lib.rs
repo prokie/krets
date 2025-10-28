@@ -28,6 +28,7 @@ struct KretsApp {
     file_to_load: Option<PathBuf>, // Initial file to load
     table_data: Option<TableData>,
     selection: HashSet<usize>,
+    current_loaded_file: Option<PathBuf>,
 }
 
 impl KretsApp {
@@ -42,6 +43,7 @@ impl KretsApp {
             file_to_load: initial_result_file.clone(), // Set initial file to load
             table_data: None,
             selection: HashSet::new(),
+            current_loaded_file: None,
         };
         app.refresh_entries();
 
@@ -74,20 +76,18 @@ impl eframe::App for KretsApp {
         if let Some(new_path) = path_to_navigate {
             self.current_path = new_path;
             self.refresh_entries();
-            self.table_data = None; // Clear data when navigating
-            self.selection.clear();
         }
 
         // Handle file loading requested from the side panel *after* initial load
         if let Some(path) = self.file_to_load.take() {
-            // Check if it's different from what might already be loaded
-            let should_load = self.table_data.is_none()
-                || self
-                    .table_data
-                    .as_ref()
-                    .map_or(true, |_| Some(path.clone()) != self.file_to_load); // Simplistic check, might need better logic if path==filename matters
+            // Only load if it's different from the currently loaded file
+            let already_loaded = self
+                .current_loaded_file
+                .as_ref()
+                .map(|p| p == &path)
+                .unwrap_or(false);
 
-            if should_load {
+            if !already_loaded {
                 self.load_parquet_file(&path);
             }
         }
@@ -368,8 +368,10 @@ impl KretsApp {
 
                             // Update file_to_load to reflect the currently loaded file path
                             // Canonicalize for consistency if possible
-                            self.file_to_load =
-                                path.canonicalize().ok().or_else(|| Some(path.clone()));
+                            let canonical = path.canonicalize().ok().or_else(|| Some(path.clone()));
+                            self.file_to_load = canonical.clone();
+                            // Record the successfully loaded file so future clicks on the same file do nothing
+                            self.current_loaded_file = canonical;
                         }
                         Err(e) => {
                             self.error_message = Some(format!("Failed to read Parquet batch: {e}"));
