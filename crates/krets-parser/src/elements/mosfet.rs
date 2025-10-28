@@ -61,6 +61,59 @@ impl MOSFET {
         // Placeholder: In a real implementation, this would look up the model parameters.
         0.0
     }
+
+    fn g_m(&self, v_gs: f64, v_ds: f64) -> f64 {
+        let v_th = self.threshold_voltage();
+        let beta = self.beta_parameter();
+        let lambda = self.lambda_parameter();
+        if v_gs <= v_th {
+            0.0
+        } else if v_ds >= 0.0 && v_ds <= (v_gs - v_th) {
+            // Linear region
+            beta * v_ds
+        } else if v_ds >= (v_gs - v_th) && v_ds >= 0.0 {
+            // Saturation region
+            beta * (v_gs - v_th) * (1.0 + lambda * v_ds)
+        } else {
+            0.0
+        }
+    }
+
+    fn g_ds(&self, v_gs: f64, v_ds: f64) -> f64 {
+        let v_th = self.threshold_voltage();
+        let beta = self.beta_parameter();
+        let lambda = self.lambda_parameter();
+
+        if v_gs <= v_th {
+            0.0
+        } else if v_ds >= 0.0 && v_ds <= (v_gs - v_th) {
+            // Linear region
+            beta * (v_gs - v_th - v_ds)
+        } else if v_ds >= (v_gs - v_th) && v_ds >= 0.0 {
+            // Saturation region
+            (beta / 2.0) * lambda * (v_gs - v_th).powi(2)
+        } else {
+            0.0
+        }
+    }
+
+    fn i_d(&self, v_gs: f64, v_ds: f64) -> f64 {
+        let v_th = self.threshold_voltage();
+        let beta = self.beta_parameter();
+        let lambda = self.lambda_parameter();
+
+        if v_gs <= v_th {
+            0.0
+        } else if v_ds >= 0.0 && v_ds <= (v_gs - v_th) {
+            // Linear region
+            beta * ((v_gs - v_th) * v_ds - (v_ds.powi(2) / 2.0))
+        } else if v_ds >= (v_gs - v_th) && v_ds >= 0.0 {
+            // Saturation region
+            (beta / 2.0) * (v_gs - v_th).powi(2) * (1.0 + lambda * v_ds)
+        } else {
+            0.0
+        }
+    }
 }
 
 impl Identifiable for MOSFET {
@@ -88,28 +141,10 @@ impl Stampable for MOSFET {
 
         let v_gs = v_g - v_s;
         let v_ds = v_d - v_s;
-        let v_th = self.threshold_voltage();
-        let beta = self.beta_parameter();
-        let lambda = self.lambda_parameter();
-
-        let mut g_ds = 0.0;
-        let mut g_m = 0.0;
 
         let mut triplets = Vec::new();
-
-        if v_gs <= v_th {
-            // Cut-off region: No conduction
-            g_ds = 0.0;
-            g_m = 0.0;
-        } else if v_ds >= 0.0 && v_ds <= (v_gs - v_th) {
-            // Linear region
-            g_ds = beta * (v_gs - v_th - v_ds);
-            g_m = beta * v_ds;
-        } else if v_ds >= (v_gs - v_th) && v_ds >= 0.0 {
-            // Saturation region
-            g_ds = (beta / 2.0) * lambda * (v_gs - v_th).powi(2);
-            g_m = beta * (v_gs - v_th) * (1.0 + lambda * v_ds);
-        }
+        let g_m = self.g_m(v_gs, v_ds);
+        let g_ds = self.g_ds(v_gs, v_ds);
 
         let index_d = index_map.get(&self.drain);
         let index_s = index_map.get(&self.source);
@@ -141,10 +176,38 @@ impl Stampable for MOSFET {
 
     fn add_excitation_vector_dc_stamp(
         &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
+        index_map: &HashMap<String, usize>,
+        solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>> {
-        todo!()
+        let v_g = solution_map
+            .get(&format!("V({})", self.gate))
+            .unwrap_or(&0.0);
+        let v_s = solution_map
+            .get(&format!("V({})", self.source))
+            .unwrap_or(&0.0);
+        let v_d = solution_map
+            .get(&format!("V({})", self.drain))
+            .unwrap_or(&0.0);
+
+        let v_gs = v_g - v_s;
+        let v_ds = v_d - v_s;
+        let g_ds = self.g_ds(v_gs, v_ds);
+        let g_m = self.g_m(v_gs, v_ds);
+        let i_d = self.i_d(v_gs, v_ds);
+
+        let i_eq = i_d - g_ds * v_ds - g_m * v_gs;
+
+        let mut triplets = Vec::new();
+
+        if let Some(&is) = index_map.get(&self.source) {
+            triplets.push(Triplet::new(is, 0, i_eq));
+        }
+
+        if let Some(&id) = index_map.get(&self.drain) {
+            triplets.push(Triplet::new(id, 0, -i_eq));
+        }
+
+        triplets
     }
 
     fn add_excitation_vector_ac_stamp(
@@ -269,7 +332,7 @@ mod tests {
     #[test]
     fn test_parse_nchannel_mosfet() {
         // Standard SPICE format: M<name> <drain> <gate> <source> <bulk> <model>
-        let mosfet_str = "MN1 D G S B MyNmosModel"; // Added bulk node 'B'
+        let mosfet_str = "MN1 D G S B MyNmosModel";
         let mosfet = mosfet_str.parse::<MOSFET>().unwrap();
 
         assert_eq!(mosfet.name, 1);
