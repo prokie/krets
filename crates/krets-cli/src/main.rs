@@ -90,7 +90,7 @@ fn main() {
     print_results_to_console(&result);
 
     // 6. Optionally write results to Parquet file.
-    if let Some(output_path) = args.output {
+    if let Some(output_path) = &args.output {
         match &result {
             AnalysisResult::Op(op_solution) => {
                 write_op_results_to_parquet(op_solution, &output_path).unwrap_or_else(|e| {
@@ -119,7 +119,17 @@ fn main() {
 
     // 7. Optionally launch the GUI.
     if args.gui {
-        let _ = run_gui();
+        if let Some(output_path) = &args.output {
+            let _ = run_gui(
+                circuit_path_resolved
+                    .parent()
+                    .unwrap_or_else(|| std::path::Path::new("."))
+                    .to_path_buf(),
+                Some(output_path.into()),
+            );
+        } else {
+            let _ = run_gui(circuit_path_resolved, None);
+        }
     }
 }
 

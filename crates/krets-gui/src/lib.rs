@@ -7,6 +7,7 @@ use std::collections::HashSet;
 use std::{fs, path::PathBuf};
 
 /// Represents an entry in the directory listing.
+#[derive(Clone)] // Added Clone
 struct DirectoryEntry {
     path: PathBuf,
     is_directory: bool,
@@ -24,26 +25,35 @@ struct KretsApp {
     current_path: PathBuf,
     entries: Vec<DirectoryEntry>,
     error_message: Option<String>,
-    file_to_load: Option<PathBuf>,
+    file_to_load: Option<PathBuf>, // Initial file to load
     table_data: Option<TableData>,
     selection: HashSet<usize>,
 }
 
-impl Default for KretsApp {
-    fn default() -> Self {
-        // Start in the current working directory.
+impl KretsApp {
+    // Renamed default to new and accept parameters
+    fn new(initial_folder_path: PathBuf, initial_result_file: Option<PathBuf>) -> Self {
         let mut app = Self {
-            current_path: std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/")),
+            current_path: initial_folder_path
+                .canonicalize()
+                .unwrap_or(initial_folder_path), // Canonicalize for cleaner display
             entries: Vec::new(),
             error_message: None,
-            file_to_load: None,
+            file_to_load: initial_result_file.clone(), // Set initial file to load
             table_data: None,
             selection: HashSet::new(),
         };
         app.refresh_entries();
+
+        // Immediately try loading the initial file if provided
+        if let Some(path) = initial_result_file {
+            app.load_parquet_file(&path);
+        }
+
         app
     }
 }
+
 impl eframe::App for KretsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // This will be set by the file explorer UI if navigation is requested.
@@ -64,11 +74,22 @@ impl eframe::App for KretsApp {
         if let Some(new_path) = path_to_navigate {
             self.current_path = new_path;
             self.refresh_entries();
+            self.table_data = None; // Clear data when navigating
+            self.selection.clear();
         }
 
-        // Handle file loading requested from the side panel
+        // Handle file loading requested from the side panel *after* initial load
         if let Some(path) = self.file_to_load.take() {
-            self.load_parquet_file(&path);
+            // Check if it's different from what might already be loaded
+            let should_load = self.table_data.is_none()
+                || self
+                    .table_data
+                    .as_ref()
+                    .map_or(true, |_| Some(path.clone()) != self.file_to_load); // Simplistic check, might need better logic if path==filename matters
+
+            if should_load {
+                self.load_parquet_file(&path);
+            }
         }
     }
 }
@@ -83,10 +104,20 @@ impl KretsApp {
         ui.separator();
 
         ui.horizontal(|ui| {
-            if ui.button("⬆ Up").clicked()
+            // Disable "Up" button if we are at the root
+            let is_at_root = self.current_path.parent().is_none();
+            let up_button = ui.add_enabled(!is_at_root, egui::Button::new("⬆ Up"));
+
+            if up_button.clicked()
                 && let Some(parent) = self.current_path.parent()
             {
-                path_to_navigate = Some(parent.to_path_buf());
+                // Ensure parent exists and canonicalize
+                if let Ok(canon_parent) = parent.canonicalize() {
+                    path_to_navigate = Some(canon_parent);
+                } else {
+                    // Fallback if canonicalization fails (e.g., permissions)
+                    path_to_navigate = Some(parent.to_path_buf());
+                }
             }
             ui.label(format!("Path: {}", self.current_path.display()));
         });
@@ -97,19 +128,32 @@ impl KretsApp {
             ui.colored_label(egui::Color32::RED, error);
         } else {
             egui::ScrollArea::vertical().show(ui, |ui| {
-                for entry in &self.entries {
+                for entry in self.entries.clone() {
+                    // Clone entry to avoid borrow checker issues with mutable self
                     let icon = if entry.is_directory { "📁" } else { "📄" };
                     let file_name = entry.path.file_name().unwrap_or_default().to_string_lossy();
+                    let is_parquet = entry.path.extension().is_some_and(|ext| ext == "parquet");
 
-                    // Make all entries buttons to handle clicks.
-                    if ui.button(format!("{icon} {file_name}")).clicked() {
+                    // Only enable button for directories and parquet files
+                    let enabled = entry.is_directory || is_parquet;
+                    let response =
+                        ui.add_enabled(enabled, egui::Button::new(format!("{icon} {file_name}")));
+
+                    if response.clicked() {
                         if entry.is_directory {
-                            // Navigate into the directory if it's a directory.
-                            path_to_navigate = Some(entry.path.clone());
-                        } else {
-                            // If it's a file, check if it's a parquet file and set it for loading.
-                            if entry.path.extension().is_some_and(|ext| ext == "parquet") {
-                                self.file_to_load = Some(entry.path.clone());
+                            // Ensure path exists and canonicalize
+                            if let Ok(canon_path) = entry.path.canonicalize() {
+                                path_to_navigate = Some(canon_path);
+                            } else {
+                                path_to_navigate = Some(entry.path); // Fallback
+                            }
+                        } else if is_parquet {
+                            // If it's a parquet file, set it for loading.
+                            // Clone needed as entry might be invalidated by refresh_entries
+                            if let Ok(canon_path) = entry.path.canonicalize() {
+                                self.file_to_load = Some(canon_path);
+                            } else {
+                                self.file_to_load = Some(entry.path); // Fallback
                             }
                         }
                     }
@@ -226,7 +270,6 @@ impl KretsApp {
                 // Try to get the X-axis data
                 if let Some(x_vals) = get_column_as_f64(col_x_arr) {
                     // Now, iterate over all *other* selected columns and plot them as Y
-                    // let mut plotted_anything = false;
                     for &idx_y in &indices[1..] {
                         let name_y = &data.headers[idx_y];
                         let col_y_arr = &data.batch.columns()[idx_y];
@@ -236,6 +279,7 @@ impl KretsApp {
                             let line_name = format!("{name_y} (Y) vs. {name_x} (X)");
 
                             // Combine the X and Y vectors into PlotPoints
+                            // Ensure vectors are the same length before zipping
                             let points: PlotPoints = x_vals
                                 .iter()
                                 .zip(y_vals.iter())
@@ -243,11 +287,8 @@ impl KretsApp {
                                 .collect();
 
                             plot_ui.line(Line::new(line_name, points));
-                            // plotted_anything = true;
                         }
-                        // If a specific Y column isn't numeric, we just skip it.
                     }
-                    // ... placeholder text comments removed for clarity ...
                 }
             }
         });
@@ -258,19 +299,30 @@ impl KretsApp {
             Ok(entries) => {
                 let mut dir_entries = Vec::new();
                 for entry in entries.filter_map(Result::ok) {
-                    let path = entry.path();
-                    let is_directory = path.is_dir();
-                    dir_entries.push(DirectoryEntry { path, is_directory });
+                    if let Ok(metadata) = entry.metadata() {
+                        let path = entry.path();
+                        let is_directory = metadata.is_dir();
+                        // Optional: Filter out hidden files/dirs if desired
+                        // if !path.file_name().map_or(false, |name| name.to_string_lossy().starts_with('.')) {
+                        dir_entries.push(DirectoryEntry { path, is_directory });
+                        // }
+                    }
                 }
                 // Sort directories first, then files, all alphabetically.
                 dir_entries.sort_by(|a, b| {
-                    (b.is_directory, a.path.file_name()).cmp(&(a.is_directory, b.path.file_name()))
+                    (b.is_directory, a.path.file_name().unwrap_or_default())
+                        .cmp(&(a.is_directory, b.path.file_name().unwrap_or_default()))
                 });
                 self.entries = dir_entries;
                 self.error_message = None;
             }
             Err(e) => {
-                self.error_message = Some(format!("Failed to read directory: {e}"));
+                self.error_message = Some(format!(
+                    "Failed to read directory '{}': {}",
+                    self.current_path.display(),
+                    e
+                ));
+                self.entries.clear(); // Clear entries on error
             }
         }
     }
@@ -279,30 +331,48 @@ impl KretsApp {
     fn load_parquet_file(&mut self, path: &PathBuf) {
         self.table_data = None; // Clear previous data
         self.error_message = None;
-        self.selection.clear();
+        self.selection.clear(); // Clear selection when loading new file
 
         match fs::File::open(path) {
             Ok(file) => {
                 match ParquetRecordBatchReaderBuilder::try_new(file) {
                     Ok(builder) => match builder.build() {
-                        Ok(mut reader) => {
-                            // We'll load the first batch for simplicity.
-                            if let Some(Ok(batch)) = reader.next() {
-                                let headers = batch
-                                    .schema()
-                                    .fields()
-                                    .iter()
-                                    .map(|field| field.name().clone())
-                                    .collect();
+                        Ok(reader) => {
+                            // Load all batches into a single Vec for simplicity
+                            let batches: Vec<Result<RecordBatch, _>> = reader.collect();
+                            let ok_batches: Vec<RecordBatch> =
+                                batches.into_iter().filter_map(Result::ok).collect();
 
-                                self.table_data = Some(TableData { headers, batch });
-                            } else {
-                                self.error_message =
-                                    Some("Parquet file is empty or corrupt.".to_string());
+                            if ok_batches.is_empty() {
+                                self.error_message = Some(
+                                    "Parquet file is empty or has no valid batches.".to_string(),
+                                );
+                                return;
                             }
+
+                            // For simplicity, we'll just display the first batch.
+                            // Concatenating batches could be done here if needed.
+                            let first_batch = ok_batches[0].clone();
+
+                            let headers = first_batch
+                                .schema()
+                                .fields()
+                                .iter()
+                                .map(|field| field.name().clone())
+                                .collect();
+
+                            self.table_data = Some(TableData {
+                                headers,
+                                batch: first_batch,
+                            });
+
+                            // Update file_to_load to reflect the currently loaded file path
+                            // Canonicalize for consistency if possible
+                            self.file_to_load =
+                                path.canonicalize().ok().or_else(|| Some(path.clone()));
                         }
                         Err(e) => {
-                            self.error_message = Some(format!("Failed to read Parquet: {e}"));
+                            self.error_message = Some(format!("Failed to read Parquet batch: {e}"));
                         }
                     },
                     Err(e) => {
@@ -310,20 +380,21 @@ impl KretsApp {
                     }
                 }
             }
-            Err(e) => self.error_message = Some(format!("Failed to open file: {e}")),
+            Err(e) => {
+                self.error_message =
+                    Some(format!("Failed to open file '{}': {}", path.display(), e))
+            }
         }
     }
 }
 
 /// Helper to get min/max stats for an Arrow array as strings.
 fn get_col_stats(array: &arrow::array::ArrayRef) -> (String, String) {
-    // Local imports for this helper function
     use arrow::array::{
         Array, Float32Array, Float64Array, Int8Array, Int16Array, Int32Array, Int64Array,
     };
     use arrow::compute::kernels::aggregate::{max, min};
 
-    // Helper to format Option<T> where T: ToString
     fn format_opt<T: ToString>(opt: Option<T>) -> String {
         opt.map_or_else(|| "NULL".to_string(), |v| v.to_string())
     }
@@ -357,7 +428,6 @@ fn get_col_stats(array: &arrow::array::ArrayRef) -> (String, String) {
             let max_str = max(arr).map_or_else(|| "NULL".to_string(), |v| format!("{v:.4}"));
             (min_str, max_str)
         }
-
         _ => ("N/A".to_string(), "N/A".to_string()),
     }
 }
@@ -371,11 +441,9 @@ fn get_column_as_f64(array: &arrow::array::ArrayRef) -> Option<Vec<f64>> {
         UInt8Array, UInt16Array, UInt32Array, UInt64Array,
     };
 
-    // Macro to simplify conversion for different numeric types
     macro_rules! convert_numeric_array {
         ($arr_type:ty) => {{
-            let arr = array.as_any().downcast_ref::<$arr_type>().unwrap();
-            // Iterate, convert nulls to NAN, and cast all values to f64
+            let arr = array.as_any().downcast_ref::<$arr_type>()?;
             Some(
                 arr.iter()
                     .map(|v| v.map_or(f64::NAN, |val| val as f64))
@@ -395,14 +463,15 @@ fn get_column_as_f64(array: &arrow::array::ArrayRef) -> Option<Vec<f64>> {
         arrow::datatypes::DataType::UInt64 => convert_numeric_array!(UInt64Array),
         arrow::datatypes::DataType::Float32 => convert_numeric_array!(Float32Array),
         arrow::datatypes::DataType::Float64 => convert_numeric_array!(Float64Array),
-        // Other types are not considered plottable
         _ => None,
     }
 }
 
-/// This function launches the native eframe GUI application.
-/// It's made public so it can be called from krets-cli.
-pub fn run_gui() -> eframe::Result {
+/// This function launches the native eframe GUI application with specific starting paths.
+pub fn run_gui(
+    initial_folder_path: PathBuf,
+    initial_result_file: Option<PathBuf>,
+) -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([1024.0, 768.0]),
         ..Default::default()
@@ -411,6 +480,12 @@ pub fn run_gui() -> eframe::Result {
     eframe::run_native(
         "Krets - Parquet Viewer",
         options,
-        Box::new(|_cc| Ok(Box::<KretsApp>::default())),
+        // Create the app instance with the provided paths
+        Box::new(move |_cc| {
+            Ok(Box::new(KretsApp::new(
+                initial_folder_path,
+                initial_result_file,
+            )))
+        }),
     )
 }
