@@ -17,49 +17,93 @@ pub fn solve(
     circuit: &Circuit,
     config: &SolverConfig,
     parameters: &AcAnalysis,
-) -> Result<HashMap<String, c64>> {
+) -> Result<Vec<HashMap<String, c64>>> {
+    // Changed return type
     // First, find the DC operating point. This is crucial for linearizing non-linear components.
+    println!("Calculating DC operating point for AC analysis...");
     let dc_solution = op::solve(circuit, config)?;
+    println!("DC operating point calculated.");
 
     let index_map = &circuit.index_map;
     let size = index_map.len();
-    let mut g_stamps = Vec::new();
-    let mut e_stamps = Vec::new();
+    let mut all_results = Vec::new(); // Store results for each frequency
 
-    for element in &circuit.elements {
-        g_stamps.extend(element.add_conductance_matrix_ac_stamp(
-            index_map,
-            &dc_solution,
-            parameters.fstart,
-        ));
-        e_stamps.extend(element.add_excitation_vector_ac_stamp(
-            index_map,
-            &dc_solution,
-            parameters.fstart,
-        ));
+    // --- Frequency Sweep Logic ---
+    let frequencies = parameters.clone().generate_frequencies();
+    println!(
+        "Starting AC sweep over {} frequencies...",
+        frequencies.len()
+    );
+
+    for frequency in frequencies {
+        if frequency <= 0.0 {
+            // Skip non-positive frequencies as they are physically meaningless
+            // and can cause issues (e.g., divide by zero in impedance calculations).
+            println!("Skipping non-positive frequency: {frequency}");
+            continue;
+        }
+        // Recalculate stamps for the current frequency
+        let mut g_stamps = Vec::new();
+        let mut e_stamps = Vec::new();
+
+        for element in &circuit.elements {
+            g_stamps.extend(element.add_conductance_matrix_ac_stamp(
+                index_map,
+                &dc_solution,
+                frequency, // Use current frequency
+            ));
+            e_stamps.extend(element.add_excitation_vector_ac_stamp(
+                index_map,
+                &dc_solution,
+                frequency, // Use current frequency
+            ));
+        }
+
+        let g_stamps_summed = sum_triplets(&g_stamps);
+        let e_stamps_summed = sum_triplets(&e_stamps);
+
+        // --- Solve MNA System for current frequency ---
+        let g_mat = SparseColMat::try_new_from_triplets(size, size, &g_stamps_summed)
+            .map_err(|e| Error::Unexpected(format!("Matrix build failed at f={frequency}: {e}")))?;
+
+        let lu = g_mat.sp_lu().map_err(|_| Error::DecompositionFailed)?;
+
+        let mut b = Mat::zeros(size, 1); // Use complex matrix
+        for &Triplet { row, col, val } in &e_stamps_summed {
+            // Ensure indices are within bounds
+            if row < size && col < 1 {
+                b[(row, col)] = val;
+            } else {
+                // Log or handle the error appropriately
+                println!(
+                    "Warning: Out-of-bounds triplet indices ignored: row={row}, col={col} for size={size}"
+                );
+            }
+        }
+
+        // Make sure b has the correct dimensions before solving
+        if b.nrows() != size || b.ncols() != 1 {
+            return Err(Error::Unexpected(format!(
+                "Excitation vector b has incorrect dimensions: {}x{} (expected {}x1)",
+                b.nrows(),
+                b.ncols(),
+                size
+            )));
+        }
+
+        let x = lu.solve(&b);
+
+        let mut solution_map: HashMap<String, c64> = index_map
+            .iter()
+            .map(|(node, &idx)| (node.clone(), x[(idx, 0)]))
+            .collect();
+
+        // Include the current frequency in the results for this step.
+        solution_map.insert("frequency".to_string(), c64::new(frequency, 0.0));
+
+        all_results.push(solution_map); // Add results for this frequency
+        // println!("Solved for f = {} Hz", frequency);
     }
-
-    let g_stamps_summed = sum_triplets(&g_stamps);
-    let e_stamps_summed = sum_triplets(&e_stamps);
-
-    let lu = SparseColMat::try_new_from_triplets(size, size, &g_stamps_summed)
-        .map_err(|e| Error::Unexpected(e.to_string()))?
-        .sp_lu()
-        .map_err(|_| Error::DecompositionFailed)?;
-
-    let mut b = Mat::zeros(size, 1);
-    for &Triplet { row, col, val } in &e_stamps_summed {
-        b[(row, col)] = val;
-    }
-    let x = lu.solve(&b);
-
-    let mut solution_map: HashMap<String, c64> = index_map
-        .iter()
-        .map(|(node, &index)| (node.clone(), x[(index, 0)]))
-        .collect();
-
-    // Include the parameters.fstart in the results for context.
-    solution_map.insert("frequency".to_string(), c64::new(parameters.fstart, 0.0));
-
-    Ok(solution_map)
+    println!("AC sweep finished.");
+    Ok(all_results) // Return the collected results
 }

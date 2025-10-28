@@ -34,7 +34,13 @@ mod tests {
         };
         let mut solver = Solver::new(circuit, config);
         let analysis = Analysis::Ac(ac_analysis);
-        let solution = solver.solve(analysis).unwrap().into_ac();
+        let solution = solver
+            .solve(analysis)
+            .unwrap()
+            .into_ac()
+            .first()
+            .unwrap()
+            .clone();
         assert!((solution.get("V(out)").unwrap().re - 2.470452e-02).abs() < 1e-3);
         assert!((solution.get("V(out)").unwrap().im - (-1.55223e-01)).abs() < 1e-3);
     }
@@ -51,7 +57,13 @@ mod tests {
         };
         let mut solver = Solver::new(circuit, config);
         let analysis = Analysis::Ac(ac_analysis);
-        let solution = solver.solve(analysis).unwrap().into_ac();
+        let solution = solver
+            .solve(analysis)
+            .unwrap()
+            .into_ac()
+            .first()
+            .unwrap()
+            .clone();
 
         assert!((solution.get("frequency").unwrap().re - 1000.0).abs() < 1e-3);
         assert!((solution.get("frequency").unwrap().im - 0.0).abs() < 1e-3);

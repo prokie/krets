@@ -56,19 +56,41 @@ mod tests {
                     println!();
                 }
             }
-            AnalysisResult::Ac(ac_solution) => {
-                let mut sorted_results: Vec<_> = ac_solution.iter().collect();
-                sorted_results.sort_by_key(|(k, _)| *k);
+            AnalysisResult::Ac(ac_sweep_solution) => {
+                // ac_sweep_solution is now Vec<HashMap<String, c64>>
+                if ac_sweep_solution.is_empty() {
+                    println!("AC sweep produced no results.");
+                    return;
+                }
 
+                // Print header once
                 println!(
-                    "{:<15} | {:<20} | {:<20}",
-                    "Node/Branch", "Magnitude", "Phase (deg)"
+                    "{:<18} | {:<15} | {:<20} | {:<20}",
+                    "Frequency (Hz)", "Node/Branch", "Magnitude", "Phase (deg)"
                 );
-                println!("{:-<15}-+-{:-<20}-+-{:-<20}", "", "", "");
+                println!("{:-<18}-+-{:-<15}-+-{:-<20}-+-{:-<20}", "", "", "", "");
 
-                for (node, value) in sorted_results {
-                    let (mag, phase_deg) = (value.norm(), value.arg().to_degrees());
-                    println!("{:<15} | {:>19.6e} | {:>19.6e}", node, mag, phase_deg);
+                // Iterate through each frequency step's results
+                for ac_solution_step in ac_sweep_solution {
+                    // Extract frequency (assuming it's stored as "frequency" key)
+                    let frequency = ac_solution_step.get("frequency").map_or(f64::NAN, |c| c.re); // Get real part for frequency
+
+                    // Sort results for the current frequency step
+                    let mut sorted_results: Vec<_> = ac_solution_step
+                        .iter()
+                        .filter(|(k, _)| **k != "frequency") // Exclude the frequency entry itself
+                        .collect();
+                    sorted_results.sort_by_key(|(k, _)| *k);
+
+                    // Print results for the current frequency
+                    for (node, value) in sorted_results {
+                        let (mag, phase_deg) = (value.norm(), value.arg().to_degrees());
+                        println!(
+                            "{:<18.6e} | {:<15} | {:>19.6e} | {:>19.6e}",
+                            frequency, node, mag, phase_deg
+                        );
+                    }
+                    println!("{:-<18}-+-{:-<15}-+-{:-<20}-+-{:-<20}", "", "", "", ""); // Separator between frequencies
                 }
             }
             AnalysisResult::Transient(tran_solution) => {
