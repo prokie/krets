@@ -1,10 +1,10 @@
 use clap::Parser;
+use krets_gui::run_gui;
 use krets_parser::analyses::{AnalysisResult, AnalysisSpec};
 use krets_result::{
     write_dc_results_to_parquet, write_op_results_to_parquet, write_tran_results_to_parquet,
 };
 use krets_solver::{config::SolverConfig, solver::Solver};
-
 /// Krets is a SPICE-like circuit simulator written in Rust.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -13,9 +13,9 @@ struct Args {
     #[arg()]
     krets_file: String,
 
-    /// Optional path to save the results to a Parquet file.
-    #[arg(short, long)]
-    output: Option<String>,
+    /// Whether to launch the GUI.
+    #[arg(short, long, default_value_t = true)]
+    gui: bool,
 }
 
 fn main() {
@@ -31,6 +31,10 @@ fn main() {
     let krets_parent = krets_file_path
         .parent()
         .unwrap_or_else(|| std::path::Path::new("."));
+
+    // decide output file path: always write result.parquet next to the krets file
+    let output_path_buf = krets_parent.join("result.parquet");
+    let output_file_str = output_path_buf.to_string_lossy().into_owned();
 
     // First try the path interpreted relative to the krets file.
     let rel_candidate = krets_parent.join(&krets_spec.circuit_path);
@@ -83,126 +87,40 @@ fn main() {
     });
 
     // 5. Print results to console.
-    print_results_to_console(&result);
+    // print_results_to_console(&result);
 
-    // 6. Optionally write results to Parquet file.
-    if let Some(output_path) = args.output {
-        match &result {
-            AnalysisResult::Op(op_solution) => {
-                write_op_results_to_parquet(op_solution, &output_path).unwrap_or_else(|e| {
-                    eprintln!("Error writing OP results to Parquet: {e}");
-                    std::process::exit(1);
-                });
-            }
-            AnalysisResult::Dc(dc_solution) => {
-                write_dc_results_to_parquet(dc_solution, &output_path).unwrap_or_else(|e| {
-                    eprintln!("Error writing DC results to Parquet: {e}");
-                    std::process::exit(1);
-                });
-            }
-            AnalysisResult::Ac(_) => {
-                eprintln!("AC results Parquet export not implemented yet.");
-            }
-            AnalysisResult::Transient(tran_solution) => {
-                write_tran_results_to_parquet(tran_solution, &output_path).unwrap_or_else(|e| {
-                    eprintln!("Error writing Transient results to Parquet: {e}");
-                    std::process::exit(1);
-                });
-            }
-        }
-        println!("Results written to '{output_path}'.");
-    }
-}
-
-/// Prints the analysis results to the console in a human-readable format.
-fn print_results_to_console(result: &AnalysisResult) {
-    match result {
+    match &result {
         AnalysisResult::Op(op_solution) => {
-            let mut sorted_results: Vec<_> = op_solution.iter().collect();
-            sorted_results.sort_by_key(|(k, _)| *k);
-
-            println!("{:<15} | {:<15}", "Node/Branch", "Value");
-            println!("{:-<15}-+-{:-<15}", "", "");
-
-            for (node_or_branch, value) in sorted_results {
-                let unit = if node_or_branch.starts_with('V') {
-                    "V"
-                } else {
-                    "A"
-                };
-                println!("{node_or_branch:<15} | {value:>14.6e} {unit}");
-            }
+            write_op_results_to_parquet(op_solution, &output_file_str).unwrap_or_else(|e| {
+                eprintln!("Error writing OP results to Parquet: {e}");
+                std::process::exit(1);
+            });
         }
         AnalysisResult::Dc(dc_solution) => {
-            if dc_solution.is_empty() {
-                println!("DC sweep produced no results.");
-                return;
-            }
-            // Get headers from the first result, sorted for consistent order
-            let mut headers: Vec<_> = dc_solution[0].keys().collect();
-            headers.sort();
-
-            // Print header
-            for header in &headers {
-                print!("{header:<18}");
-            }
-            println!();
-            println!("{:-<width$}", "", width = headers.len() * 18);
-
-            // Print rows
-            for step_result in dc_solution {
-                for header in &headers {
-                    if let Some(value) = step_result.get(*header) {
-                        print!("{value:<18.6e}");
-                    } else {
-                        print!("{:<18}", "N/A");
-                    }
-                }
-                println!();
-            }
+            write_dc_results_to_parquet(dc_solution, &output_file_str).unwrap_or_else(|e| {
+                eprintln!("Error writing DC results to Parquet: {e}");
+                std::process::exit(1);
+            });
         }
-        AnalysisResult::Ac(ac_solution) => {
-            let mut sorted_results: Vec<_> = ac_solution.iter().collect();
-            sorted_results.sort_by_key(|(k, _)| *k);
-
-            println!(
-                "{:<15} | {:<20} | {:<20}",
-                "Node/Branch", "Magnitude", "Phase (deg)"
-            );
-            println!("{:-<15}-+-{:-<20}-+-{:-<20}", "", "", "");
-
-            for (node, value) in sorted_results {
-                let (mag, phase_deg) = (value.norm(), value.arg().to_degrees());
-                println!("{node:<15} | {mag:>19.6e} | {phase_deg:>19.6e}");
-            }
+        AnalysisResult::Ac(_) => {
+            eprintln!("AC results Parquet export not implemented yet.");
         }
         AnalysisResult::Transient(tran_solution) => {
-            if tran_solution.is_empty() {
-                println!("Transient analysis produced no results.");
-                return;
-            }
-            // Get headers from the first result, sorted for consistent order
-            let mut headers: Vec<_> = tran_solution[0].keys().collect();
-            headers.sort();
-
-            // Print header
-            for header in &headers {
-                print!("{header:<18}");
-            }
-            println!();
-            println!("{:-<width$}", "", width = headers.len() * 18);
-
-            // Print rows
-            for step_result in tran_solution {
-                for header in &headers {
-                    if let Some(value) = step_result.get(*header) {
-                        print!("{value:<18.6e}");
-                    } else {
-                        print!("{:<18}", "N/A");
-                    }
-                }
-                println!();
-            }
+            write_tran_results_to_parquet(tran_solution, &output_file_str).unwrap_or_else(|e| {
+                eprintln!("Error writing Transient results to Parquet: {e}");
+                std::process::exit(1);
+            });
         }
+    }
+
+    // 7. Optionally launch the GUI.
+    if args.gui {
+        let _ = run_gui(
+            circuit_path_resolved
+                .parent()
+                .unwrap_or_else(|| std::path::Path::new("."))
+                .to_path_buf(),
+            Some(output_path_buf.clone()),
+        );
     }
 }

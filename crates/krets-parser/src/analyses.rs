@@ -33,7 +33,7 @@ pub enum Analysis {
     Dc(DcAnalysis),
 
     /// AC Small-Signal Frequency Analysis.
-    Ac { frequency: f64 },
+    Ac(AcAnalysis),
 
     /// Transient Analysis.
     Transient(TransientAnalysis),
@@ -50,6 +50,110 @@ pub struct DcAnalysis {
     pub stop: f64,
     /// The increment for each step of the sweep.
     pub step_size: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AcSweep {
+    /// Decade variation (`dec`): Specifies the number of points per decade.
+    Decade { points_per_decade: u32 },
+    /// Octave variation (`oct`): Specifies the number of points per octave.
+    Octave { points_per_octave: u32 },
+    /// Linear variation (`lin`): Specifies the total number of points in the sweep.
+    Linear { total_points: u32 },
+}
+
+/// Holds the parameters for an AC Small-Signal Analysis (`.ac`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AcAnalysis {
+    /// The type of sweep and its corresponding point specification.
+    pub sweep: AcSweep,
+    /// The starting frequency (`fstart`) in Hertz.
+    pub fstart: f64,
+    /// The final frequency (`fstop`) in Hertz.
+    pub fstop: f64,
+}
+
+impl AcAnalysis {
+    /// Generates a vector of frequencies based on the AC analysis sweep parameters.
+    pub fn generate_frequencies(self) -> Vec<f64> {
+        let mut freqs = Vec::new();
+        let fstart = self.fstart;
+        let fstop = self.fstop;
+
+        if fstart <= 0.0 || fstop <= 0.0 || fstart > fstop {
+            eprintln!(
+                "Warning: Invalid frequency range fstart={fstart}, fstop={fstop}. Returning empty frequency list."
+            );
+            return freqs; // Return empty vector for invalid range
+        }
+
+        match self.sweep {
+            AcSweep::Linear { total_points } => {
+                if total_points == 1 {
+                    freqs.push(fstart); // Handle single point case
+                } else if total_points > 1 {
+                    let step = (fstop - fstart) / (total_points - 1) as f64;
+                    for i in 0..total_points {
+                        freqs.push(fstart + i as f64 * step);
+                    }
+                } // If total_points is 0, freqs remains empty
+            }
+            AcSweep::Decade { points_per_decade } => {
+                if points_per_decade == 0 {
+                    return freqs;
+                } // Avoid infinite loop/division by zero
+                let num_decades = (fstop / fstart).log10();
+                let total_points = (num_decades * points_per_decade as f64).round() as u32 + 1;
+                let factor = 10.0f64.powf(1.0 / points_per_decade as f64);
+                let mut current_freq = fstart;
+                for _ in 0..total_points {
+                    if current_freq > fstop * (1.0 + 1e-9) {
+                        break;
+                    } // Add tolerance for float comparison
+                    freqs.push(current_freq);
+                    current_freq *= factor;
+
+                    // Ensure fstop is included if the loop finishes slightly before it
+                    if current_freq > fstop && freqs.last().is_none_or(|&f| f < fstop) {
+                        freqs.push(fstop);
+                        break;
+                    }
+                }
+                // Ensure fstop is included if factor logic steps over it
+                if freqs.last().is_none_or(|&f| f < fstop * (1.0 - 1e-9)) {
+                    freqs.push(fstop);
+                }
+            }
+            AcSweep::Octave { points_per_octave } => {
+                if points_per_octave == 0 {
+                    return freqs;
+                }
+                let num_octaves = (fstop / fstart).log2();
+                let total_points = (num_octaves * points_per_octave as f64).round() as u32 + 1;
+                let factor = 2.0f64.powf(1.0 / points_per_octave as f64);
+                let mut current_freq = fstart;
+                for _ in 0..total_points {
+                    if current_freq > fstop * (1.0 + 1e-9) {
+                        break;
+                    }
+                    freqs.push(current_freq);
+                    current_freq *= factor;
+
+                    if current_freq > fstop && freqs.last().is_none_or(|&f| f < fstop) {
+                        freqs.push(fstop);
+                        break;
+                    }
+                }
+                if freqs.last().is_none_or(|&f| f < fstop * (1.0 - 1e-9)) {
+                    freqs.push(fstop);
+                }
+            }
+        }
+        // Ensure uniqueness and sort, although generation methods should ideally produce sorted unique values.
+        freqs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        freqs.dedup();
+        freqs
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,8 +177,8 @@ pub enum AnalysisResult {
     Dc(Vec<HashMap<String, f64>>),
 
     /// Result of an AC Small-Signal Analysis.
-    /// A HashMap containing the complex-valued solution at a single frequency.
-    Ac(HashMap<String, c64>),
+    /// A vector of HashMaps, where each map is the solution at one frequency.
+    Ac(Vec<HashMap<String, c64>>),
 
     /// Result of a Transient analysis.
     /// A vector of HashMaps, where each map is the solution at one
@@ -109,7 +213,7 @@ impl AnalysisResult {
     ///
     /// # Panics
     /// Panics if the result is not `AnalysisResult::Ac`.
-    pub fn into_ac(self) -> HashMap<String, c64> {
+    pub fn into_ac(self) -> Vec<HashMap<String, c64>> {
         match self {
             AnalysisResult::Ac(result) => result,
             _ => panic!("Called `into_ac()` on a non-Ac result"),

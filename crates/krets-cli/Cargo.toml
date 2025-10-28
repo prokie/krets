@@ -1,6 +1,6 @@
 [package]
 name = "krets-cli"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 [dependencies]
@@ -8,6 +8,7 @@ clap = { version = "4.5.32", features = ["derive"] }
 krets-parser = { path = "../krets-parser" }
 krets-solver = { path = "../krets-solver" }
 krets-result = { path = "../krets-result" }
+krets-gui = { path = "../krets-gui" }
 
 [lints]
 workspace = true
