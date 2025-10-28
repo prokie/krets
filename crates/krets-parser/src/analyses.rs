@@ -33,7 +33,7 @@ pub enum Analysis {
     Dc(DcAnalysis),
 
     /// AC Small-Signal Frequency Analysis.
-    Ac { frequency: f64 },
+    Ac(AcAnalysis),
 
     /// Transient Analysis.
     Transient(TransientAnalysis),
@@ -50,6 +50,27 @@ pub struct DcAnalysis {
     pub stop: f64,
     /// The increment for each step of the sweep.
     pub step_size: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AcSweep {
+    /// Decade variation (`dec`): Specifies the number of points per decade.
+    Decade { points_per_decade: u32 },
+    /// Octave variation (`oct`): Specifies the number of points per octave.
+    Octave { points_per_octave: u32 },
+    /// Linear variation (`lin`): Specifies the total number of points in the sweep.
+    Linear { total_points: u32 },
+}
+
+/// Holds the parameters for an AC Small-Signal Analysis (`.ac`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AcAnalysis {
+    /// The type of sweep and its corresponding point specification.
+    pub sweep: AcSweep,
+    /// The starting frequency (`fstart`) in Hertz.
+    pub fstart: f64,
+    /// The final frequency (`fstop`) in Hertz.
+    pub fstop: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

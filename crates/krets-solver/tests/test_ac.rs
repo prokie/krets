@@ -27,8 +27,13 @@ mod tests {
         let path = Path::new(&circuits_dir()).join("low_pass_filter/low_pass_filter.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let config = SolverConfig::default();
+        let ac_analysis = krets_parser::analyses::AcAnalysis {
+            fstart: 1000.0,
+            sweep: krets_parser::analyses::AcSweep::Linear { total_points: 1 },
+            fstop: 1000.0,
+        };
         let mut solver = Solver::new(circuit, config);
-        let analysis = Analysis::Ac { frequency: 1000.0 };
+        let analysis = Analysis::Ac(ac_analysis);
         let solution = solver.solve(analysis).unwrap().into_ac();
         assert!((solution.get("V(out)").unwrap().re - 2.470452e-02).abs() < 1e-3);
         assert!((solution.get("V(out)").unwrap().im - (-1.55223e-01)).abs() < 1e-3);
@@ -39,8 +44,13 @@ mod tests {
         let path = Path::new(&circuits_dir()).join("high_pass_filter/high_pass_filter.cir");
         let circuit = krets_parser::parser::parse_circuit_description_file(&path).unwrap();
         let config = SolverConfig::default();
+        let ac_analysis = krets_parser::analyses::AcAnalysis {
+            fstart: 1000.0,
+            sweep: krets_parser::analyses::AcSweep::Linear { total_points: 1 },
+            fstop: 1000.0,
+        };
         let mut solver = Solver::new(circuit, config);
-        let analysis = Analysis::Ac { frequency: 1000.0 };
+        let analysis = Analysis::Ac(ac_analysis);
         let solution = solver.solve(analysis).unwrap().into_ac();
 
         assert!((solution.get("frequency").unwrap().re - 1000.0).abs() < 1e-3);

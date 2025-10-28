@@ -6,7 +6,7 @@ use faer::{
     prelude::Solve,
     sparse::{SparseColMat, Triplet},
 };
-use krets_parser::{circuit::Circuit, elements::Stampable};
+use krets_parser::{analyses::AcAnalysis, circuit::Circuit, elements::Stampable};
 
 /// Solves for the small-signal AC response of the circuit at a given frequency.
 ///
@@ -16,7 +16,7 @@ use krets_parser::{circuit::Circuit, elements::Stampable};
 pub fn solve(
     circuit: &Circuit,
     config: &SolverConfig,
-    frequency: f64,
+    parameters: &AcAnalysis,
 ) -> Result<HashMap<String, c64>> {
     // First, find the DC operating point. This is crucial for linearizing non-linear components.
     let dc_solution = op::solve(circuit, config)?;
@@ -30,9 +30,13 @@ pub fn solve(
         g_stamps.extend(element.add_conductance_matrix_ac_stamp(
             index_map,
             &dc_solution,
-            frequency,
+            parameters.fstart,
         ));
-        e_stamps.extend(element.add_excitation_vector_ac_stamp(index_map, &dc_solution, frequency));
+        e_stamps.extend(element.add_excitation_vector_ac_stamp(
+            index_map,
+            &dc_solution,
+            parameters.fstart,
+        ));
     }
 
     let g_stamps_summed = sum_triplets(&g_stamps);
@@ -54,8 +58,8 @@ pub fn solve(
         .map(|(node, &index)| (node.clone(), x[(index, 0)]))
         .collect();
 
-    // Include the frequency in the results for context.
-    solution_map.insert("frequency".to_string(), c64::new(frequency, 0.0));
+    // Include the parameters.fstart in the results for context.
+    solution_map.insert("frequency".to_string(), c64::new(parameters.fstart, 0.0));
 
     Ok(solution_map)
 }

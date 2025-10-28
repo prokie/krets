@@ -39,8 +39,8 @@ impl Solver {
                 let result = dc::solve(&mut self.circuit, &self.config, &dc_params)?;
                 Ok(AnalysisResult::Dc(result))
             }
-            Analysis::Ac { frequency } => {
-                let result = ac::solve(&self.circuit, &self.config, frequency)?;
+            Analysis::Ac(ac_params) => {
+                let result = ac::solve(&self.circuit, &self.config, &ac_params)?;
                 Ok(AnalysisResult::Ac(result))
             }
             Analysis::Transient(transient_params) => {
