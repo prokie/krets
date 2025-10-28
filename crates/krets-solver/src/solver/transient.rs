@@ -107,7 +107,6 @@ pub fn solve(
             }
         }
 
-        println!("Converged at t = {current_time}s");
         all_results.push(op_result_at_t);
     }
     Ok(all_results)
