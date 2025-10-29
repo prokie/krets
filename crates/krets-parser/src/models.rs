@@ -8,7 +8,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, tag_no_case},
     character::complete::{space0, space1},
-    combinator::map,
+    combinator::{map, opt},
     multi::many0,
     sequence::{delimited, preceded},
 };
@@ -28,13 +28,13 @@ pub trait ModelTrait {
 /// Parses a list of parameters like (KEY=VALUE KEY2=VALUE2 ...)
 fn parse_parameters(input: &str) -> IResult<&str, HashMap<String, f64>> {
     delimited(
-        preceded(space0, tag("(")),
+        preceded(space0, opt(tag("("))),
         map(many0(preceded(space0, parse_key_value)), |vec| {
             vec.into_iter()
                 .map(|(k, v)| (k.to_string(), v))
                 .collect::<HashMap<String, f64>>()
         }),
-        preceded(space0, tag(")")),
+        preceded(space0, opt(tag(")"))),
     )
     .parse(input)
 }
