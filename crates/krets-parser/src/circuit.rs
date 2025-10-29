@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-use crate::model::Model;
+use crate::models::Model;
 
 #[derive(Debug, Clone)]
 /// A structured representation of a circuit element.
