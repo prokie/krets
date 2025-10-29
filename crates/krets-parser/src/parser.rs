@@ -5,9 +5,9 @@ use std::{
     path::Path,
 };
 
-use crate::elements::Element;
 use crate::prelude::*;
-use crate::{circuit::Circuit, model::Model};
+use crate::{circuit::Circuit, models::Model};
+use crate::{elements::Element, models::parse_model};
 
 /// Parses a SPICE-like netlist and extracts circuit elements into structured data.
 ///
@@ -80,8 +80,13 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
         };
 
         if line.to_lowercase().starts_with(".model") {
-            let model: Model = line.parse()?;
-            models.insert(model.name.clone(), model);
+            let model = parse_model(line).map_err(|e| Error::ParseError {
+                line: current_line,
+                message: e.to_string(),
+            })?;
+            if let Model::Diode(diode_model) = &model {
+                models.insert(diode_model.name.clone(), model);
+            }
             continue;
         }
 
@@ -122,32 +127,14 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
 
     // --- Second pass: Apply model parameters to elements ---
     for element in elements.iter_mut() {
-        // Match mutably to get a mutable reference to the diode inside
         if let Element::Diode(diode) = element {
             match models.get(&diode.model_name) {
-                Some(model) => {
-                    if model.model_type == crate::model::ModelType::Diode {
-                        for parameter_pair in &model.parameters {
-                            match diode.apply_model_parameter(parameter_pair) {
-                                Ok(_) => {} // Parameter applied successfully
-                                Err(e) => {
-                                    eprintln!("Warning: {}", e); // Or just print a warning
-                                }
-                            }
-                        }
-                    } else {
-                        // Model found, but it's not a Diode model
-                        return Err(Error::InvalidModelType(diode.model_name.clone()));
-                    }
+                Some(Model::Diode(model)) => {
+                    diode.model = model.clone();
                 }
-                None => {
-                    // Model name specified by diode not found in the parsed models
-                    return Err(Error::UndefinedModel(diode.model_name.clone()));
-                }
+                _ => todo!(),
             }
         }
-        // Add similar blocks here for BJT, MOSFET etc. if they need model parameters
-        // else if let Element::BJT(bjt) = element { ... }
     }
 
     // Convert HashSet to Vec for the final Circuit struct if needed

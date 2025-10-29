@@ -64,7 +64,7 @@ R1 out_dc 0 1k
         for element in circuit.as_ref().unwrap().elements.iter() {
             if let Element::Diode(diode) = element {
                 assert_eq!(diode.model_name, "DMOD");
-                assert_eq!(diode.options.saturation_current, 1e-9);
+                assert_eq!(diode.model.saturation_current, 1e-9);
             }
         }
 

@@ -1,4 +1,4 @@
-use crate::{constants::THERMAL_VOLTAGE, prelude::*};
+use crate::{constants::THERMAL_VOLTAGE, models::diode::DiodeModel, prelude::*};
 
 use nom::{
     IResult,
@@ -18,7 +18,7 @@ pub struct Diode {
     /// The name of the diode model to use.
     pub model_name: String,
     /// Model parameters for the diode.
-    pub options: DiodeOptions,
+    pub model: DiodeModel,
     /// Positive node of the diode.
     pub plus: String,
     /// Negative node of the diode.
@@ -28,50 +28,6 @@ pub struct Diode {
 impl Identifiable for Diode {
     fn identifier(&self) -> String {
         format!("D{}", self.name)
-    }
-}
-
-impl Diode {
-    pub fn apply_model_parameter(&mut self, parameter: (&String, &f64)) -> Result<()> {
-        match parameter.0.to_lowercase().as_str() {
-            "is" => {
-                self.options.saturation_current = *parameter.1;
-                Ok(())
-            }
-            "rs" => {
-                self.options.parasitic_resistance = *parameter.1;
-                Ok(())
-            }
-            "n" => {
-                self.options.emission_coefficient = *parameter.1;
-                Ok(())
-            }
-            _ => Err(Error::InvalidModelParameter(format!(
-                "Invalid parameter '{}' for Diode model",
-                parameter.0
-            ))),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-/// Options for the diode, including saturation current, parasitic resistance, and emission coefficient.
-pub struct DiodeOptions {
-    /// The Saturation current (Is).
-    pub saturation_current: f64,
-    /// The Parasitic resistance (Rs).
-    pub parasitic_resistance: f64,
-    /// The Emission coefficient (N).
-    pub emission_coefficient: f64,
-}
-
-impl Default for DiodeOptions {
-    fn default() -> Self {
-        DiodeOptions {
-            saturation_current: 1e-12,
-            parasitic_resistance: 0.0,
-            emission_coefficient: 1.0,
-        }
     }
 }
 
@@ -184,16 +140,16 @@ impl Diode {
 
     fn conductance(&self, solution_map: &HashMap<String, f64>) -> f64 {
         let diode_voltage = self.limit_diode_voltage(self.v_d(solution_map));
-        let n = self.options.emission_coefficient;
-        let is = self.options.saturation_current;
+        let n = self.model.emission_coefficient;
+        let is = self.model.saturation_current;
 
         (is / (n * THERMAL_VOLTAGE)) * f64::exp(diode_voltage / (n * THERMAL_VOLTAGE))
     }
 
     fn current(&self, solution_map: &HashMap<String, f64>) -> f64 {
         let diode_voltage = self.limit_diode_voltage(self.v_d(solution_map));
-        let n = self.options.emission_coefficient;
-        let is = self.options.saturation_current;
+        let n = self.model.emission_coefficient;
+        let is = self.model.saturation_current;
 
         is * (f64::exp(diode_voltage / (n * THERMAL_VOLTAGE)) - 1.0)
     }
@@ -206,8 +162,8 @@ impl Diode {
     // Voltage limiting function to prevent floating-point overflows
     // in the exponential function, which is a common issue in circuit simulators.
     fn limit_diode_voltage(&self, vd: f64) -> f64 {
-        let n = self.options.emission_coefficient;
-        let is = self.options.saturation_current;
+        let n = self.model.emission_coefficient;
+        let is = self.model.saturation_current;
         let v_critical = n * THERMAL_VOLTAGE * f64::ln(f64::MAX * n * THERMAL_VOLTAGE / is);
         vd.clamp(-v_critical, v_critical)
     }
@@ -228,7 +184,7 @@ fn parse_diode(input: &str) -> IResult<&str, Diode> {
         plus: plus.to_string(),
         minus: minus.to_string(),
         model_name: model_name.unwrap_or("default").to_string(),
-        options: DiodeOptions::default(),
+        model: DiodeModel::default(),
     };
 
     Ok((input, diode))
