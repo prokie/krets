@@ -253,40 +253,80 @@ impl KretsApp {
     fn ui_plot_viewer(&mut self, ui: &mut egui::Ui) {
         let my_plot = Plot::new("My Plot").legend(Legend::default());
         my_plot.show(ui, |plot_ui| {
-            // Only plot if we have data and *at least* two columns are selected
+            // Only plot if we have data and *at least* one column is selected
             if let Some(data) = &self.table_data
-                && self.selection.len() >= 2
+                && !self.selection.is_empty()
             {
-                // Get the selected indices.
-                // We sort them so the X-axis is deterministic
-                // (lowest index will be X, all others will be Y).
-                let mut indices: Vec<usize> = self.selection.iter().copied().collect();
-                indices.sort_unstable();
+                let selected_indices: HashSet<usize> = self.selection.iter().copied().collect();
 
-                let idx_x = indices[0];
-                let name_x = &data.headers[idx_x];
-                let col_x_arr = &data.batch.columns()[idx_x];
+                // Helper to find a selected column by name
+                let find_selected_index = |name: &str| -> Option<usize> {
+                    data.headers
+                        .iter()
+                        .position(|h| h == name)
+                        .filter(|&index| selected_indices.contains(&index))
+                };
 
-                // Try to get the X-axis data
-                if let Some(x_vals) = get_column_as_f64(col_x_arr) {
-                    // Now, iterate over all *other* selected columns and plot them as Y
-                    for &idx_y in &indices[1..] {
-                        let name_y = &data.headers[idx_y];
-                        let col_y_arr = &data.batch.columns()[idx_y];
+                // 1. Prefer "time" if it's selected
+                let mut idx_x: Option<usize> = find_selected_index("time");
 
-                        // Try to get the Y-axis data
-                        if let Some(y_vals) = get_column_as_f64(col_y_arr) {
-                            let line_name = format!("{name_y} (Y) vs. {name_x} (X)");
+                // 2. Otherwise, prefer "frequency" if it's selected
+                if idx_x.is_none() {
+                    idx_x = find_selected_index("frequency");
+                }
 
-                            // Combine the X and Y vectors into PlotPoints
-                            // Ensure vectors are the same length before zipping
-                            let points: PlotPoints = x_vals
-                                .iter()
-                                .zip(y_vals.iter())
-                                .map(|(&x, &y)| [x, y])
-                                .collect();
+                // 3. Otherwise, prefer "step" if it's selected
+                if idx_x.is_none() {
+                    idx_x = find_selected_index("step");
+                }
 
-                            plot_ui.line(Line::new(line_name, points));
+                // 4. Otherwise, use the smallest selected index
+                if idx_x.is_none() {
+                    idx_x = selected_indices.iter().min().copied();
+                }
+
+                // We must have an X axis to plot
+                if let Some(idx_x) = idx_x {
+                    // --- Find Y-axis indices ---
+                    // Y-axes are all selected indices *except* the chosen X-axis
+                    let y_indices: Vec<usize> = selected_indices
+                        .iter()
+                        .copied()
+                        .filter(|&idx| idx != idx_x)
+                        .collect();
+
+                    // We only plot if we have at least one Y-axis
+                    if y_indices.is_empty() {
+                        // This happens if only one column (the x-axis) is selected.
+                        // We can still plot this single line against its index if we want,
+                        // but for now, just don't plot.
+                        return;
+                    }
+
+                    let name_x = &data.headers[idx_x];
+                    let col_x_arr = &data.batch.columns()[idx_x];
+
+                    // Try to get the X-axis data
+                    if let Some(x_vals) = get_column_as_f64(col_x_arr) {
+                        // Now, iterate over all *other* selected columns and plot them as Y
+                        for &idx_y in &y_indices {
+                            let name_y = &data.headers[idx_y];
+                            let col_y_arr = &data.batch.columns()[idx_y];
+
+                            // Try to get the Y-axis data
+                            if let Some(y_vals) = get_column_as_f64(col_y_arr) {
+                                let line_name = format!("{name_y} (Y) vs. {name_x} (X)");
+
+                                // Combine the X and Y vectors into PlotPoints
+                                // Ensure vectors are the same length before zipping
+                                let points: PlotPoints = x_vals
+                                    .iter()
+                                    .zip(y_vals.iter())
+                                    .map(|(&x, &y)| [x, y])
+                                    .collect();
+
+                                plot_ui.line(Line::new(line_name, points));
+                            }
                         }
                     }
                 }

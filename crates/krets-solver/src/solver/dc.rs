@@ -101,6 +101,8 @@ pub fn solve(
                 .map(|(node, &idx)| (node.clone(), x[(idx, 0)]))
                 .collect();
 
+            op_result.insert("step".to_string(), i as f64);
+
             if !has_nonlinear_elements {
                 break; // Circuit is linear, one iteration is enough.
             }
