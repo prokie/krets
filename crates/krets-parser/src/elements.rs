@@ -5,7 +5,7 @@ pub mod capacitor;
 pub mod current_source;
 pub mod diode;
 pub mod inductor;
-pub mod mosfet;
+pub mod nmosfet;
 pub mod resistor;
 pub mod voltage_source;
 
@@ -19,7 +19,7 @@ pub enum Element {
     Inductor(inductor::Inductor),
     Diode(diode::Diode),
     BJT(bjt::BJT),
-    MOSFET(mosfet::MOSFET),
+    NMOSFET(nmosfet::NMOSFET),
 }
 
 /// A macro to forward a method call to the correct inner element struct.
@@ -34,7 +34,7 @@ macro_rules! dispatch {
             Element::Inductor(e) => e.$method($($args),*),
             Element::Diode(e) => e.$method($($args),*),
             Element::BJT(e) => e.$method($($args),*),
-            Element::MOSFET(e) => e.$method($($args),*),
+            Element::NMOSFET(e) => e.$method($($args),*),
         }
     };
 }
@@ -74,9 +74,9 @@ impl From<bjt::BJT> for Element {
         Element::BJT(item)
     }
 }
-impl From<mosfet::MOSFET> for Element {
-    fn from(item: mosfet::MOSFET) -> Self {
-        Element::MOSFET(item)
+impl From<nmosfet::NMOSFET> for Element {
+    fn from(item: nmosfet::NMOSFET) -> Self {
+        Element::NMOSFET(item)
     }
 }
 
@@ -91,7 +91,7 @@ impl Element {
             Element::Inductor(l) => vec![&l.plus, &l.minus],
             Element::Diode(d) => vec![&d.plus, &d.minus],
             Element::BJT(b) => vec![&b.collector, &b.emitter, &b.base],
-            Element::MOSFET(m) => vec![&m.drain, &m.gate, &m.source],
+            Element::NMOSFET(m) => vec![&m.drain, &m.gate, &m.source],
         }
     }
 
@@ -106,7 +106,7 @@ impl Element {
             Element::Capacitor(e) => e.g2,
             Element::CurrentSource(_) => true,
             // Non-linear elements are linearized into Group 1 companion models.
-            Element::Diode(_) | Element::BJT(_) | Element::MOSFET(_) => false,
+            Element::Diode(_) | Element::BJT(_) | Element::NMOSFET(_) => false,
         }
     }
 
@@ -114,7 +114,7 @@ impl Element {
     pub fn is_nonlinear(&self) -> bool {
         matches!(
             self,
-            Element::Diode(_) | Element::BJT(_) | Element::MOSFET(_)
+            Element::Diode(_) | Element::BJT(_) | Element::NMOSFET(_)
         )
     }
 }

@@ -71,7 +71,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
             } else if line.starts_with("Q") || line.starts_with("q") {
                 Ok(Element::BJT(line.parse()?))
             } else if line.starts_with("M") || line.starts_with("m") {
-                Ok(Element::MOSFET(line.parse()?))
+                Ok(Element::NMOSFET(line.parse()?))
             } else {
                 // Continue quietly for lines that are not element definitions
                 // This could also be an error if strict parsing is desired.
@@ -84,10 +84,8 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
                 line: current_line,
                 message: e.to_string(),
             })?;
-            if let Model::Diode(diode_model) = &model {
-                models.insert(diode_model.name.clone(), model);
-            }
-            continue;
+
+            models.insert(model.name().to_string(), model);
         }
 
         match parse_with_context(line) {
@@ -131,6 +129,14 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
             match models.get(&diode.model_name) {
                 Some(Model::Diode(model)) => {
                     diode.model = model.clone();
+                }
+                _ => todo!(),
+            }
+        }
+        if let Element::NMOSFET(mosfet) = element {
+            match models.get(&mosfet.model_name) {
+                Some(Model::NMosfet(model)) => {
+                    mosfet.model = model.clone();
                 }
                 _ => todo!(),
             }

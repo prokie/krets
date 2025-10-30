@@ -21,6 +21,17 @@ pub enum Model {
     PMosfet(pmosfet::PMosfetModel), // PMOSFET
 }
 
+impl Model {
+    /// Returns the name of the model.
+    pub fn name(&self) -> &str {
+        match self {
+            Model::Diode(model) => &model.name,
+            Model::NMosfet(model) => &model.name,
+            Model::PMosfet(model) => &model.name,
+        }
+    }
+}
+
 pub trait ModelTrait {
     fn apply_model_parameters(&mut self, parameters: &HashMap<String, f64>);
 }
