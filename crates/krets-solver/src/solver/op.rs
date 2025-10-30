@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::prelude::*;
 use faer::{
     Mat,
@@ -10,6 +8,8 @@ use krets_parser::{
     circuit::Circuit,
     elements::{Element, Stampable},
 };
+use log::info;
+use std::collections::HashMap;
 
 /// Solves for the DC operating point of the circuit.
 ///
@@ -71,7 +71,7 @@ pub fn solve(circuit: &Circuit, config: &SolverConfig) -> Result<HashMap<String,
         }
 
         if convergence_check(&previous_result, &result, config) {
-            println!("Converged after {} iterations", iter + 1);
+            info!("Converged after {} iterations", iter + 1);
             break;
         }
 
@@ -79,51 +79,11 @@ pub fn solve(circuit: &Circuit, config: &SolverConfig) -> Result<HashMap<String,
         previous_result.clone_from(&result);
 
         if iter == config.maximum_iterations - 1 {
-            println!("Warning: Maximum iterations reached without convergence.");
+            info!("Warning: Maximum iterations reached without convergence.");
             return Err(Error::MaximumIterationsExceeded(config.maximum_iterations));
         }
     }
 
     // Return the final converged operating point solution.
     Ok(result)
-}
-
-/// A helper function to pretty-print the MNA matrix for debugging purposes.
-#[allow(dead_code)] // Prevents warnings if not used (e.g., in release builds).
-fn print_matrix(
-    triplets: &[Triplet<usize, usize, f64>],
-    size: usize,
-    index_map: &HashMap<String, usize>,
-) {
-    // Create a reverse mapping from index to name for easier lookup of headers.
-    let mut rev_index_map: Vec<String> = vec![String::new(); size];
-    for (name, &idx) in index_map {
-        if idx < size {
-            rev_index_map[idx].clone_from(name);
-        }
-    }
-
-    // Convert triplets to a HashMap for efficient (row, col) -> value lookups.
-    let matrix_map: HashMap<(usize, usize), f64> = triplets
-        .iter()
-        .map(|&Triplet { row, col, val }| ((row, col), val))
-        .collect();
-
-    // Print header row with column names.
-    print!("{:<12}", ""); // Spacer for row names column.
-    for col_name in &rev_index_map {
-        print!("{col_name:<12}");
-    }
-    println!();
-    println!("{}", "-".repeat(12 * (size + 1)));
-
-    // Print each row with its name and values.
-    for (r, row_name) in rev_index_map.iter().enumerate() {
-        print!("{row_name:<12}");
-        for c in 0..size {
-            let val = matrix_map.get(&(r, c)).unwrap_or(&0.0);
-            print!("{val:<12.4}");
-        }
-        println!();
-    }
 }

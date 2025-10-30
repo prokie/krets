@@ -5,6 +5,8 @@ use krets_result::{
     write_dc_results_to_parquet, write_op_results_to_parquet, write_tran_results_to_parquet,
 };
 use krets_solver::{config::SolverConfig, solver::Solver};
+use log::info;
+
 /// Krets is a SPICE-like circuit simulator written in Rust.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -16,13 +18,19 @@ struct Args {
     /// Whether to launch the GUI.
     #[arg(short, long, default_value_t = true)]
     gui: bool,
+
+    #[arg(short = 'l', long = "log-level", default_value = "info")]
+    log_level: String,
 }
 
 fn main() {
     let args = Args::parse();
 
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(&args.log_level))
+        .init();
+
     let krets_spec = AnalysisSpec::from_file(&args.krets_file).unwrap_or_else(|e| {
-        eprintln!("Error reading krets spec from '{}': {}", args.krets_file, e);
+        info!("Error reading krets spec from '{}': {}", args.krets_file, e);
         std::process::exit(1);
     });
 
@@ -44,7 +52,7 @@ fn main() {
         // Fallback: if the given path is absolute and exists, use it.
         krets_spec.circuit_path.clone()
     } else {
-        eprintln!(
+        info!(
             "Circuit file not found.\nTried:\n  - relative to krets file: {}\n  - as given (absolute or relative to cwd): {}\n\nProvide a path that exists either relative to the krets file or as an absolute path.",
             rel_candidate.display(),
             krets_spec.circuit_path.display()
@@ -57,7 +65,7 @@ fn main() {
     {
         Ok(c) => c,
         Err(e) => {
-            eprintln!(
+            info!(
                 "Error parsing circuit file '{}': {}",
                 circuit_path_resolved.display(),
                 e
@@ -74,7 +82,7 @@ fn main() {
 
     let analysis = krets_spec.analysis;
 
-    println!(
+    info!(
         "Running {:?} analysis on '{}'...",
         analysis,
         krets_spec.circuit_path.display()
@@ -82,7 +90,7 @@ fn main() {
 
     // 4. Run the specified analysis.
     let result = solver.solve(analysis).unwrap_or_else(|e| {
-        eprintln!("Error during analysis: {e}");
+        info!("Error during analysis: {e}");
         std::process::exit(1);
     });
 
@@ -92,22 +100,22 @@ fn main() {
     match &result {
         AnalysisResult::Op(op_solution) => {
             write_op_results_to_parquet(op_solution, &output_file_str).unwrap_or_else(|e| {
-                eprintln!("Error writing OP results to Parquet: {e}");
+                info!("Error writing OP results to Parquet: {e}");
                 std::process::exit(1);
             });
         }
         AnalysisResult::Dc(dc_solution) => {
             write_dc_results_to_parquet(dc_solution, &output_file_str).unwrap_or_else(|e| {
-                eprintln!("Error writing DC results to Parquet: {e}");
+                info!("Error writing DC results to Parquet: {e}");
                 std::process::exit(1);
             });
         }
         AnalysisResult::Ac(_) => {
-            eprintln!("AC results Parquet export not implemented yet.");
+            info!("AC results Parquet export not implemented yet.");
         }
         AnalysisResult::Transient(tran_solution) => {
             write_tran_results_to_parquet(tran_solution, &output_file_str).unwrap_or_else(|e| {
-                eprintln!("Error writing Transient results to Parquet: {e}");
+                info!("Error writing Transient results to Parquet: {e}");
                 std::process::exit(1);
             });
         }

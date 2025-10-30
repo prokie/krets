@@ -8,6 +8,8 @@ krets-parser = { path = "../krets-parser" }
 
 faer = { workspace = true }
 thiserror = { workspace = true }
+log = { workspace = true }
+
 
 [lints]
 workspace = true

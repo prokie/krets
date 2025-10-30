@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -81,7 +82,7 @@ impl AcAnalysis {
         let fstop = self.fstop;
 
         if fstart <= 0.0 || fstop <= 0.0 || fstart > fstop {
-            eprintln!(
+            info!(
                 "Warning: Invalid frequency range fstart={fstart}, fstop={fstop}. Returning empty frequency list."
             );
             return freqs; // Return empty vector for invalid range

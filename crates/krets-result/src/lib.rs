@@ -1,3 +1,4 @@
+use log::info;
 use polars::prelude::*;
 use std::collections::HashMap;
 use std::fs::File;
@@ -43,7 +44,7 @@ pub fn write_op_results_to_parquet(
     let mut file = File::create(&filename).map_err(PolarsError::from)?;
     ParquetWriter::new(&mut file).finish(&mut df)?;
 
-    println!("Saved OP results to {filename}");
+    info!("Saved OP results to {filename}");
     Ok(())
 }
 
@@ -80,7 +81,7 @@ pub fn write_dc_results_to_parquet(
     let mut file = File::create(&filename).map_err(PolarsError::from)?;
     ParquetWriter::new(&mut file).finish(&mut df)?;
 
-    println!("Saved DC sweep results to {filename}");
+    info!("Saved DC sweep results to {filename}");
     Ok(())
 }
 
@@ -121,6 +122,6 @@ pub fn write_tran_results_to_parquet(
     let mut file = File::create(&filename).map_err(PolarsError::from)?;
     ParquetWriter::new(&mut file).finish(&mut df)?;
 
-    println!("Saved transient results to {filename}");
+    info!("Saved transient results to {filename}");
     Ok(())
 }

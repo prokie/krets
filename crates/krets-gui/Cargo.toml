@@ -4,13 +4,13 @@ version = "0.1.1"
 edition = "2024"
 
 [dependencies]
-arrow = "56.2.0"
-eframe = "0.33.0"
-egui = "0.33.0"
-egui_extras = "0.33.0"
-egui_plot = "0.34.0"
-egui_table = "0.5.0"
+arrow = { workspace = true }
 parquet = { workspace = true }
+eframe = { workspace = true }
+egui = { workspace = true }
+egui_extras = { workspace = true }
+egui_plot = { workspace = true }
+egui_table = { workspace = true }
 
 
 [lints]

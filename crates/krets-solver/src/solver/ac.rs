@@ -1,3 +1,4 @@
+use log::info;
 use std::collections::HashMap;
 
 use crate::{config::SolverConfig, prelude::*, solver::op};
@@ -20,9 +21,9 @@ pub fn solve(
 ) -> Result<Vec<HashMap<String, c64>>> {
     // Changed return type
     // First, find the DC operating point. This is crucial for linearizing non-linear components.
-    println!("Calculating DC operating point for AC analysis...");
+    info!("Calculating DC operating point for AC analysis...");
     let dc_solution = op::solve(circuit, config)?;
-    println!("DC operating point calculated.");
+    info!("DC operating point calculated.");
 
     let index_map = &circuit.index_map;
     let size = index_map.len();
@@ -30,7 +31,7 @@ pub fn solve(
 
     // --- Frequency Sweep Logic ---
     let frequencies = parameters.clone().generate_frequencies();
-    println!(
+    info!(
         "Starting AC sweep over {} frequencies...",
         frequencies.len()
     );
@@ -39,7 +40,7 @@ pub fn solve(
         if frequency <= 0.0 {
             // Skip non-positive frequencies as they are physically meaningless
             // and can cause issues (e.g., divide by zero in impedance calculations).
-            println!("Skipping non-positive frequency: {frequency}");
+            info!("Skipping non-positive frequency: {frequency}");
             continue;
         }
         // Recalculate stamps for the current frequency
@@ -75,7 +76,7 @@ pub fn solve(
                 b[(row, col)] = val;
             } else {
                 // Log or handle the error appropriately
-                println!(
+                info!(
                     "Warning: Out-of-bounds triplet indices ignored: row={row}, col={col} for size={size}"
                 );
             }
@@ -102,8 +103,7 @@ pub fn solve(
         solution_map.insert("frequency".to_string(), c64::new(frequency, 0.0));
 
         all_results.push(solution_map); // Add results for this frequency
-        // println!("Solved for f = {} Hz", frequency);
+        // info!("Solved for f = {} Hz", frequency);
     }
-    println!("AC sweep finished.");
     Ok(all_results) // Return the collected results
 }

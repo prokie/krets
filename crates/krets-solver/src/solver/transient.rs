@@ -1,3 +1,4 @@
+use log::info;
 use std::collections::HashMap;
 
 use super::{convergence_check, sum_triplets};
@@ -16,7 +17,7 @@ pub fn solve(
     tran_analysis: &TransientAnalysis,
 ) -> Result<Vec<HashMap<String, f64>>> {
     // 1. Solve for the initial DC operating point (t=0).
-    println!("Calculating initial operating point...");
+    info!("Calculating initial operating point...");
     let mut initial_op = op::solve(circuit, config)?;
     initial_op.insert("time".to_string(), 0.0);
     let index_map = &circuit.index_map;
@@ -34,7 +35,7 @@ pub fn solve(
         .iter()
         .any(krets_parser::elements::Element::is_nonlinear);
 
-    println!(
+    info!(
         "Starting transient analysis from t=0 to t={}s with a {}s time step.",
         tran_analysis.stop_time, time_step
     );
@@ -110,91 +111,4 @@ pub fn solve(
         all_results.push(op_result_at_t);
     }
     Ok(all_results)
-}
-
-/// A helper function to pretty-print the full MNA system (Gx=b) for debugging.
-#[allow(dead_code)]
-fn print_system(
-    g_triplets: &[Triplet<usize, usize, f64>],
-    b_vector: &Mat<f64>,
-    x_vector: &Mat<f64>,
-    index_map: &HashMap<String, usize>,
-) {
-    let size = index_map.len();
-    let mut rev_index_map: Vec<String> = vec![String::new(); size];
-    for (name, &idx) in index_map {
-        if idx < size {
-            rev_index_map[idx].clone_from(name);
-        }
-    }
-
-    let matrix_map: HashMap<(usize, usize), f64> = g_triplets
-        .iter()
-        .map(|&Triplet { row, col, val }| ((row, col), val))
-        .collect();
-
-    // Print header
-    print!("{:<12}", ""); // Spacer for row names
-    for name in &rev_index_map {
-        print!("{name:<12}");
-    }
-    println!(
-        "{:<15}   {:<15}",
-        "| x Vector (Solution)", "| b Vector (Excitation)"
-    );
-    println!("{}", "-".repeat(12 * (size + 1) + 32));
-
-    // Print each row of the system
-    for (r, row_name) in rev_index_map.iter().enumerate() {
-        print!("{row_name:<12}");
-        for c in 0..size {
-            let val = matrix_map.get(&(r, c)).unwrap_or(&0.0);
-            print!("{val:<12.4}");
-        }
-        println!(
-            "| {:<15.6e} | {:<15.6e}",
-            x_vector.get(r, 0), // Use NaN for missing values
-            b_vector.get(r, 0)
-        );
-    }
-}
-
-/// A helper function to pretty-print the MNA matrix for debugging purposes.
-#[allow(dead_code)]
-fn print_matrix(
-    triplets: &[Triplet<usize, usize, f64>],
-    size: usize,
-    index_map: &HashMap<String, usize>,
-) {
-    // Create a reverse mapping from index to name for easier lookup of headers.
-    let mut rev_index_map: Vec<String> = vec![String::new(); size];
-    for (name, &idx) in index_map {
-        if idx < size {
-            rev_index_map[idx].clone_from(name);
-        }
-    }
-
-    // Convert triplets to a HashMap for efficient (row, col) -> value lookups.
-    let matrix_map: HashMap<(usize, usize), f64> = triplets
-        .iter()
-        .map(|&Triplet { row, col, val }| ((row, col), val))
-        .collect();
-
-    // Print header row with column names.
-    print!("{:<12}", ""); // Spacer for row names column.
-    for col_name in &rev_index_map {
-        print!("{col_name:<12}");
-    }
-    println!();
-    println!("{}", "-".repeat(12 * (size + 1)));
-
-    // Print each row with its name and values.
-    for (r, row_name) in rev_index_map.iter().enumerate() {
-        print!("{row_name:<12}");
-        for c in 0..size {
-            let val = matrix_map.get(&(r, c)).unwrap_or(&0.0);
-            print!("{val:<12.4}");
-        }
-        println!();
-    }
 }
