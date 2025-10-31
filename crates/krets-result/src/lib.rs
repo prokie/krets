@@ -1,6 +1,8 @@
+use faer::c64;
 use log::info;
 use polars::prelude::*;
 use std::collections::HashMap;
+use std::f64::consts::PI;
 use std::fs::File;
 use std::path::Path;
 
@@ -123,5 +125,84 @@ pub fn write_tran_results_to_parquet(
     ParquetWriter::new(&mut file).finish(&mut df)?;
 
     info!("Saved transient results to {filename}");
+    Ok(())
+}
+
+/// Writes AC sweep results (Vec<HashMap<String, c64>>) to a Parquet file.
+///
+/// The input is a vector where each entry corresponds to one frequency point.
+/// Each map contains complex values per signal name, and should include a
+/// "frequency" key whose real part is the frequency in Hertz.
+///
+/// The output Parquet will contain:
+/// - A `frequency` column (f64)
+/// - For every other key `K`, two columns: `K_mag` and `K_phase_deg` (both f64)
+pub fn write_ac_results_to_parquet(
+    data: &[HashMap<String, c64>],
+    filename: &str,
+) -> Result<(), PolarsError> {
+    if data.is_empty() {
+        return Ok(());
+    }
+
+    let filename = ensure_parquet_extension(filename);
+
+    // Collect all unique headers
+    let mut all_headers = data
+        .iter()
+        .flat_map(|row| row.keys().cloned())
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+
+    // Ensure stable order and put frequency first if present
+    all_headers.sort();
+    let mut signal_headers: Vec<String> = all_headers
+        .into_iter()
+        .filter(|h| h != "frequency")
+        .collect();
+    signal_headers.sort();
+
+    let mut columns: Vec<polars::prelude::Column> = Vec::new();
+
+    // Frequency column (if present) — extract real part only
+    {
+        let freq_values: Vec<Option<f64>> = data
+            .iter()
+            .map(|row| row.get("frequency").map(|v| v.re))
+            .collect();
+        // Include frequency even if all None — remains a valid nullable column
+        columns.push(Series::new("frequency".into(), freq_values).into_column());
+    }
+
+    // For each other header, create magnitude and phase columns
+    for header in signal_headers {
+        let mag_name = format!("{}_mag", header);
+        let phase_name = format!("{}_phase_deg", header);
+
+        let (mag_values, phase_values): (Vec<Option<f64>>, Vec<Option<f64>>) = data
+            .iter()
+            .map(|row| {
+                row.get(&header).map(|v| {
+                    let mag = (v.re * v.re + v.im * v.im).sqrt();
+                    let phase = v.im.atan2(v.re) * 180.0 / PI;
+                    (mag, phase)
+                })
+            })
+            .map(|opt| match opt {
+                Some((m, p)) => (Some(m), Some(p)),
+                None => (None, None),
+            })
+            .unzip();
+
+        columns.push(Series::new(mag_name.into(), mag_values).into_column());
+        columns.push(Series::new(phase_name.into(), phase_values).into_column());
+    }
+
+    let mut df = DataFrame::new(columns)?;
+    let mut file = File::create(&filename).map_err(PolarsError::from)?;
+    ParquetWriter::new(&mut file).finish(&mut df)?;
+
+    info!("Saved AC sweep results to {filename}");
     Ok(())
 }

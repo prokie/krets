@@ -54,6 +54,7 @@ pub struct DcAnalysis {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "variation")]
 pub enum AcSweep {
     /// Decade variation (`dec`): Specifies the number of points per decade.
     Decade { points_per_decade: u32 },
@@ -278,6 +279,61 @@ stop_time = 1e-3
                 "expected Transient analysis in AnalysisSpec, got {:?}",
                 other
             ),
+        }
+    }
+
+    #[test]
+    fn parse_ac_toml() {
+        let toml_str = r#"
+[ac]
+sweep = { variation = "Decade", points_per_decade = 10  }
+fstart = 1.0
+fstop = 1e6
+"#;
+
+        let parsed: Analysis =
+            toml::from_str(toml_str).expect("failed to parse TOML into Analysis");
+        match parsed {
+            Analysis::Ac(a) => {
+                match a.sweep {
+                    AcSweep::Decade { points_per_decade } => {
+                        assert_eq!(points_per_decade, 10);
+                    }
+                    other => panic!("expected Decade sweep, got {:?}", other),
+                }
+                assert_eq!(a.fstart, 1.0);
+                assert_eq!(a.fstop, 1e6);
+            }
+            other => panic!("expected Ac analysis, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_analysis_spec_ac_from_toml_str() {
+        let toml_str = r#"
+circuit_path = "any_path/krets.toml"
+
+[analysis.ac]
+sweep = { variation = "Decade", points_per_decade = 5 }
+fstart = 10.0
+fstop = 1000.0
+"#;
+
+        let spec: AnalysisSpec =
+            toml::from_str(toml_str).expect("failed to parse TOML into AnalysisSpec");
+
+        assert!(spec.circuit_path.ends_with("krets.toml"));
+
+        match spec.analysis {
+            Analysis::Ac(a) => {
+                match a.sweep {
+                    AcSweep::Decade { points_per_decade } => assert_eq!(points_per_decade, 5),
+                    other => panic!("expected Decade sweep, got {:?}", other),
+                }
+                assert_eq!(a.fstart, 10.0);
+                assert_eq!(a.fstop, 1000.0);
+            }
+            other => panic!("expected Ac analysis in AnalysisSpec, got {:?}", other),
         }
     }
 }

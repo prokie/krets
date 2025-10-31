@@ -2,7 +2,8 @@ use clap::Parser;
 use krets_gui::run_gui;
 use krets_parser::analyses::{AnalysisResult, AnalysisSpec};
 use krets_result::{
-    write_dc_results_to_parquet, write_op_results_to_parquet, write_tran_results_to_parquet,
+    write_ac_results_to_parquet, write_dc_results_to_parquet, write_op_results_to_parquet,
+    write_tran_results_to_parquet,
 };
 use krets_solver::{config::SolverConfig, solver::Solver};
 use log::info;
@@ -110,8 +111,11 @@ fn main() {
                 std::process::exit(1);
             });
         }
-        AnalysisResult::Ac(_) => {
-            info!("AC results Parquet export not implemented yet.");
+        AnalysisResult::Ac(ac_solution) => {
+            write_ac_results_to_parquet(ac_solution, &output_file_str).unwrap_or_else(|e| {
+                info!("Error writing AC results to Parquet: {e}");
+                std::process::exit(1);
+            });
         }
         AnalysisResult::Transient(tran_solution) => {
             write_tran_results_to_parquet(tran_solution, &output_file_str).unwrap_or_else(|e| {
