@@ -101,7 +101,7 @@ impl Stampable for CurrentSource {
         }
     }
 }
-fn parse_current_source(input: &str) -> IResult<&str, CurrentSource> {
+pub fn parse_current_source(input: &str) -> IResult<&str, CurrentSource> {
     let (input, _) = alt((tag("I"), tag("i"))).parse(input)?;
     let (input, name) = alphanumeric_or_underscore1.parse(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;

@@ -170,7 +170,7 @@ impl Diode {
 }
 
 // Updated nom parser function
-fn parse_diode(input: &str) -> IResult<&str, Diode> {
+pub fn parse_diode(input: &str) -> IResult<&str, Diode> {
     let (input, _) = alt((tag("D"), tag("d"))).parse(input)?;
     // Use map_res to parse the name directly into u32 and handle potential errors
     let (input, name) =

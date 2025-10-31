@@ -214,8 +214,8 @@ impl Stampable for NMOSFET {
     }
 }
 
-// Nom parser for MOSFET (updated for bulk node)
-fn parse_mosfet(input: &str) -> IResult<&str, NMOSFET> {
+// Nom parser for NMOSFET
+pub fn parse_nmosfet(input: &str) -> IResult<&str, NMOSFET> {
     // Parse the initial 'MN' (case-insensitive)
     let (input, _) = tag_no_case("MN").parse(input)?;
 
@@ -281,7 +281,7 @@ impl FromStr for NMOSFET {
         }
 
         // Expected format: M<name> <drain> <gate> <source> <bulk> <model>
-        match all_consuming(parse_mosfet).parse(s_without_comment) {
+        match all_consuming(parse_nmosfet).parse(s_without_comment) {
             Ok((_, mosfet)) => {
                 if mosfet.name == 0 {
                     return Err(Error::InvalidFormat(format!(

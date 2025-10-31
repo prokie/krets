@@ -155,7 +155,7 @@ impl fmt::Display for Resistor {
         )
     }
 }
-fn parse_resistor(input: &str) -> IResult<&str, Resistor> {
+pub fn parse_resistor(input: &str) -> IResult<&str, Resistor> {
     let (input, _) = alt((tag("R"), tag("r"))).parse(input)?;
     let (input, name) = alphanumeric_or_underscore1(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;

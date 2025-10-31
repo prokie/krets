@@ -6,9 +6,9 @@ use std::{
 };
 
 use crate::prelude::*;
+
 use crate::{circuit::Circuit, models::Model};
 use crate::{elements::Element, models::parse_model};
-
 /// Parses a SPICE-like netlist and extracts circuit elements into structured data.
 ///
 /// # Description
@@ -31,8 +31,11 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
     let mut index_map: HashMap<String, usize> = HashMap::new();
     let mut nodes: HashSet<String> = HashSet::new();
     let mut models: HashMap<String, Model> = HashMap::new();
+    let mut subcircuits: HashMap<String, Subcircuit> = HashMap::new();
     let mut index_counter = 0;
     let mut inside_control_block = false;
+    let mut inside_subckt_block = false;
+    let mut current_subckt_name = String::new();
 
     for (line_num, line) in input.lines().enumerate() {
         let current_line = line_num + 1;
@@ -51,33 +54,48 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
             continue;
         }
 
+        if line.to_lowercase().starts_with(".subckt") {
+            inside_subckt_block = true;
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 {
+                current_subckt_name = parts[1].to_string();
+            }
+            subcircuits.insert(
+                current_subckt_name.clone(),
+                Subcircuit::new(current_subckt_name.clone(), parts),
+            );
+            continue;
+        }
+
+        if line.to_lowercase().starts_with(".ends") {
+            inside_subckt_block = false;
+            current_subckt_name.clear();
+
+            continue;
+        }
+
         if inside_control_block {
             continue;
         }
 
-        let parse_with_context = |line: &str| -> Result<Element> {
-            if line.starts_with("V") || line.starts_with("v") {
-                Ok(Element::VoltageSource(line.parse()?))
-            } else if line.starts_with("I") || line.starts_with("i") {
-                Ok(Element::CurrentSource(line.parse()?))
-            } else if line.starts_with("R") || line.starts_with("r") {
-                Ok(Element::Resistor(line.parse()?))
-            } else if line.starts_with("C") || line.starts_with("c") {
-                Ok(Element::Capacitor(line.parse()?))
-            } else if line.starts_with("L") || line.starts_with("l") {
-                Ok(Element::Inductor(line.parse()?))
-            } else if line.starts_with("D") || line.starts_with("d") {
-                Ok(Element::Diode(line.parse()?))
-            } else if line.starts_with("Q") || line.starts_with("q") {
-                Ok(Element::BJT(line.parse()?))
-            } else if line.starts_with("M") || line.starts_with("m") {
-                Ok(Element::NMOSFET(line.parse()?))
-            } else {
-                // Continue quietly for lines that are not element definitions
-                // This could also be an error if strict parsing is desired.
-                Err(Error::Unexpected("Not an element".into()))
+        if inside_subckt_block {
+            if let Some(subckt) = subcircuits.get_mut(&current_subckt_name) {
+                match parse_element(line) {
+                    Ok(element) => {
+                        subckt.elements.push(element);
+                    }
+                    Err(e) => {
+                        return Err(Error::ParseError {
+                            line: current_line,
+                            message: e.to_string(),
+                        });
+                    }
+                }
             }
-        };
+            continue;
+        }
+
+        let element = parse_element(line);
 
         if line.to_lowercase().starts_with(".model") {
             let model = parse_model(line).map_err(|e| Error::ParseError {
@@ -88,7 +106,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
             models.insert(model.name().to_string(), model);
         }
 
-        match parse_with_context(line) {
+        match element {
             Ok(element) => {
                 if element.is_g2() {
                     index_map.insert(format!("I({element})"), index_counter);

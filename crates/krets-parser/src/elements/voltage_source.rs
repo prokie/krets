@@ -186,7 +186,7 @@ fn parse_sinusoidal_param(input: &str) -> IResult<&str, Param> {
 }
 
 /// Main nom parser for the VoltageSource
-fn parse_voltage_source(input: &str) -> IResult<&str, VoltageSource> {
+pub fn parse_voltage_source(input: &str) -> IResult<&str, VoltageSource> {
     let (input, _) = alt((tag("V"), tag("v"))).parse(input)?;
     let (input, name) = alphanumeric_or_underscore1(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;

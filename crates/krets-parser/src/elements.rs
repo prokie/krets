@@ -1,5 +1,5 @@
 use crate::prelude::*;
-
+use nom::{Parser, branch::alt};
 pub mod bjt;
 pub mod capacitor;
 pub mod current_source;
@@ -20,6 +20,26 @@ pub enum Element {
     Diode(diode::Diode),
     BJT(bjt::BJT),
     NMOSFET(nmosfet::NMOSFET),
+}
+
+pub fn parse_element(input: &str) -> Result<Element> {
+    // Remove comments starting with '%'
+    let input = input.split('%').next().unwrap_or("").trim();
+
+    let (_, element) = alt((
+        map(parse_resistor, Element::Resistor),
+        map(parse_capacitor, Element::Capacitor),
+        map(parse_inductor, Element::Inductor),
+        map(parse_voltage_source, Element::VoltageSource),
+        map(parse_current_source, Element::CurrentSource),
+        map(parse_diode, Element::Diode),
+        map(parse_bjt, Element::BJT),
+        map(parse_nmosfet, Element::NMOSFET),
+    ))
+    .parse(input)
+    .map_err(|_| Error::Unexpected("Failed to parse element".into()))?;
+
+    Ok(element)
 }
 
 /// A macro to forward a method call to the correct inner element struct.

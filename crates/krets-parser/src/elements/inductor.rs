@@ -168,7 +168,7 @@ impl Stampable for Inductor {
         }
     }
 }
-fn parse_inductor(input: &str) -> IResult<&str, Inductor> {
+pub fn parse_inductor(input: &str) -> IResult<&str, Inductor> {
     let (input, _) = alt((tag("L"), tag("l"))).parse(input)?;
     let (input, name) = alphanumeric_or_underscore1(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;

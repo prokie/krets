@@ -88,7 +88,7 @@ impl Stampable for BJT {
 }
 
 // Nom parser for BJT
-fn parse_bjt(input: &str) -> IResult<&str, BJT> {
+pub fn parse_bjt(input: &str) -> IResult<&str, BJT> {
     // Parse the initial 'Q' (case-insensitive)
     let (input, _) = alt((tag("Q"), tag("q"))).parse(input)?;
 

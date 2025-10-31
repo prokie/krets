@@ -178,7 +178,7 @@ impl Stampable for Capacitor {
         triplets
     }
 }
-fn parse_capacitor(input: &str) -> IResult<&str, Capacitor> {
+pub fn parse_capacitor(input: &str) -> IResult<&str, Capacitor> {
     let (input, _) = alt((tag("C"), tag("c"))).parse(input)?;
     let (input, name) = alphanumeric_or_underscore1(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
