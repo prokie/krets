@@ -37,7 +37,12 @@ pub fn parse_element(input: &str) -> Result<Element> {
         map(parse_nmosfet, Element::NMOSFET),
     ))
     .parse(input)
-    .map_err(|_| Error::Unexpected("Failed to parse element".into()))?;
+    .map_err(|e| {
+        Error::Unexpected(format!(
+            "Failed to parse element from input '{}': parser error: {:?}",
+            input, e
+        ))
+    })?;
 
     Ok(element)
 }
