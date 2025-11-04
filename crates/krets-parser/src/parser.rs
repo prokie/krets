@@ -89,6 +89,11 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
                         });
                     }
                 }
+            } else {
+                return Err(Error::ParseError {
+                    line: current_line,
+                    message: format!("Subcircuit '{}' not found when parsing element.", current_subckt_name),
+                });
             }
             continue;
         }
