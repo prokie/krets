@@ -36,7 +36,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
     let mut inside_control_block = false;
     let mut inside_subckt_block = false;
     let mut current_subckt_name = String::new();
-    let mut subcircuit;
+    let mut subcircuit: Subcircuit;
 
     for (line_num, line) in input.lines().enumerate() {
         let current_line = line_num + 1;
@@ -92,7 +92,10 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
             } else {
                 return Err(Error::ParseError {
                     line: current_line,
-                    message: format!("Subcircuit '{}' not found when parsing element.", current_subckt_name),
+                    message: format!(
+                        "Subcircuit '{}' not found when parsing element.",
+                        current_subckt_name
+                    ),
                 });
             }
             continue;
