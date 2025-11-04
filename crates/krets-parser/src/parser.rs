@@ -32,7 +32,6 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
     let mut inside_control_block = false;
     let mut inside_subckt_block = false;
     let mut current_subckt_name = String::new();
-    let mut subcircuit_definition: Subcircuit;
 
     let mut circuit = Circuit::empty_circuit();
 
@@ -57,7 +56,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
 
         if line.to_lowercase().starts_with(".subckt") {
             inside_subckt_block = true;
-            (_, subcircuit_definition) =
+            let (_, subcircuit_definition) =
                 parse_subckt_header(line).map_err(|e| Error::ParseError {
                     line: current_line,
                     message: e.to_string(),
@@ -132,7 +131,12 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
             continue;
         }
 
-        circuit.elements.push(parse_element(line)?);
+        circuit
+            .elements
+            .push(parse_element(line).map_err(|e| Error::ParseError {
+                line: current_line,
+                message: e.to_string(),
+            })?);
     }
 
     for element in circuit.elements.iter() {
