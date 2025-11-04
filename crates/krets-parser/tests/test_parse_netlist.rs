@@ -73,4 +73,24 @@ R1 out_dc 0 1k
         }
         assert!(circuit.is_ok());
     }
+
+    #[test]
+    fn test_with_subckt() {
+        let netlist = "
+xdiv1 10 7 0 vdivide
+.subckt vdivide 1 2 3
+r1 1 2 10K
+r2 2 3 5K
+.ends
+";
+        let circuit = parse_circuit_description(netlist);
+
+        if let Err(e) = &circuit {
+            println!("Parsing failed with error: {:?}", e);
+        }
+        assert!(circuit.is_ok());
+
+        let circuit = circuit.unwrap();
+        assert_eq!(circuit.subcircuit_definitions.len(), 1); // One subcircuit definition
+    }
 }

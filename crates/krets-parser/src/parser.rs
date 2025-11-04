@@ -1,11 +1,11 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     fs::File,
     io::{BufReader, Read},
     path::Path,
 };
 
-use crate::prelude::*;
+use crate::{prelude::*, subcircuit::parse_subckt_instance};
 
 use crate::{circuit::Circuit, models::Model};
 use crate::{elements::Element, models::parse_model};
@@ -27,16 +27,14 @@ use crate::{elements::Element, models::parse_model};
 /// # Returns
 /// - A `Result<Circuit, Error>`.
 pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
-    let mut elements: Vec<Element> = Vec::new();
-    let mut index_map: HashMap<String, usize> = HashMap::new();
     let mut nodes: HashSet<String> = HashSet::new();
-    let mut models: HashMap<String, Model> = HashMap::new();
-    let mut subcircuits: HashMap<String, Subcircuit> = HashMap::new();
     let mut index_counter = 0;
     let mut inside_control_block = false;
     let mut inside_subckt_block = false;
     let mut current_subckt_name = String::new();
-    let mut subcircuit: Subcircuit;
+    let mut subcircuit_definition: Subcircuit;
+
+    let mut circuit = Circuit::empty_circuit();
 
     for (line_num, line) in input.lines().enumerate() {
         let current_line = line_num + 1;
@@ -59,11 +57,16 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
 
         if line.to_lowercase().starts_with(".subckt") {
             inside_subckt_block = true;
-            (_, subcircuit) = parse_subckt_header(line).map_err(|e| Error::ParseError {
-                line: current_line,
-                message: e.to_string(),
-            })?;
-            subcircuits.insert(current_subckt_name.clone(), subcircuit);
+            (_, subcircuit_definition) =
+                parse_subckt_header(line).map_err(|e| Error::ParseError {
+                    line: current_line,
+                    message: e.to_string(),
+                })?;
+            current_subckt_name = subcircuit_definition.name.clone();
+            circuit
+                .subcircuit_definitions
+                .insert(subcircuit_definition.name.clone(), subcircuit_definition);
+
             continue;
         }
 
@@ -82,8 +85,20 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
             continue;
         }
 
+        if line.to_lowercase().starts_with("x") {
+            circuit.subcircuit_instances.push(
+                parse_subckt_instance(line)
+                    .map_err(|e| Error::ParseError {
+                        line: current_line,
+                        message: e.to_string(),
+                    })?
+                    .1,
+            );
+            continue;
+        }
+
         if inside_subckt_block {
-            if let Some(subckt) = subcircuits.get_mut(&current_subckt_name) {
+            if let Some(subckt) = circuit.subcircuit_definitions.get_mut(&current_subckt_name) {
                 match parse_element(line) {
                     Ok(element) => {
                         subckt.elements.push(element);
@@ -107,56 +122,49 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
             continue;
         }
 
-        let element = parse_element(line);
-
         if line.to_lowercase().starts_with(".model") {
             let model = parse_model(line).map_err(|e| Error::ParseError {
                 line: current_line,
                 message: e.to_string(),
             })?;
 
-            models.insert(model.name().to_string(), model);
+            circuit.models.insert(model.name().to_string(), model);
             continue;
         }
 
-        match element {
-            Ok(element) => {
-                if element.is_g2() {
-                    index_map.insert(format!("I({element})"), index_counter);
-                    index_counter += 1;
-                }
-
-                for node in &element.nodes() {
-                    if nodes.insert(node.to_string()) {
-                        // Skip adding the ground node to the index map
-                        if *node == "0" {
-                            continue;
-                        }
-
-                        let index_name = format!("V({node})");
-                        index_map.insert(index_name, index_counter);
-                        index_counter += 1;
-                    }
-                }
-                elements.push(element);
-            }
-            Err(e) => {
-                return Err(Error::ParseError {
-                    line: current_line,
-                    message: e.to_string(),
-                });
-            }
-        };
+        circuit.elements.push(parse_element(line)?);
     }
 
-    if elements.is_empty() {
+    for element in circuit.elements.iter() {
+        if element.is_g2() {
+            circuit
+                .index_map
+                .insert(format!("I({element})"), index_counter);
+            index_counter += 1;
+        }
+
+        for node in &element.nodes() {
+            if nodes.insert(node.to_string()) {
+                // Skip adding the ground node to the index map
+                if *node == "0" {
+                    continue;
+                }
+
+                let index_name = format!("V({node})");
+                circuit.index_map.insert(index_name, index_counter);
+                index_counter += 1;
+            }
+        }
+    }
+
+    if circuit.is_empty() {
         return Err(Error::EmptyNetlist);
     }
 
     // --- Second pass: Apply model parameters to elements ---
-    for element in elements.iter_mut() {
+    for element in circuit.elements.iter_mut() {
         if let Element::Diode(diode) = element {
-            match models.get(&diode.model_name) {
+            match circuit.models.get(&diode.model_name) {
                 Some(Model::Diode(model)) => {
                     diode.model = model.clone();
                 }
@@ -164,7 +172,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
             }
         }
         if let Element::NMOSFET(mosfet) = element {
-            match models.get(&mosfet.model_name) {
+            match circuit.models.get(&mosfet.model_name) {
                 Some(Model::NMosfet(model)) => {
                     mosfet.model = model.clone();
                 }
@@ -174,9 +182,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
     }
 
     // Convert HashSet to Vec for the final Circuit struct if needed
-    let nodes_vec = nodes.into_iter().collect();
-    let circuit = Circuit::new(elements, index_map, nodes_vec, models);
-
+    circuit.nodes = nodes.into_iter().collect();
     Ok(circuit)
 }
 
