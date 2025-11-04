@@ -41,6 +41,8 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
     for (line_num, line) in input.lines().enumerate() {
         let current_line = line_num + 1;
 
+        let line = line.trim();
+
         if line.is_empty() || line.starts_with('%') || line.starts_with('*') {
             continue;
         }
@@ -73,6 +75,10 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
         }
 
         if inside_control_block {
+            continue;
+        }
+
+        if line.to_lowercase().starts_with(".end") {
             continue;
         }
 
@@ -110,6 +116,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
             })?;
 
             models.insert(model.name().to_string(), model);
+            continue;
         }
 
         match element {
@@ -133,7 +140,6 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
                 }
                 elements.push(element);
             }
-            Err(Error::Unexpected(_)) => continue, // Ignore lines that aren't elements
             Err(e) => {
                 return Err(Error::ParseError {
                     line: current_line,

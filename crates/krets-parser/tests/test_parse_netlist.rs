@@ -52,9 +52,9 @@ R1 out_dc 0 1k
 
 .model DMOD D (is=1e-9)
 
-.tran 0.1ms 50ms
 
 .control
+  tran 0.1ms 50ms
   run
   plot v(in_ac1,in_ac2) v(out_dc)
 .endc
