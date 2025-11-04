@@ -36,6 +36,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
     let mut inside_control_block = false;
     let mut inside_subckt_block = false;
     let mut current_subckt_name = String::new();
+    let mut subcircuit;
 
     for (line_num, line) in input.lines().enumerate() {
         let current_line = line_num + 1;
@@ -56,14 +57,11 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
 
         if line.to_lowercase().starts_with(".subckt") {
             inside_subckt_block = true;
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 2 {
-                current_subckt_name = parts[1].to_string();
-            }
-            subcircuits.insert(
-                current_subckt_name.clone(),
-                Subcircuit::new(current_subckt_name.clone(), parts),
-            );
+            (_, subcircuit) = parse_subckt_header(line).map_err(|e| Error::ParseError {
+                line: current_line,
+                message: e.to_string(),
+            })?;
+            subcircuits.insert(current_subckt_name.clone(), subcircuit);
             continue;
         }
 

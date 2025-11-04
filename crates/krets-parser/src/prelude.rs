@@ -13,7 +13,7 @@ pub use crate::elements::nmosfet::parse_nmosfet;
 pub use crate::elements::parse_element;
 pub use crate::elements::resistor::parse_resistor;
 pub use crate::elements::voltage_source::parse_voltage_source;
-pub use crate::subcircuit::Subcircuit;
+pub use crate::subcircuit::{Subcircuit, parse_subckt_header};
 pub use crate::utils::parse_value;
 pub use crate::utils::{alphanumeric_or_underscore1, parse_key_value, value_parser};
 pub use faer::c64;
