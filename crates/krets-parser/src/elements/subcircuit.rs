@@ -15,6 +15,7 @@ pub struct SubcircuitInstance {
     pub instance_name: String,
     pub definition_name: String,
     pub nodes: Vec<String>,
+    pub subcircuit_instances: Vec<SubcircuitInstance>,
 }
 
 impl SubcircuitInstance {
@@ -27,7 +28,50 @@ impl SubcircuitInstance {
             instance_name: instance_name.into(),
             definition_name: definition_name.into(),
             nodes: nodes.into_iter().map(Into::into).collect(),
+            subcircuit_instances: Vec::new(),
         }
+    }
+}
+
+impl Identifiable for SubcircuitInstance {
+    fn identifier(&self) -> String {
+        format!("X{}", self.instance_name)
+    }
+}
+
+impl Stampable for SubcircuitInstance {
+    fn stamp_conductance_matrix_dc(
+        &self,
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        todo!()
+    }
+
+    fn stamp_excitation_vector_dc(
+        &self,
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
+    ) -> Vec<Triplet<usize, usize, f64>> {
+        todo!()
+    }
+
+    fn stamp_conductance_matrix_ac(
+        &self,
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
+        _frequency: f64,
+    ) -> Vec<Triplet<usize, usize, c64>> {
+        todo!()
+    }
+
+    fn stamp_excitation_vector_ac(
+        &self,
+        _index_map: &HashMap<String, usize>,
+        _solution_map: &HashMap<String, f64>,
+        _frequency: f64,
+    ) -> Vec<Triplet<usize, usize, c64>> {
+        todo!()
     }
 }
 

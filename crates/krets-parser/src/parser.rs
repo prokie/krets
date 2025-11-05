@@ -5,7 +5,7 @@ use std::{
     path::Path,
 };
 
-use crate::{prelude::*, subcircuit::parse_subckt_instance};
+use crate::{elements::subcircuit::parse_subckt_header, prelude::*};
 
 use crate::{circuit::Circuit, models::Model};
 use crate::{elements::Element, models::parse_model};
@@ -81,18 +81,6 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
         }
 
         if line.to_lowercase().starts_with(".end") {
-            continue;
-        }
-
-        if line.to_lowercase().starts_with("x") {
-            circuit.subcircuit_instances.push(
-                parse_subckt_instance(line)
-                    .map_err(|e| Error::ParseError {
-                        line: current_line,
-                        message: e.to_string(),
-                    })?
-                    .1,
-            );
             continue;
         }
 

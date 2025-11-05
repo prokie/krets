@@ -7,8 +7,8 @@ pub mod diode;
 pub mod inductor;
 pub mod nmosfet;
 pub mod resistor;
+pub mod subcircuit;
 pub mod voltage_source;
-
 /// Represents any component that can be included in a circuit simulation.
 #[derive(Debug, Clone)]
 pub enum Element {
@@ -20,6 +20,7 @@ pub enum Element {
     Diode(diode::Diode),
     BJT(bjt::BJT),
     NMOSFET(nmosfet::NMOSFET),
+    SubcktInstance(subcircuit::SubcircuitInstance),
 }
 
 pub fn parse_element(input: &str) -> Result<Element> {
@@ -35,6 +36,7 @@ pub fn parse_element(input: &str) -> Result<Element> {
         map(parse_diode, Element::Diode),
         map(parse_bjt, Element::BJT),
         map(parse_nmosfet, Element::NMOSFET),
+        map(parse_subckt_instance, Element::SubcktInstance),
     ))
     .parse(input)
     .map_err(|e| {
@@ -60,6 +62,7 @@ macro_rules! dispatch {
             Element::Diode(e) => e.$method($($args),*),
             Element::BJT(e) => e.$method($($args),*),
             Element::NMOSFET(e) => e.$method($($args),*),
+            Element::SubcktInstance(e) => e.$method($($args),*),
         }
     };
 }
@@ -117,6 +120,7 @@ impl Element {
             Element::Diode(d) => vec![&d.plus, &d.minus],
             Element::BJT(b) => vec![&b.collector, &b.emitter, &b.base],
             Element::NMOSFET(m) => vec![&m.drain, &m.gate, &m.source],
+            Element::SubcktInstance(s) => s.nodes.iter().map(String::as_str).collect(),
         }
     }
 
@@ -131,7 +135,10 @@ impl Element {
             Element::Capacitor(e) => e.g2,
             Element::CurrentSource(_) => true,
             // Non-linear elements are linearized into Group 1 companion models.
-            Element::Diode(_) | Element::BJT(_) | Element::NMOSFET(_) => false,
+            Element::Diode(_)
+            | Element::BJT(_)
+            | Element::NMOSFET(_)
+            | Element::SubcktInstance(_) => false,
         }
     }
 
