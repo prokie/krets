@@ -153,9 +153,9 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
                 if *node == "0" {
                     continue;
                 }
-
-                let index_name = format!("V({node})");
-                circuit.index_map.insert(index_name, index_counter);
+                circuit
+                    .index_map
+                    .insert(format!("V({node})"), index_counter);
                 index_counter += 1;
             }
         }

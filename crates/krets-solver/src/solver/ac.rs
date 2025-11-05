@@ -48,12 +48,12 @@ pub fn solve(
         let mut e_stamps = Vec::new();
 
         for element in &circuit.elements {
-            g_stamps.extend(element.add_conductance_matrix_ac_stamp(
+            g_stamps.extend(element.stamp_conductance_matrix_ac(
                 index_map,
                 &dc_solution,
                 frequency, // Use current frequency
             ));
-            e_stamps.extend(element.add_excitation_vector_ac_stamp(
+            e_stamps.extend(element.stamp_excitation_vector_ac(
                 index_map,
                 &dc_solution,
                 frequency, // Use current frequency

@@ -110,7 +110,7 @@ impl Identifiable for NMOSFET {
 }
 
 impl Stampable for NMOSFET {
-    fn add_conductance_matrix_dc_stamp(
+    fn stamp_conductance_matrix_dc(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
@@ -160,7 +160,7 @@ impl Stampable for NMOSFET {
         triplets
     }
 
-    fn add_excitation_vector_dc_stamp(
+    fn stamp_excitation_vector_dc(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
@@ -195,7 +195,7 @@ impl Stampable for NMOSFET {
         triplets
     }
 
-    fn add_excitation_vector_ac_stamp(
+    fn stamp_excitation_vector_ac(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -204,7 +204,7 @@ impl Stampable for NMOSFET {
         vec![]
     }
 
-    fn add_conductance_matrix_ac_stamp(
+    fn stamp_conductance_matrix_ac(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,

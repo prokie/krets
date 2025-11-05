@@ -41,8 +41,8 @@ pub fn solve(circuit: &Circuit, config: &SolverConfig) -> Result<HashMap<String,
         let mut e_stamps = Vec::new();
 
         for element in &elements {
-            g_stamps.extend(element.add_conductance_matrix_dc_stamp(index_map, &previous_result));
-            e_stamps.extend(element.add_excitation_vector_dc_stamp(index_map, &previous_result));
+            g_stamps.extend(element.stamp_conductance_matrix_dc(index_map, &previous_result));
+            e_stamps.extend(element.stamp_excitation_vector_dc(index_map, &previous_result));
         }
 
         let g_stamps_summed = sum_triplets(&g_stamps);
