@@ -52,9 +52,9 @@ R1 out_dc 0 1k
 
 .model DMOD D (is=1e-9)
 
-.tran 0.1ms 50ms
 
 .control
+  tran 0.1ms 50ms
   run
   plot v(in_ac1,in_ac2) v(out_dc)
 .endc
@@ -72,5 +72,32 @@ R1 out_dc 0 1k
             println!("Parsing failed with error: {:?}", e);
         }
         assert!(circuit.is_ok());
+    }
+
+    #[test]
+    fn test_with_subckt() {
+        let netlist = "
+xdiv1 10 7 0 vdivide
+
+.subckt vdivide 1 2 3
+xr1 1 2 myresistor
+xr2 2 3 myresistor
+.ends
+
+
+.subckt myresistor plus minus
+r0 plus minus 1k
+.ends
+";
+        let circuit = parse_circuit_description(netlist);
+
+        if let Err(e) = &circuit {
+            println!("Parsing failed with error: {:?}", e);
+        }
+        assert!(circuit.is_ok());
+
+        let circuit = circuit.unwrap();
+
+        assert_eq!(circuit.elements.len(), 2);
     }
 }

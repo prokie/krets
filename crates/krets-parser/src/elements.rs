@@ -1,5 +1,5 @@
 use crate::prelude::*;
-
+use nom::{Parser, branch::alt};
 pub mod bjt;
 pub mod capacitor;
 pub mod current_source;
@@ -7,8 +7,8 @@ pub mod diode;
 pub mod inductor;
 pub mod nmosfet;
 pub mod resistor;
+pub mod subcircuit;
 pub mod voltage_source;
-
 /// Represents any component that can be included in a circuit simulation.
 #[derive(Debug, Clone)]
 pub enum Element {
@@ -20,6 +20,30 @@ pub enum Element {
     Diode(diode::Diode),
     BJT(bjt::BJT),
     NMOSFET(nmosfet::NMOSFET),
+    SubcktInstance(subcircuit::SubcircuitInstance),
+}
+
+pub fn parse_element(input: &str) -> Result<Element> {
+    let (_, element) = alt((
+        map(parse_resistor, Element::Resistor),
+        map(parse_capacitor, Element::Capacitor),
+        map(parse_inductor, Element::Inductor),
+        map(parse_voltage_source, Element::VoltageSource),
+        map(parse_current_source, Element::CurrentSource),
+        map(parse_diode, Element::Diode),
+        map(parse_bjt, Element::BJT),
+        map(parse_nmosfet, Element::NMOSFET),
+        map(parse_subckt_instance, Element::SubcktInstance),
+    ))
+    .parse(input)
+    .map_err(|e| {
+        Error::Unexpected(format!(
+            "Failed to parse element from input '{}': parser error: {:?}",
+            input, e
+        ))
+    })?;
+
+    Ok(element)
 }
 
 /// A macro to forward a method call to the correct inner element struct.
@@ -35,6 +59,7 @@ macro_rules! dispatch {
             Element::Diode(e) => e.$method($($args),*),
             Element::BJT(e) => e.$method($($args),*),
             Element::NMOSFET(e) => e.$method($($args),*),
+            Element::SubcktInstance(e) => e.$method($($args),*),
         }
     };
 }
@@ -92,6 +117,48 @@ impl Element {
             Element::Diode(d) => vec![&d.plus, &d.minus],
             Element::BJT(b) => vec![&b.collector, &b.emitter, &b.base],
             Element::NMOSFET(m) => vec![&m.drain, &m.gate, &m.source],
+            Element::SubcktInstance(s) => s.nodes.iter().map(String::as_str).collect(),
+        }
+    }
+
+    pub fn nodes_mut(&mut self) -> Vec<&mut String> {
+        match self {
+            Element::VoltageSource(v) => vec![&mut v.plus, &mut v.minus],
+            Element::CurrentSource(i) => vec![&mut i.plus, &mut i.minus],
+            Element::Resistor(r) => vec![&mut r.plus, &mut r.minus],
+            Element::Capacitor(c) => vec![&mut c.plus, &mut c.minus],
+            Element::Inductor(l) => vec![&mut l.plus, &mut l.minus],
+            Element::Diode(d) => vec![&mut d.plus, &mut d.minus],
+            Element::BJT(b) => vec![&mut b.collector, &mut b.emitter, &mut b.base],
+            Element::NMOSFET(m) => vec![&mut m.drain, &mut m.gate, &mut m.source],
+            Element::SubcktInstance(s) => s.nodes.iter_mut().collect(),
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        match self {
+            Element::VoltageSource(v) => &v.name,
+            Element::CurrentSource(i) => &i.name,
+            Element::Resistor(r) => &r.name,
+            Element::Capacitor(c) => &c.name,
+            Element::Inductor(l) => &l.name,
+            Element::Diode(d) => &d.name,
+            Element::BJT(b) => &b.name,
+            Element::NMOSFET(m) => &m.name,
+            Element::SubcktInstance(s) => &s.instance_name,
+        }
+    }
+    pub fn set_name(&mut self, new_name: &str) {
+        match self {
+            Element::VoltageSource(v) => v.name = new_name.to_string(),
+            Element::CurrentSource(i) => i.name = new_name.to_string(),
+            Element::Resistor(r) => r.name = new_name.to_string(),
+            Element::Capacitor(c) => c.name = new_name.to_string(),
+            Element::Inductor(l) => l.name = new_name.to_string(),
+            Element::Diode(d) => d.name = new_name.to_string(),
+            Element::BJT(b) => b.name = new_name.to_string(),
+            Element::NMOSFET(m) => m.name = new_name.to_string(),
+            Element::SubcktInstance(s) => s.instance_name = new_name.to_string(),
         }
     }
 
@@ -106,7 +173,10 @@ impl Element {
             Element::Capacitor(e) => e.g2,
             Element::CurrentSource(_) => true,
             // Non-linear elements are linearized into Group 1 companion models.
-            Element::Diode(_) | Element::BJT(_) | Element::NMOSFET(_) => false,
+            Element::Diode(_)
+            | Element::BJT(_)
+            | Element::NMOSFET(_)
+            | Element::SubcktInstance(_) => false,
         }
     }
 
@@ -125,50 +195,115 @@ pub trait Identifiable {
 }
 
 /// A trait for elements that can contribute to the MNA matrices.
+/// A trait for elements that can contribute their "stamp" to the Modified Nodal Analysis (MNA) matrices.
+///
+/// Implementors of this trait provide methods to add their contributions to the conductance matrix and excitation vector
+/// for DC, AC, and transient analyses. These methods are called during circuit simulation to assemble the system equations.
+///
+/// The default implementations for transient stamps assume resistive behavior, using the DC stamp.
 pub trait Stampable {
-    fn add_conductance_matrix_dc_stamp(
+    /// Adds the DC conductance matrix stamp for this element.
+    ///
+    /// # Arguments
+    /// * `index_map` - Maps node/branch identifiers to matrix indices.
+    /// * `solution_map` - Current solution values for nodes/branches.
+    ///
+    /// # Returns
+    /// A vector of triplets representing non-zero entries in the conductance matrix.
+    fn stamp_conductance_matrix_dc(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>>;
-    fn add_excitation_vector_dc_stamp(
+
+    /// Adds the DC excitation vector stamp for this element.
+    ///
+    /// # Arguments
+    /// * `index_map` - Maps node/branch identifiers to vector indices.
+    /// * `solution_map` - Current solution values for nodes/branches.
+    ///
+    /// # Returns
+    /// A vector of triplets representing non-zero entries in the excitation vector.
+    fn stamp_excitation_vector_dc(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>>;
-    fn add_conductance_matrix_ac_stamp(
-        &self,
-        index_map: &HashMap<String, usize>,
-        solution_map: &HashMap<String, f64>,
-        frequency: f64,
-    ) -> Vec<Triplet<usize, usize, c64>>;
-    fn add_excitation_vector_ac_stamp(
+
+    /// Adds the AC conductance matrix stamp for this element at a given frequency.
+    ///
+    /// # Arguments
+    /// * `index_map` - Maps node/branch identifiers to matrix indices.
+    /// * `solution_map` - Current solution values for nodes/branches.
+    /// * `frequency` - The AC analysis frequency.
+    ///
+    /// # Returns
+    /// A vector of triplets representing non-zero entries in the AC conductance matrix.
+    fn stamp_conductance_matrix_ac(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
         frequency: f64,
     ) -> Vec<Triplet<usize, usize, c64>>;
 
-    /// Default implementation for resistive elements. Their transient stamp is the same as their DC stamp.
-    fn add_conductance_matrix_transient_stamp(
+    /// Adds the AC excitation vector stamp for this element at a given frequency.
+    ///
+    /// # Arguments
+    /// * `index_map` - Maps node/branch identifiers to vector indices.
+    /// * `solution_map` - Current solution values for nodes/branches.
+    /// * `frequency` - The AC analysis frequency.
+    ///
+    /// # Returns
+    /// A vector of triplets representing non-zero entries in the AC excitation vector.
+    fn stamp_excitation_vector_ac(
+        &self,
+        index_map: &HashMap<String, usize>,
+        solution_map: &HashMap<String, f64>,
+        frequency: f64,
+    ) -> Vec<Triplet<usize, usize, c64>>;
+
+    /// Adds the transient conductance matrix stamp for this element.
+    ///
+    /// By default, uses the DC stamp (appropriate for resistive elements).
+    ///
+    /// # Arguments
+    /// * `index_map` - Maps node/branch identifiers to matrix indices.
+    /// * `solution_map` - Current solution values for nodes/branches.
+    /// * `prev_solution` - Solution values from the previous time step.
+    /// * `time_step` - The simulation time step.
+    ///
+    /// # Returns
+    /// A vector of triplets representing non-zero entries in the transient conductance matrix.
+    fn stamp_conductance_matrix_transient(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
         _prev_solution: &HashMap<String, f64>,
         _time_step: f64,
     ) -> Vec<Triplet<usize, usize, f64>> {
-        self.add_conductance_matrix_dc_stamp(index_map, solution_map)
+        self.stamp_conductance_matrix_dc(index_map, solution_map)
     }
 
-    /// Default implementation for resistive elements.
-    fn add_excitation_vector_transient_stamp(
+    /// Adds the transient excitation vector stamp for this element.
+    ///
+    /// By default, uses the DC excitation vector stamp (appropriate for resistive elements).
+    ///
+    /// # Arguments
+    /// * `index_map` - Maps node/branch identifiers to vector indices.
+    /// * `solution_map` - Current solution values for nodes/branches.
+    /// * `prev_solution` - Solution values from the previous time step.
+    /// * `time_step` - The simulation time step.
+    ///
+    /// # Returns
+    /// A vector of triplets representing non-zero entries in the transient excitation vector.
+    fn stamp_excitation_vector_transient(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
         _prev_solution: &HashMap<String, f64>,
         _time_step: f64,
     ) -> Vec<Triplet<usize, usize, f64>> {
-        self.add_excitation_vector_dc_stamp(index_map, solution_map)
+        self.stamp_excitation_vector_dc(index_map, solution_map)
     }
 }
 
@@ -179,27 +314,21 @@ impl Identifiable for Element {
 }
 
 impl Stampable for Element {
-    fn add_conductance_matrix_dc_stamp(
+    fn stamp_conductance_matrix_dc(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>> {
-        dispatch!(
-            self,
-            add_conductance_matrix_dc_stamp(index_map, solution_map)
-        )
+        dispatch!(self, stamp_conductance_matrix_dc(index_map, solution_map))
     }
-    fn add_excitation_vector_dc_stamp(
+    fn stamp_excitation_vector_dc(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>> {
-        dispatch!(
-            self,
-            add_excitation_vector_dc_stamp(index_map, solution_map)
-        )
+        dispatch!(self, stamp_excitation_vector_dc(index_map, solution_map))
     }
-    fn add_conductance_matrix_ac_stamp(
+    fn stamp_conductance_matrix_ac(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
@@ -207,10 +336,10 @@ impl Stampable for Element {
     ) -> Vec<Triplet<usize, usize, c64>> {
         dispatch!(
             self,
-            add_conductance_matrix_ac_stamp(index_map, solution_map, frequency)
+            stamp_conductance_matrix_ac(index_map, solution_map, frequency)
         )
     }
-    fn add_excitation_vector_ac_stamp(
+    fn stamp_excitation_vector_ac(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
@@ -218,10 +347,10 @@ impl Stampable for Element {
     ) -> Vec<Triplet<usize, usize, c64>> {
         dispatch!(
             self,
-            add_excitation_vector_ac_stamp(index_map, solution_map, frequency)
+            stamp_excitation_vector_ac(index_map, solution_map, frequency)
         )
     }
-    fn add_conductance_matrix_transient_stamp(
+    fn stamp_conductance_matrix_transient(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
@@ -230,15 +359,10 @@ impl Stampable for Element {
     ) -> Vec<Triplet<usize, usize, f64>> {
         dispatch!(
             self,
-            add_conductance_matrix_transient_stamp(
-                index_map,
-                solution_map,
-                prev_solution,
-                time_step
-            )
+            stamp_conductance_matrix_transient(index_map, solution_map, prev_solution, time_step)
         )
     }
-    fn add_excitation_vector_transient_stamp(
+    fn stamp_excitation_vector_transient(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,
@@ -247,12 +371,7 @@ impl Stampable for Element {
     ) -> Vec<Triplet<usize, usize, f64>> {
         dispatch!(
             self,
-            add_excitation_vector_transient_stamp(
-                index_map,
-                solution_map,
-                prev_solution,
-                time_step
-            )
+            stamp_excitation_vector_transient(index_map, solution_map, prev_solution, time_step)
         )
     }
 }

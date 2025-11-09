@@ -54,13 +54,13 @@ pub fn solve(
 
             // Build the MNA matrices using the discretized, linearized stamps (companion models).
             for element in &circuit.elements {
-                g_stamps.extend(element.add_conductance_matrix_transient_stamp(
+                g_stamps.extend(element.stamp_conductance_matrix_transient(
                     index_map,
                     &previous_nr_guess,
                     prev_solution,
                     time_step,
                 ));
-                e_stamps.extend(element.add_excitation_vector_transient_stamp(
+                e_stamps.extend(element.stamp_excitation_vector_transient(
                     index_map,
                     &previous_nr_guess,
                     prev_solution,

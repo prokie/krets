@@ -24,7 +24,7 @@ impl Identifiable for CurrentSource {
 }
 
 impl Stampable for CurrentSource {
-    fn add_conductance_matrix_dc_stamp(
+    fn stamp_conductance_matrix_dc(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -47,7 +47,7 @@ impl Stampable for CurrentSource {
         triplets
     }
 
-    fn add_conductance_matrix_ac_stamp(
+    fn stamp_conductance_matrix_ac(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -76,7 +76,7 @@ impl Stampable for CurrentSource {
         triplets
     }
 
-    fn add_excitation_vector_dc_stamp(
+    fn stamp_excitation_vector_dc(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -87,7 +87,7 @@ impl Stampable for CurrentSource {
         }
     }
 
-    fn add_excitation_vector_ac_stamp(
+    fn stamp_excitation_vector_ac(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -101,7 +101,7 @@ impl Stampable for CurrentSource {
         }
     }
 }
-fn parse_current_source(input: &str) -> IResult<&str, CurrentSource> {
+pub fn parse_current_source(input: &str) -> IResult<&str, CurrentSource> {
     let (input, _) = alt((tag("I"), tag("i"))).parse(input)?;
     let (input, name) = alphanumeric_or_underscore1.parse(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;

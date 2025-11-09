@@ -32,7 +32,7 @@ impl Identifiable for Capacitor {
 }
 
 impl Stampable for Capacitor {
-    fn add_conductance_matrix_dc_stamp(
+    fn stamp_conductance_matrix_dc(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -41,7 +41,7 @@ impl Stampable for Capacitor {
         vec![]
     }
 
-    fn add_conductance_matrix_ac_stamp(
+    fn stamp_conductance_matrix_ac(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -94,7 +94,7 @@ impl Stampable for Capacitor {
         triplets
     }
 
-    fn add_excitation_vector_dc_stamp(
+    fn stamp_excitation_vector_dc(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -103,7 +103,7 @@ impl Stampable for Capacitor {
         vec![]
     }
 
-    fn add_excitation_vector_ac_stamp(
+    fn stamp_excitation_vector_ac(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -113,7 +113,7 @@ impl Stampable for Capacitor {
         vec![]
     }
 
-    fn add_conductance_matrix_transient_stamp(
+    fn stamp_conductance_matrix_transient(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>, // Not needed for a linear capacitor's conductance
@@ -141,7 +141,7 @@ impl Stampable for Capacitor {
         triplets
     }
 
-    fn add_excitation_vector_transient_stamp(
+    fn stamp_excitation_vector_transient(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>, // Not needed for a linear capacitor's excitation
@@ -178,7 +178,7 @@ impl Stampable for Capacitor {
         triplets
     }
 }
-fn parse_capacitor(input: &str) -> IResult<&str, Capacitor> {
+pub fn parse_capacitor(input: &str) -> IResult<&str, Capacitor> {
     let (input, _) = alt((tag("C"), tag("c"))).parse(input)?;
     let (input, name) = alphanumeric_or_underscore1(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;

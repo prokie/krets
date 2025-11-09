@@ -186,7 +186,7 @@ fn parse_sinusoidal_param(input: &str) -> IResult<&str, Param> {
 }
 
 /// Main nom parser for the VoltageSource
-fn parse_voltage_source(input: &str) -> IResult<&str, VoltageSource> {
+pub fn parse_voltage_source(input: &str) -> IResult<&str, VoltageSource> {
     let (input, _) = alt((tag("V"), tag("v"))).parse(input)?;
     let (input, name) = alphanumeric_or_underscore1(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
@@ -272,7 +272,7 @@ impl Identifiable for VoltageSource {
 }
 
 impl Stampable for VoltageSource {
-    fn add_conductance_matrix_dc_stamp(
+    fn stamp_conductance_matrix_dc(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -296,7 +296,7 @@ impl Stampable for VoltageSource {
         triplets
     }
 
-    fn add_conductance_matrix_ac_stamp(
+    fn stamp_conductance_matrix_ac(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -321,7 +321,7 @@ impl Stampable for VoltageSource {
         triplets
     }
 
-    fn add_excitation_vector_dc_stamp(
+    fn stamp_excitation_vector_dc(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -333,7 +333,7 @@ impl Stampable for VoltageSource {
         triplets
     }
 
-    fn add_excitation_vector_ac_stamp(
+    fn stamp_excitation_vector_ac(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -347,7 +347,7 @@ impl Stampable for VoltageSource {
         triplets
     }
 
-    fn add_excitation_vector_transient_stamp(
+    fn stamp_excitation_vector_transient(
         &self,
         index_map: &HashMap<String, usize>,
         solution_map: &HashMap<String, f64>,

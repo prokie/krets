@@ -27,7 +27,7 @@ impl Identifiable for Inductor {
 }
 
 impl Stampable for Inductor {
-    fn add_conductance_matrix_dc_stamp(
+    fn stamp_conductance_matrix_dc(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -56,7 +56,7 @@ impl Stampable for Inductor {
         triplets
     }
 
-    fn add_conductance_matrix_ac_stamp(
+    fn stamp_conductance_matrix_ac(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -98,7 +98,7 @@ impl Stampable for Inductor {
         triplets
     }
 
-    fn add_excitation_vector_dc_stamp(
+    fn stamp_excitation_vector_dc(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -107,7 +107,7 @@ impl Stampable for Inductor {
         vec![]
     }
 
-    fn add_excitation_vector_ac_stamp(
+    fn stamp_excitation_vector_ac(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -117,7 +117,7 @@ impl Stampable for Inductor {
         vec![]
     }
 
-    fn add_conductance_matrix_transient_stamp(
+    fn stamp_conductance_matrix_transient(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -147,7 +147,7 @@ impl Stampable for Inductor {
         triplets
     }
 
-    fn add_excitation_vector_transient_stamp(
+    fn stamp_excitation_vector_transient(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -168,7 +168,7 @@ impl Stampable for Inductor {
         }
     }
 }
-fn parse_inductor(input: &str) -> IResult<&str, Inductor> {
+pub fn parse_inductor(input: &str) -> IResult<&str, Inductor> {
     let (input, _) = alt((tag("L"), tag("l"))).parse(input)?;
     let (input, name) = alphanumeric_or_underscore1(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;

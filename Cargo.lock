@@ -3111,6 +3111,7 @@ dependencies = [
 name = "krets-result"
 version = "0.1.2"
 dependencies = [
+ "faer",
  "log",
  "parquet",
  "polars",

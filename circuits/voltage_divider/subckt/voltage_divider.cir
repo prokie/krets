@@ -1,0 +1,18 @@
+* The following is the instance card:
+*
+xdiv1 10 7 0 vdivide
+* The following are the subcircuit definition cards:
+*
+.subckt vdivide 1 2 3
+r1 1 2 10K
+r2 2 3 5K
+.ends
+
+
+V1 1 0 dc 10
+
+
+.control
+op
+print all
+.endc

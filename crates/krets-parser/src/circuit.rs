@@ -33,4 +33,17 @@ impl Circuit {
             models,
         }
     }
+
+    pub fn empty_circuit() -> Self {
+        Circuit {
+            elements: Vec::new(),
+            index_map: HashMap::new(),
+            nodes: Vec::new(),
+            models: HashMap::new(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.elements.is_empty()
+    }
 }

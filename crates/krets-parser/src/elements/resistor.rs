@@ -23,7 +23,7 @@ pub struct Resistor {
 }
 
 impl Stampable for Resistor {
-    fn add_conductance_matrix_dc_stamp(
+    fn stamp_conductance_matrix_dc(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -68,7 +68,7 @@ impl Stampable for Resistor {
         triplets
     }
 
-    fn add_conductance_matrix_ac_stamp(
+    fn stamp_conductance_matrix_ac(
         &self,
         index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -119,7 +119,7 @@ impl Stampable for Resistor {
         triplets
     }
 
-    fn add_excitation_vector_dc_stamp(
+    fn stamp_excitation_vector_dc(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -128,7 +128,7 @@ impl Stampable for Resistor {
         Vec::new()
     }
 
-    fn add_excitation_vector_ac_stamp(
+    fn stamp_excitation_vector_ac(
         &self,
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
@@ -155,7 +155,7 @@ impl fmt::Display for Resistor {
         )
     }
 }
-fn parse_resistor(input: &str) -> IResult<&str, Resistor> {
+pub fn parse_resistor(input: &str) -> IResult<&str, Resistor> {
     let (input, _) = alt((tag("R"), tag("r"))).parse(input)?;
     let (input, name) = alphanumeric_or_underscore1(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
