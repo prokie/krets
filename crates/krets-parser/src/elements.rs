@@ -64,47 +64,6 @@ pub fn parse_element(input: &str) -> Result<Element> {
     Ok(element)
 }
 
-impl From<voltage_source::VoltageSource> for Element {
-    fn from(item: voltage_source::VoltageSource) -> Self {
-        Element::VoltageSource(item)
-    }
-}
-impl From<current_source::CurrentSource> for Element {
-    fn from(item: current_source::CurrentSource) -> Self {
-        Element::CurrentSource(item)
-    }
-}
-impl From<resistor::Resistor> for Element {
-    fn from(item: resistor::Resistor) -> Self {
-        Element::Resistor(item)
-    }
-}
-impl From<capacitor::Capacitor> for Element {
-    fn from(item: capacitor::Capacitor) -> Self {
-        Element::Capacitor(item)
-    }
-}
-impl From<inductor::Inductor> for Element {
-    fn from(item: inductor::Inductor) -> Self {
-        Element::Inductor(item)
-    }
-}
-impl From<diode::Diode> for Element {
-    fn from(item: diode::Diode) -> Self {
-        Element::Diode(item)
-    }
-}
-impl From<bjt::BJT> for Element {
-    fn from(item: bjt::BJT) -> Self {
-        Element::BJT(item)
-    }
-}
-impl From<nmosfet::NMOSFET> for Element {
-    fn from(item: nmosfet::NMOSFET) -> Self {
-        Element::NMOSFET(item)
-    }
-}
-
 impl Element {
     /// Retrieves the nodes associated with the element.
     pub fn nodes(&self) -> Vec<&str> {
