@@ -1,6 +1,5 @@
 use crate::prelude::*;
 
-use crate::elements::subcircuit::Subcircuit;
 use crate::models::Model;
 
 #[derive(Debug, Clone)]
@@ -17,9 +16,6 @@ pub struct Circuit {
 
     /// A list of models in the circuit.
     pub models: HashMap<String, Model>,
-
-    /// A list of subcircuits in the circuit.
-    pub subcircuit_definitions: HashMap<String, Subcircuit>,
 }
 
 impl Circuit {
@@ -29,14 +25,12 @@ impl Circuit {
         index_map: HashMap<String, usize>,
         nodes: Vec<String>,
         models: HashMap<String, Model>,
-        subcircuit_definitions: HashMap<String, Subcircuit>,
     ) -> Self {
         Circuit {
             elements,
             index_map,
             nodes,
             models,
-            subcircuit_definitions,
         }
     }
 
@@ -46,11 +40,10 @@ impl Circuit {
             index_map: HashMap::new(),
             nodes: Vec::new(),
             models: HashMap::new(),
-            subcircuit_definitions: HashMap::new(),
         }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.elements.is_empty() && self.subcircuit_definitions.is_empty()
+        self.elements.is_empty()
     }
 }

@@ -124,6 +124,47 @@ impl Element {
         }
     }
 
+    pub fn nodes_mut(&mut self) -> Vec<&mut String> {
+        match self {
+            Element::VoltageSource(v) => vec![&mut v.plus, &mut v.minus],
+            Element::CurrentSource(i) => vec![&mut i.plus, &mut i.minus],
+            Element::Resistor(r) => vec![&mut r.plus, &mut r.minus],
+            Element::Capacitor(c) => vec![&mut c.plus, &mut c.minus],
+            Element::Inductor(l) => vec![&mut l.plus, &mut l.minus],
+            Element::Diode(d) => vec![&mut d.plus, &mut d.minus],
+            Element::BJT(b) => vec![&mut b.collector, &mut b.emitter, &mut b.base],
+            Element::NMOSFET(m) => vec![&mut m.drain, &mut m.gate, &mut m.source],
+            Element::SubcktInstance(s) => s.nodes.iter_mut().collect(),
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        match self {
+            Element::VoltageSource(v) => &v.name,
+            Element::CurrentSource(i) => &i.name,
+            Element::Resistor(r) => &r.name,
+            Element::Capacitor(c) => &c.name,
+            Element::Inductor(l) => &l.name,
+            Element::Diode(d) => &d.name,
+            Element::BJT(b) => &b.name,
+            Element::NMOSFET(m) => &m.name,
+            Element::SubcktInstance(s) => &s.instance_name,
+        }
+    }
+    pub fn set_name(&mut self, new_name: &str) {
+        match self {
+            Element::VoltageSource(v) => v.name = new_name.to_string(),
+            Element::CurrentSource(i) => i.name = new_name.to_string(),
+            Element::Resistor(r) => r.name = new_name.to_string(),
+            Element::Capacitor(c) => c.name = new_name.to_string(),
+            Element::Inductor(l) => l.name = new_name.to_string(),
+            Element::Diode(d) => d.name = new_name.to_string(),
+            Element::BJT(b) => b.name = new_name.to_string(),
+            Element::NMOSFET(m) => m.name = new_name.to_string(),
+            Element::SubcktInstance(s) => s.instance_name = new_name.to_string(),
+        }
+    }
+
     /// Determines if the element requires a dedicated branch current (Group 2) in MNA.
     pub fn is_g2(&self) -> bool {
         match self {

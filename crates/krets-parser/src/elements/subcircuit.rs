@@ -4,7 +4,7 @@ use nom::{
     sequence::preceded,
 };
 #[derive(Debug, Clone)]
-pub struct Subcircuit {
+pub struct SubcircuitDefinition {
     pub name: String,
     pub pins: Vec<String>,
     pub elements: Vec<Element>,
@@ -15,7 +15,6 @@ pub struct SubcircuitInstance {
     pub instance_name: String,
     pub definition_name: String,
     pub nodes: Vec<String>,
-    pub subcircuit_instances: Vec<SubcircuitInstance>,
 }
 
 impl SubcircuitInstance {
@@ -28,9 +27,83 @@ impl SubcircuitInstance {
             instance_name: instance_name.into(),
             definition_name: definition_name.into(),
             nodes: nodes.into_iter().map(Into::into).collect(),
-            subcircuit_instances: Vec::new(),
         }
     }
+
+    pub fn instantiate(
+        &self,
+        definitions: &HashMap<String, SubcircuitDefinition>,
+    ) -> Result<Vec<Element>> {
+        let mut final_elements: Vec<Element> = Vec::new();
+
+        // 1. Find the definition for this instance
+        let definition = definitions.get(&self.definition_name).ok_or_else(|| {
+            Error::InvalidFormat(format!(
+                "Undefined subcircuit definition: {}",
+                self.definition_name
+            ))
+        })?;
+
+        // 2. Create the node mapping for this level
+        if self.nodes.len() != definition.pins.len() {
+            return Err(Error::InvalidFormat(format!(
+                "Node/port mismatch for instance {}: expected {}, got {}",
+                self.instance_name,
+                definition.pins.len(),
+                self.nodes.len()
+            )));
+        }
+        let port_to_node: HashMap<&String, &String> =
+            definition.pins.iter().zip(self.nodes.iter()).collect();
+
+        // 3. Iterate over all elements inside the definition
+        for sub_element in &definition.elements {
+            // 4. Instantiate the nodes and name of this sub-element
+            let mapped_element = map_sub_element(sub_element, &port_to_node, &self.instance_name)?;
+
+            // 5. Check if the mapped element is *another* subcircuit or a primitive
+            match mapped_element {
+                Element::SubcktInstance(next_instance) => {
+                    // It's another subcircuit, recurse by calling the method on the nested instance
+                    let mut expanded_elements = next_instance.instantiate(definitions)?;
+                    final_elements.append(&mut expanded_elements);
+                }
+                _ => {
+                    // It's a primitive, add it to our list
+                    final_elements.push(mapped_element);
+                } // Add other primitive types here in the future
+            }
+        }
+
+        Ok(final_elements)
+    }
+}
+
+/// This function maps nodes and prefixes the name for a *single* element
+/// from a subcircuit definition.
+pub fn map_sub_element(
+    subckt_element: &Element,
+    port_to_node: &HashMap<&String, &String>,
+    parent_instance_name: &str,
+) -> Result<Element> {
+    // Clone the subcircuit element to modify
+    let mut instantiated_element = subckt_element.clone();
+
+    // Update the nodes of the instantiated element
+    for node in instantiated_element.nodes_mut() {
+        if let Some(actual_node) = port_to_node.get(node) {
+            *node = (*actual_node).clone();
+        }
+    }
+
+    // Prefix the instance name to the element name for uniqueness
+    instantiated_element.set_name(&format!(
+        "{}_{}",
+        parent_instance_name,
+        instantiated_element.name()
+    ));
+
+    Ok(instantiated_element)
 }
 
 impl Identifiable for SubcircuitInstance {
@@ -75,7 +148,7 @@ impl Stampable for SubcircuitInstance {
     }
 }
 
-impl Subcircuit {
+impl SubcircuitDefinition {
     pub fn new(name: impl Into<String>, pins: Vec<&str>) -> Self {
         Self {
             name: name.into(),
@@ -85,11 +158,11 @@ impl Subcircuit {
     }
 }
 
-pub fn parse_subckt_header(input: &str) -> IResult<&str, Subcircuit> {
+pub fn parse_subckt_header(input: &str) -> IResult<&str, SubcircuitDefinition> {
     let (input, _) = tag_no_case(".subckt").parse(input)?;
     let (input, name) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
     let (input, pins) = many0(preceded(space1, alphanumeric_or_underscore1)).parse(input)?;
-    Ok((input, Subcircuit::new(name, pins)))
+    Ok((input, SubcircuitDefinition::new(name, pins)))
 }
 
 pub fn parse_subckt_instance(input: &str) -> IResult<&str, SubcircuitInstance> {
@@ -107,6 +180,57 @@ pub fn parse_subckt_instance(input: &str) -> IResult<&str, SubcircuitInstance> {
             nodes.to_vec(),
         ),
     ))
+}
+
+pub fn parse_subcircuits(input: &str) -> Result<HashMap<String, SubcircuitDefinition>> {
+    let mut subcircuit_definitions: HashMap<String, SubcircuitDefinition> = HashMap::new();
+    let mut inside_subckt_block = false;
+    let mut current_subckt_name = String::new();
+
+    for line in input.lines() {
+        let line = line.trim();
+
+        if line.is_empty() || line.starts_with('%') || line.starts_with('*') {
+            continue;
+        }
+
+        if line.to_lowercase().starts_with(".subckt") {
+            let (_, subckt_header) = parse_subckt_header(line).map_err(|e| {
+                Error::InvalidFormat(format!("Failed to parse subcircuit header: {}", e))
+            })?;
+
+            current_subckt_name = subckt_header.name.clone();
+            subcircuit_definitions.insert(subckt_header.name.clone(), subckt_header);
+
+            inside_subckt_block = true;
+
+            continue;
+        }
+
+        if line.to_lowercase().starts_with(".ends") {
+            inside_subckt_block = false;
+            current_subckt_name.clear();
+            continue;
+        }
+
+        if inside_subckt_block {
+            // We now use parse_element, which can handle primitives (r) AND
+            // nested subcircuit instances (x)
+            let subckt_element = parse_element(line).map_err(|e| {
+                Error::InvalidFormat(format!(
+                    "Failed to parse subcircuit element in '{}': {}",
+                    current_subckt_name, e
+                ))
+            })?;
+
+            if let Some(subckt_def) = subcircuit_definitions.get_mut(&current_subckt_name) {
+                subckt_def.elements.push(subckt_element);
+            }
+            continue;
+        }
+    }
+
+    Ok(subcircuit_definitions)
 }
 
 #[cfg(test)]

@@ -3,8 +3,8 @@ use crate::{models::nmosfet::NMosfetModel, prelude::*};
 use nom::{
     IResult, Parser,
     bytes::complete::tag_no_case,
-    character::complete::{digit1, space0, space1},
-    combinator::{all_consuming, map_res},
+    character::complete::{space0, space1},
+    combinator::all_consuming,
     multi,
     sequence::preceded,
 };
@@ -13,8 +13,8 @@ use nom::{
 /// Represents a MOSFET (Metal-Oxide-Semiconductor Field-Effect Transistor) in a circuit.
 /// SPICE format: M<name> <drain> <gate> <source> <bulk/substrate> <model> [parameters...]
 pub struct NMOSFET {
-    /// Name of the MOSFET (numeric part).
-    pub name: u32,
+    /// Name of the MOSFET.
+    pub name: String,
     /// Drain node of the MOSFET.
     pub drain: String,
     /// Gate node of the MOSFET.
@@ -220,7 +220,7 @@ pub fn parse_nmosfet(input: &str) -> IResult<&str, NMOSFET> {
     let (input, _) = tag_no_case("MN").parse(input)?;
 
     // Parse the numeric name part
-    let (input, name) = map_res(digit1, |s: &str| s.parse::<u32>()).parse(input)?;
+    let (input, name) = alphanumeric_or_underscore1(input)?;
 
     // Parse nodes: drain, gate, source, bulk
     let (input, drain) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
@@ -254,7 +254,7 @@ pub fn parse_nmosfet(input: &str) -> IResult<&str, NMOSFET> {
     }
 
     let mosfet = NMOSFET {
-        name,
+        name: name.to_string(),
         drain: drain.to_string(),
         gate: gate.to_string(),
         source: source.to_string(),
@@ -282,14 +282,7 @@ impl FromStr for NMOSFET {
 
         // Expected format: M<name> <drain> <gate> <source> <bulk> <model>
         match all_consuming(parse_nmosfet).parse(s_without_comment) {
-            Ok((_, mosfet)) => {
-                if mosfet.name == 0 {
-                    return Err(Error::InvalidFormat(format!(
-                        "MOSFET name cannot be zero: '{s}'"
-                    )));
-                }
-                Ok(mosfet)
-            }
+            Ok((_, mosfet)) => Ok(mosfet),
             Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(Error::InvalidFormat(format!(
                 "Failed to parse MOSFET line '{}': {:?}. Expected format: M<name> D G S B <model>", // Updated error message
                 s_without_comment, e.code
@@ -312,7 +305,7 @@ mod tests {
         let mosfet_str = "MN1 D G S B MyNmosModel % bla";
         let mosfet = mosfet_str.parse::<NMOSFET>().unwrap();
 
-        assert_eq!(mosfet.name, 1);
+        assert_eq!(mosfet.name, "1");
         assert_eq!(mosfet.drain, "D");
         assert_eq!(mosfet.gate, "G");
         assert_eq!(mosfet.source, "S");
@@ -349,23 +342,9 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_name_not_numeric() {
-        let s = "MNA 1 2 3 0 MyModel";
-        let result = s.parse::<NMOSFET>();
-        assert!(result.is_err());
-    }
-
-    #[test]
     fn test_invalid_prefix() {
         let s = "R1 1 2 3 0 MyModel";
         let result = s.parse::<NMOSFET>();
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_invalid_mosfet_name_zero() {
-        let mosfet_str = "MN0 1 2 3 0 MyModel";
-        let result = mosfet_str.parse::<NMOSFET>();
         assert!(result.is_err());
     }
 
