@@ -24,9 +24,6 @@ pub enum Element {
 }
 
 pub fn parse_element(input: &str) -> Result<Element> {
-    // Remove comments starting with '%'
-    let input = input.split('%').next().unwrap_or("").trim();
-
     let (_, element) = alt((
         map(parse_resistor, Element::Resistor),
         map(parse_capacitor, Element::Capacitor),

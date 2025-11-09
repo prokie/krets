@@ -71,7 +71,7 @@ pub fn parse_circuit_description(input: &str) -> Result<Circuit> {
             continue;
         }
 
-        if line.to_lowercase().starts_with(".end") {
+        if line.to_lowercase() == ".end" {
             continue;
         }
 
@@ -161,60 +161,4 @@ pub fn parse_circuit_description_file(file_path: &Path) -> Result<Circuit> {
         .read_to_string(&mut contents)
         .map_err(|e| Error::Unexpected(e.to_string()))?;
     parse_circuit_description(&contents)
-}
-
-pub fn instantiate_subckt_element(
-    subckt_element: &Element,
-    nodes: &[String],
-    ports: &[String],
-    instance_name: &str,
-) -> Result<Element> {
-    // Create a mapping from port names to actual node names
-    let port_to_node: HashMap<&String, &String> = ports.iter().zip(nodes.iter()).collect();
-
-    // Clone the subcircuit element to modify
-    let mut instantiated_element = subckt_element.clone();
-
-    // Update the nodes of the instantiated element
-    for node in instantiated_element.nodes_mut() {
-        if let Some(actual_node) = port_to_node.get(node) {
-            *node = (*actual_node).clone();
-        }
-    }
-
-    // Prefix the instance name to the element name for uniqueness
-    instantiated_element.set_name(&format!(
-        "{}_{}",
-        instance_name,
-        instantiated_element.name()
-    ));
-
-    Ok(instantiated_element)
-}
-
-/// This function maps nodes and prefixes the name for a *single* element
-/// from a subcircuit definition.
-pub fn map_sub_element(
-    subckt_element: &Element,
-    port_to_node: &HashMap<&String, &String>,
-    parent_instance_name: &str,
-) -> Result<Element> {
-    // Clone the subcircuit element to modify
-    let mut instantiated_element = subckt_element.clone();
-
-    // Update the nodes of the instantiated element
-    for node in instantiated_element.nodes_mut() {
-        if let Some(actual_node) = port_to_node.get(node) {
-            *node = (*actual_node).clone();
-        }
-    }
-
-    // Prefix the instance name to the element name for uniqueness
-    instantiated_element.set_name(&format!(
-        "{}_{}",
-        parent_instance_name,
-        instantiated_element.name()
-    ));
-
-    Ok(instantiated_element)
 }
