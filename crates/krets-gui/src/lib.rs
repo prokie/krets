@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::{fs, path::PathBuf};
 
 /// Represents an entry in the directory listing.
-#[derive(Clone)] // Added Clone
+#[derive(Clone)]
 struct DirectoryEntry {
     path: PathBuf,
     is_directory: bool,

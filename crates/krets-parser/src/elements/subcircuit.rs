@@ -170,6 +170,13 @@ pub fn parse_subckt_instance(input: &str) -> IResult<&str, SubcircuitInstance> {
     let (input, instance_name) = alphanumeric_or_underscore1(input)?;
     let (input, nodes) = many0(preceded(space1, alphanumeric_or_underscore1)).parse(input)?;
 
+    if nodes.is_empty() {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::LengthValue,
+        )));
+    }
+
     let definition_name = nodes.last().unwrap();
     let nodes = &nodes[..nodes.len() - 1];
     Ok((

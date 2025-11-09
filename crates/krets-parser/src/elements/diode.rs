@@ -1,12 +1,11 @@
 use crate::{constants::THERMAL_VOLTAGE, models::diode::DiodeModel, prelude::*};
 
 use nom::{
-    IResult,
-    Parser,
+    IResult, Parser,
     branch::alt,
     bytes::complete::tag,
     character::complete::space1,
-    combinator::{all_consuming, opt}, // Added map_res
+    combinator::{all_consuming, opt},
     sequence::preceded,
 };
 

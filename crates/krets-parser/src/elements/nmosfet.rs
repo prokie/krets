@@ -22,7 +22,7 @@ pub struct NMOSFET {
     /// Source node of the MOSFET.
     pub source: String,
     /// Bulk (or Substrate) node of the MOSFET.
-    pub bulk: String, // Added bulk node
+    pub bulk: String,
     /// Model name associated with the MOSFET (required).
     pub model_name: String,
     /// The model associated with the MOSFET.
@@ -226,7 +226,7 @@ pub fn parse_nmosfet(input: &str) -> IResult<&str, NMOSFET> {
     let (input, drain) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
     let (input, gate) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
     let (input, source) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
-    let (input, bulk) = preceded(space1, alphanumeric_or_underscore1).parse(input)?; // Added bulk parser
+    let (input, bulk) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
 
     // Parse the required model name
     let (input, model_name) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
@@ -258,7 +258,7 @@ pub fn parse_nmosfet(input: &str) -> IResult<&str, NMOSFET> {
         drain: drain.to_string(),
         gate: gate.to_string(),
         source: source.to_string(),
-        bulk: bulk.to_string(), // Added bulk field
+        bulk: bulk.to_string(),
         model_name: model_name.to_string(),
         model: NMosfetModel::default(),
         multiplicity,
