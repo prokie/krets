@@ -93,6 +93,9 @@ pub fn map_sub_element(
     for node in instantiated_element.nodes_mut() {
         if let Some(actual_node) = port_to_node.get(node) {
             *node = (*actual_node).clone();
+        } else {
+            // Internal node: prefix with parent instance name for uniqueness
+            *node = format!("{}_{}", parent_instance_name, node);
         }
     }
 
@@ -118,7 +121,7 @@ impl Stampable for SubcircuitInstance {
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>> {
-        todo!()
+        unreachable!("Subcircuit instances should be expanded before stamping")
     }
 
     fn stamp_excitation_vector_dc(
@@ -126,7 +129,7 @@ impl Stampable for SubcircuitInstance {
         _index_map: &HashMap<String, usize>,
         _solution_map: &HashMap<String, f64>,
     ) -> Vec<Triplet<usize, usize, f64>> {
-        todo!()
+        unreachable!("Subcircuit instances should be expanded before stamping")
     }
 
     fn stamp_conductance_matrix_ac(
@@ -135,7 +138,7 @@ impl Stampable for SubcircuitInstance {
         _solution_map: &HashMap<String, f64>,
         _frequency: f64,
     ) -> Vec<Triplet<usize, usize, c64>> {
-        todo!()
+        unreachable!("Subcircuit instances should be expanded before stamping")
     }
 
     fn stamp_excitation_vector_ac(
@@ -144,7 +147,7 @@ impl Stampable for SubcircuitInstance {
         _solution_map: &HashMap<String, f64>,
         _frequency: f64,
     ) -> Vec<Triplet<usize, usize, c64>> {
-        todo!()
+        unreachable!("Subcircuit instances should be expanded before stamping")
     }
 }
 
