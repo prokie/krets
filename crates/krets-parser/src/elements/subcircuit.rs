@@ -109,45 +109,9 @@ pub fn map_sub_element(
     Ok(instantiated_element)
 }
 
-impl Identifiable for SubcircuitInstance {
-    fn identifier(&self) -> String {
+impl SubcircuitInstance {
+    pub fn identifier(&self) -> String {
         format!("X{}", self.instance_name)
-    }
-}
-
-impl Stampable for SubcircuitInstance {
-    fn stamp_conductance_matrix_dc(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        unreachable!("Subcircuit instances should be expanded before stamping")
-    }
-
-    fn stamp_excitation_vector_dc(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        unreachable!("Subcircuit instances should be expanded before stamping")
-    }
-
-    fn stamp_conductance_matrix_ac(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, c64>> {
-        unreachable!("Subcircuit instances should be expanded before stamping")
-    }
-
-    fn stamp_excitation_vector_ac(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, c64>> {
-        unreachable!("Subcircuit instances should be expanded before stamping")
     }
 }
 

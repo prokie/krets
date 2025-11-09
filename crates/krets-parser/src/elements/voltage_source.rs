@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use faer::sparse::Triplet;
 use nom::{
     IResult, Parser,
     branch::alt,
@@ -187,7 +186,7 @@ fn parse_sinusoidal_param(input: &str) -> IResult<&str, Param> {
 
 /// Main nom parser for the VoltageSource
 pub fn parse_voltage_source(input: &str) -> IResult<&str, VoltageSource> {
-    let (input, _) = alt((tag("V"), tag("v"))).parse(input)?;
+    let (input, _) = tag_no_case("V").parse(input)?;
     let (input, name) = alphanumeric_or_underscore1(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
     let (input, minus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
@@ -265,101 +264,9 @@ pub struct VoltageSource {
     pub sinusoidal: Option<Sinusoidal>,
 }
 
-impl Identifiable for VoltageSource {
-    fn identifier(&self) -> String {
+impl VoltageSource {
+    pub fn identifier(&self) -> String {
         format!("V{}", self.name)
-    }
-}
-
-impl Stampable for VoltageSource {
-    fn stamp_conductance_matrix_dc(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-        let index_current = index_map.get(&format!("I({})", self.identifier()));
-
-        let mut triplets = Vec::with_capacity(4);
-
-        if let (Some(&ip), Some(&ic)) = (index_plus, index_current) {
-            triplets.push(Triplet::new(ip, ic, 1.0));
-            triplets.push(Triplet::new(ic, ip, 1.0));
-        }
-
-        if let (Some(&im), Some(&ic)) = (index_minus, index_current) {
-            triplets.push(Triplet::new(im, ic, -1.0));
-            triplets.push(Triplet::new(ic, im, -1.0));
-        }
-
-        triplets
-    }
-
-    fn stamp_conductance_matrix_ac(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, c64>> {
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-        let index_current = index_map.get(&format!("I({})", self.identifier()));
-        let one = c64::new(1.0, 0.0);
-        let mut triplets = Vec::with_capacity(4);
-
-        if let (Some(&ip), Some(&ic)) = (index_plus, index_current) {
-            triplets.push(Triplet::new(ip, ic, one));
-            triplets.push(Triplet::new(ic, ip, one));
-        }
-
-        if let (Some(&im), Some(&ic)) = (index_minus, index_current) {
-            triplets.push(Triplet::new(im, ic, -one));
-            triplets.push(Triplet::new(ic, im, -one));
-        }
-
-        triplets
-    }
-
-    fn stamp_excitation_vector_dc(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let mut triplets = Vec::with_capacity(1);
-        if let Some(&ic) = index_map.get(&format!("I({})", self.identifier())) {
-            triplets.push(Triplet::new(ic, 0, self.dc_value));
-        }
-        triplets
-    }
-
-    fn stamp_excitation_vector_ac(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, c64>> {
-        let mut triplets = Vec::with_capacity(1);
-
-        if let Some(&ic) = index_map.get(&format!("I({})", self.identifier())) {
-            triplets.push(Triplet::new(ic, 0, c64::new(self.ac_amplitude, 0.0)));
-        }
-        triplets
-    }
-
-    fn stamp_excitation_vector_transient(
-        &self,
-        index_map: &HashMap<String, usize>,
-        solution_map: &HashMap<String, f64>,
-        _prev_solution: &HashMap<String, f64>,
-        _time_step: f64,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let current_time = solution_map.get("time").cloned().unwrap_or(0.0);
-        if let Some(&ic) = index_map.get(&format!("I({})", self.identifier())) {
-            vec![Triplet::new(ic, 0, self.transient_value_at(current_time))]
-        } else {
-            vec![]
-        }
     }
 }
 

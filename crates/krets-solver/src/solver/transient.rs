@@ -2,13 +2,13 @@ use log::info;
 use std::collections::HashMap;
 
 use super::{convergence_check, sum_triplets};
-use crate::{config::SolverConfig, prelude::*, solver::op};
+use crate::{config::SolverConfig, prelude::*, solver::op, stampable::Stampable};
 use faer::{
     Mat,
     prelude::Solve,
     sparse::{SparseColMat, Triplet},
 };
-use krets_parser::{analyses::TransientAnalysis, circuit::Circuit, elements::Stampable};
+use krets_parser::{analyses::TransientAnalysis, circuit::Circuit};
 
 /// Solves for the transient (time-domain) response of a circuit using a fixed time step.
 pub fn solve(

@@ -1,0 +1,7 @@
+circuit_path = "inverter.cir"
+
+[analysis.dc]
+element = "V1"
+start = 0.0
+stop = 1.0
+step_size = 0.01

@@ -1,13 +1,4 @@
 use crate::prelude::*;
-use nom::{
-    IResult,
-    Parser,
-    branch::alt,
-    bytes::complete::tag,
-    character::complete::{alphanumeric1, space1}, // Use alpha1 for type, alphanumeric1 for name part
-    combinator::{all_consuming, opt},
-    sequence::preceded,
-};
 
 #[derive(Debug, PartialEq, Clone)]
 /// Represents the type of a BJT (Bipolar Junction Transistor).
@@ -39,61 +30,20 @@ pub struct BJT {
     pub bjt_type: BjtType,
 }
 
-impl Identifiable for BJT {
+impl BJT {
     /// Returns the identifier of the BJT in the format `Q{name}`.
-    fn identifier(&self) -> String {
+    pub fn identifier(&self) -> String {
         format!("Q{}", self.name)
-    }
-}
-
-impl Stampable for BJT {
-    // --- Stamping methods remain unchanged ---
-    fn stamp_conductance_matrix_dc(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        // TODO: Implement BJT DC conductance stamp
-        todo!()
-    }
-
-    fn stamp_excitation_vector_dc(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        // TODO: Implement BJT DC excitation stamp
-        todo!()
-    }
-
-    fn stamp_excitation_vector_ac(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, faer::c64>> {
-        // BJTs are passive for small-signal AC excitation
-        vec![]
-    }
-
-    fn stamp_conductance_matrix_ac(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, faer::c64>> {
-        // TODO: Implement BJT AC conductance stamp (small-signal model)
-        todo!()
     }
 }
 
 // Nom parser for BJT
 pub fn parse_bjt(input: &str) -> IResult<&str, BJT> {
     // Parse the initial 'Q' (case-insensitive)
-    let (input, _) = alt((tag("Q"), tag("q"))).parse(input)?;
+    let (input, _) = tag_no_case("Q").parse(input)?;
 
     // Parse the type character (N or P, case-insensitive)
-    let (input, type_char) = alt((tag("N"), tag("n"), tag("P"), tag("p"))).parse(input)?;
+    let (input, type_char) = alt((tag_no_case("N"), tag_no_case("P"))).parse(input)?;
     let bjt_type = match type_char.to_ascii_uppercase().as_str() {
         "N" => BjtType::NPN,
         "P" => BjtType::PNP,

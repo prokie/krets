@@ -1,13 +1,13 @@
 use log::info;
 use std::collections::HashMap;
 
-use crate::{config::SolverConfig, prelude::*, solver::op};
+use crate::{config::SolverConfig, prelude::*, solver::op, stampable::Stampable};
 use faer::{
     Mat, c64,
     prelude::Solve,
     sparse::{SparseColMat, Triplet},
 };
-use krets_parser::{analyses::AcAnalysis, circuit::Circuit, elements::Stampable};
+use krets_parser::{analyses::AcAnalysis, circuit::Circuit};
 
 /// Solves for the small-signal AC response of the circuit at a given frequency.
 ///

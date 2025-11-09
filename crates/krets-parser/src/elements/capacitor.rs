@@ -1,15 +1,5 @@
 use crate::prelude::*;
 
-use nom::{
-    IResult, Parser,
-    branch::alt,
-    bytes::complete::{tag, tag_no_case},
-    character::complete::space1,
-    combinator::{all_consuming, opt},
-    sequence::preceded,
-};
-use std::f64::consts::PI;
-
 #[derive(Debug, Clone)]
 /// Represents a capacitor in a circuit.
 pub struct Capacitor {
@@ -25,161 +15,14 @@ pub struct Capacitor {
     pub g2: bool,
 }
 
-impl Identifiable for Capacitor {
-    fn identifier(&self) -> String {
+impl Capacitor {
+    pub fn identifier(&self) -> String {
         format!("C{}", self.name)
     }
 }
 
-impl Stampable for Capacitor {
-    fn stamp_conductance_matrix_dc(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
-        // A capacitor is an open circuit in DC analysis, so it contributes nothing to the DC conductance matrix.
-        vec![]
-    }
-
-    fn stamp_conductance_matrix_ac(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        frequency: f64,
-    ) -> Vec<faer::sparse::Triplet<usize, usize, c64>> {
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-
-        let admittance = c64 {
-            re: 0.0,
-            im: 2.0 * PI * frequency * self.value,
-        };
-
-        let mut triplets = Vec::with_capacity(4);
-
-        if !self.g2 {
-            if let Some(&index_plus) = index_plus {
-                triplets.push(Triplet::new(index_plus, index_plus, admittance));
-            }
-            if let Some(&index_minus) = index_minus {
-                triplets.push(Triplet::new(index_minus, index_minus, admittance));
-            }
-            if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-                triplets.push(Triplet::new(index_plus, index_minus, -admittance));
-                triplets.push(Triplet::new(index_minus, index_plus, -admittance));
-            }
-        } else {
-            let index_current = index_map.get(&format!("I({})", self.identifier()));
-
-            if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-                // -Y contribution for V_plus
-                triplets.push(Triplet::new(index_current, index_plus, -admittance));
-            }
-
-            if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-                // +Y contribution for V_minus
-                triplets.push(Triplet::new(index_current, index_minus, admittance));
-            }
-
-            if let Some(&index_current) = index_current {
-                // +1 contribution for I_c
-                triplets.push(Triplet::new(
-                    index_current,
-                    index_current,
-                    c64 { re: 1.0, im: 0.0 },
-                ));
-            }
-        }
-
-        triplets
-    }
-
-    fn stamp_excitation_vector_dc(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<faer::sparse::Triplet<usize, usize, f64>> {
-        // Capacitors are passive and don't contribute to the DC excitation vector.
-        vec![]
-    }
-
-    fn stamp_excitation_vector_ac(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<faer::sparse::Triplet<usize, usize, c64>> {
-        // Capacitors are passive and don't contribute to the AC excitation vector.
-        vec![]
-    }
-
-    fn stamp_conductance_matrix_transient(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>, // Not needed for a linear capacitor's conductance
-        _prev_solution: &HashMap<String, f64>, // Not needed for a linear capacitor's conductance
-        h: f64,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let g = self.value / h;
-
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-
-        let mut triplets = Vec::with_capacity(4);
-
-        if let Some(&ip) = index_plus {
-            triplets.push(Triplet::new(ip, ip, g));
-        }
-        if let Some(&im) = index_minus {
-            triplets.push(Triplet::new(im, im, g));
-        }
-        if let (Some(&ip), Some(&im)) = (index_plus, index_minus) {
-            triplets.push(Triplet::new(ip, im, -g));
-            triplets.push(Triplet::new(im, ip, -g));
-        }
-
-        triplets
-    }
-
-    fn stamp_excitation_vector_transient(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>, // Not needed for a linear capacitor's excitation
-        prev_solution: &HashMap<String, f64>,
-        h: f64,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-
-        // Get the capacitor's voltage from the PREVIOUS time step.
-        // Default to 0.0 if a node is not in the map (e.g., ground or first step).
-        let v_plus_prev = prev_solution
-            .get(&format!("V({})", self.plus))
-            .copied()
-            .unwrap_or(0.0);
-        let v_minus_prev = prev_solution
-            .get(&format!("V({})", self.minus))
-            .copied()
-            .unwrap_or(0.0);
-        let v_prev = v_plus_prev - v_minus_prev;
-
-        // Calculate the equivalent current source value: I_eq = (C/h) * v_prev
-        let i_eq = -(self.value / h) * v_prev;
-
-        let mut triplets = Vec::with_capacity(2);
-
-        if let Some(&ip) = index_plus {
-            triplets.push(Triplet::new(ip, 0, -i_eq));
-        }
-        if let Some(&im) = index_minus {
-            triplets.push(Triplet::new(im, 0, i_eq));
-        }
-
-        triplets
-    }
-}
 pub fn parse_capacitor(input: &str) -> IResult<&str, Capacitor> {
-    let (input, _) = alt((tag("C"), tag("c"))).parse(input)?;
+    let (input, _) = tag_no_case("C").parse(input)?;
     let (input, name) = alphanumeric_or_underscore1(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
     let (input, minus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;

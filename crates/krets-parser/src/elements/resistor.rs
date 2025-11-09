@@ -1,9 +1,3 @@
-use faer::sparse::Triplet;
-use nom::{
-    IResult, Parser, branch::alt, bytes::complete::tag, character::complete::space1,
-    combinator::all_consuming, sequence::preceded,
-};
-
 use crate::prelude::*;
 use std::fmt;
 
@@ -22,126 +16,9 @@ pub struct Resistor {
     pub g2: bool,
 }
 
-impl Stampable for Resistor {
-    fn stamp_conductance_matrix_dc(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-        let index_current = index_map.get(&format!("I({})", self.identifier()));
-
-        let mut triplets;
-
-        if self.g2 {
-            triplets = Vec::with_capacity(5);
-            if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-                triplets.push(Triplet::new(index_plus, index_current, 1.0));
-                triplets.push(Triplet::new(index_current, index_plus, 1.0));
-            }
-
-            if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-                triplets.push(Triplet::new(index_minus, index_current, -1.0));
-                triplets.push(Triplet::new(index_current, index_minus, -1.0));
-            }
-
-            if let Some(&index_current) = index_current {
-                triplets.push(Triplet::new(index_current, index_current, -self.value));
-            }
-        } else {
-            triplets = Vec::with_capacity(4);
-
-            let g = 1.0 / self.value;
-            if let Some(&ip) = index_plus {
-                triplets.push(Triplet::new(ip, ip, g));
-            }
-            if let Some(&im) = index_minus {
-                triplets.push(Triplet::new(im, im, g));
-            }
-
-            if let (Some(&ip), Some(&im)) = (index_plus, index_minus) {
-                triplets.push(Triplet::new(ip, im, -g));
-                triplets.push(Triplet::new(im, ip, -g));
-            }
-        }
-        triplets
-    }
-
-    fn stamp_conductance_matrix_ac(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, c64>> {
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-        let index_current = index_map.get(&format!("I({})", self.identifier()));
-
-        let mut triplets;
-
-        if self.g2 {
-            triplets = Vec::with_capacity(5);
-            let one = c64::new(1.0, 0.0);
-            if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-                triplets.push(Triplet::new(index_plus, index_current, one));
-                triplets.push(Triplet::new(index_current, index_plus, one));
-            }
-
-            if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-                triplets.push(Triplet::new(index_minus, index_current, -one));
-                triplets.push(Triplet::new(index_current, index_minus, -one));
-            }
-
-            if let Some(&index_current) = index_current {
-                triplets.push(Triplet::new(
-                    index_current,
-                    index_current,
-                    -c64::new(self.value, 0.0),
-                ));
-            }
-        } else {
-            triplets = Vec::with_capacity(4);
-            let g = c64::new(1.0 / self.value, 0.0);
-            if let Some(&ip) = index_plus {
-                triplets.push(Triplet::new(ip, ip, g));
-            }
-            if let Some(&im) = index_minus {
-                triplets.push(Triplet::new(im, im, g));
-            }
-
-            if let (Some(&ip), Some(&im)) = (index_plus, index_minus) {
-                triplets.push(Triplet::new(ip, im, -g));
-                triplets.push(Triplet::new(im, ip, -g));
-            }
-        }
-
-        triplets
-    }
-
-    fn stamp_excitation_vector_dc(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        // A resistor is a passive component and does not add to the excitation vector.
-        Vec::new()
-    }
-
-    fn stamp_excitation_vector_ac(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, c64>> {
-        // A resistor is a passive component and does not add to the excitation vector.
-        Vec::new()
-    }
-}
-
-impl Identifiable for Resistor {
+impl Resistor {
     /// Returns the identifier of the resistor in the format `R{name}`.
-    fn identifier(&self) -> String {
+    pub fn identifier(&self) -> String {
         format!("R{}", self.name)
     }
 }
@@ -156,7 +33,7 @@ impl fmt::Display for Resistor {
     }
 }
 pub fn parse_resistor(input: &str) -> IResult<&str, Resistor> {
-    let (input, _) = alt((tag("R"), tag("r"))).parse(input)?;
+    let (input, _) = tag_no_case("R").parse(input)?;
     let (input, name) = alphanumeric_or_underscore1(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
     let (input, minus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;

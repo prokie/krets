@@ -1,0 +1,6 @@
+circuit_path = "ac.cir"
+
+[analysis.ac]
+sweep = { variation = "Linear", total_points = 10 }
+fstart = 0.1
+fstop = 1000.0

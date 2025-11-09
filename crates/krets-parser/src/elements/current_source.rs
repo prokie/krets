@@ -1,8 +1,4 @@
 use crate::prelude::*;
-use nom::{
-    IResult, Parser, branch::alt, bytes::complete::tag, character::complete::space1,
-    combinator::all_consuming, sequence::preceded,
-};
 
 #[derive(Debug, Clone)]
 /// Represents a current source in a circuit.
@@ -17,92 +13,14 @@ pub struct CurrentSource {
     pub minus: String,
 }
 
-impl Identifiable for CurrentSource {
-    fn identifier(&self) -> String {
+impl CurrentSource {
+    pub fn identifier(&self) -> String {
         format!("I{}", self.name)
     }
 }
 
-impl Stampable for CurrentSource {
-    fn stamp_conductance_matrix_dc(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-        let index_current = index_map.get(&format!("I({})", self.identifier()));
-
-        let mut triplets = Vec::with_capacity(3);
-        if let Some(&index_current) = index_current {
-            triplets.push(Triplet::new(index_current, index_current, 1.0));
-        }
-        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-            triplets.push(Triplet::new(index_plus, index_current, 1.0));
-        }
-
-        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-            triplets.push(Triplet::new(index_minus, index_current, -1.0));
-        }
-        triplets
-    }
-
-    fn stamp_conductance_matrix_ac(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, faer::c64>> {
-        // FIX: Implemented the AC stamp, which is identical to the DC stamp for a
-        // frequency-independent current source.
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-        let index_current = index_map.get(&format!("I({})", self.identifier()));
-
-        let mut triplets = Vec::with_capacity(3);
-
-        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-            triplets.push(Triplet::new(index_plus, index_current, c64::new(1.0, 0.0)));
-        }
-
-        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-            triplets.push(Triplet::new(
-                index_minus,
-                index_current,
-                c64::new(-1.0, 0.0),
-            ));
-        }
-
-        triplets
-    }
-
-    fn stamp_excitation_vector_dc(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        match index_map.get(&format!("I({})", self.identifier())) {
-            Some(i) => vec![Triplet::new(*i, 0, self.value)],
-            None => Vec::new(),
-        }
-    }
-
-    fn stamp_excitation_vector_ac(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, faer::c64>> {
-        // FIX: Implemented the AC excitation stamp. For a simple source, this is a
-        // real value, but it's represented as a complex number.
-        match index_map.get(&format!("I({})", self.identifier())) {
-            Some(i) => vec![Triplet::new(*i, 0, c64::new(self.value, 0.0))],
-            None => Vec::new(),
-        }
-    }
-}
 pub fn parse_current_source(input: &str) -> IResult<&str, CurrentSource> {
-    let (input, _) = alt((tag("I"), tag("i"))).parse(input)?;
+    let (input, _) = tag_no_case("I").parse(input)?;
     let (input, name) = alphanumeric_or_underscore1.parse(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
     let (input, minus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;

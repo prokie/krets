@@ -36,19 +36,19 @@ pub struct NMOSFET {
 }
 
 impl NMOSFET {
-    fn threshold_voltage(&self) -> f64 {
+    pub fn threshold_voltage(&self) -> f64 {
         self.model.voltage_threshold
     }
 
-    fn beta(&self) -> f64 {
+    pub fn beta(&self) -> f64 {
         self.model.beta()
     }
 
-    fn lambda(&self) -> f64 {
+    pub fn lambda(&self) -> f64 {
         self.model.channel_length_modulation
     }
 
-    fn g_m(&self, v_gs: f64, v_ds: f64) -> f64 {
+    pub fn g_m(&self, v_gs: f64, v_ds: f64) -> f64 {
         let v_th = self.threshold_voltage();
         let beta = self.beta();
         let lambda = self.lambda();
@@ -65,7 +65,7 @@ impl NMOSFET {
         }
     }
 
-    fn g_ds(&self, v_gs: f64, v_ds: f64) -> f64 {
+    pub fn g_ds(&self, v_gs: f64, v_ds: f64) -> f64 {
         let v_th = self.threshold_voltage();
         let beta = self.beta();
         let lambda = self.lambda();
@@ -83,7 +83,7 @@ impl NMOSFET {
         }
     }
 
-    fn i_d(&self, v_gs: f64, v_ds: f64) -> f64 {
+    pub fn i_d(&self, v_gs: f64, v_ds: f64) -> f64 {
         let v_th = self.threshold_voltage();
         let beta = self.beta();
         let lambda = self.lambda();
@@ -102,115 +102,10 @@ impl NMOSFET {
     }
 }
 
-impl Identifiable for NMOSFET {
+impl NMOSFET {
     /// Returns the identifier of the MOSFET in the format `M{name}`.
-    fn identifier(&self) -> String {
+    pub fn identifier(&self) -> String {
         format!("M{}", self.name)
-    }
-}
-
-impl Stampable for NMOSFET {
-    fn stamp_conductance_matrix_dc(
-        &self,
-        index_map: &HashMap<String, usize>,
-        solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let v_g = solution_map
-            .get(&format!("V({})", self.gate))
-            .unwrap_or(&0.0);
-        let v_s = solution_map
-            .get(&format!("V({})", self.source))
-            .unwrap_or(&0.0);
-        let v_d = solution_map
-            .get(&format!("V({})", self.drain))
-            .unwrap_or(&0.0);
-
-        let v_gs = v_g - v_s;
-        let v_ds = v_d - v_s;
-
-        let mut triplets = Vec::new();
-        let g_m = self.g_m(v_gs, v_ds);
-        let g_ds = self.g_ds(v_gs, v_ds);
-
-        let index_d = index_map.get(&self.drain);
-        let index_s = index_map.get(&self.source);
-        let index_g = index_map.get(&self.gate);
-
-        if let Some(&id) = index_d {
-            triplets.push(Triplet::new(id, id, g_ds));
-        }
-
-        if let Some(&is) = index_s {
-            triplets.push(Triplet::new(is, is, g_ds + g_m));
-        }
-
-        if let (Some(&id), Some(&is)) = (index_d, index_s) {
-            triplets.push(Triplet::new(id, is, -(g_ds + g_m)));
-            triplets.push(Triplet::new(is, id, g_ds + g_m));
-        }
-
-        if let (Some(&is), Some(&ig)) = (index_s, index_g) {
-            triplets.push(Triplet::new(is, ig, g_m));
-        }
-
-        if let (Some(&id), Some(&ig)) = (index_d, index_g) {
-            triplets.push(Triplet::new(id, ig, g_m));
-        }
-
-        triplets
-    }
-
-    fn stamp_excitation_vector_dc(
-        &self,
-        index_map: &HashMap<String, usize>,
-        solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let v_g = solution_map
-            .get(&format!("V({})", self.gate))
-            .unwrap_or(&0.0);
-        let v_s = solution_map
-            .get(&format!("V({})", self.source))
-            .unwrap_or(&0.0);
-        let v_d = solution_map
-            .get(&format!("V({})", self.drain))
-            .unwrap_or(&0.0);
-
-        let v_gs = v_g - v_s;
-        let v_ds = v_d - v_s;
-        let g_ds = self.g_ds(v_gs, v_ds);
-        let g_m = self.g_m(v_gs, v_ds);
-        let i_d = self.i_d(v_gs, v_ds);
-
-        let i_eq = i_d - g_ds * v_ds - g_m * v_gs;
-
-        let mut triplets = Vec::new();
-
-        if let Some(&is) = index_map.get(&self.source) {
-            triplets.push(Triplet::new(is, 0, i_eq));
-        }
-
-        if let Some(&id) = index_map.get(&self.drain) {
-            triplets.push(Triplet::new(id, 0, -i_eq));
-        }
-        triplets
-    }
-
-    fn stamp_excitation_vector_ac(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, faer::c64>> {
-        vec![]
-    }
-
-    fn stamp_conductance_matrix_ac(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, faer::c64>> {
-        todo!()
     }
 }
 

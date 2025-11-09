@@ -1,16 +1,11 @@
-use std::collections::HashMap;
-
-use crate::prelude::*;
+use crate::{prelude::*, stampable::Stampable};
 use faer::{
     Mat,
     prelude::Solve,
     sparse::{SparseColMat, Triplet},
 };
-use krets_parser::{
-    analyses::DcAnalysis,
-    circuit::Circuit,
-    elements::{Element, Identifiable, Stampable},
-};
+use krets_parser::{analyses::DcAnalysis, circuit::Circuit, elements::Element};
+use std::collections::HashMap;
 
 /// Solves for the DC response of a circuit while sweeping a source.
 ///

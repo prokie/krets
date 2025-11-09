@@ -1,0 +1,16 @@
+
+
+MN1 D G S 0 NMOS
+V0 D 0 DC 1
+V1 G 0 DC 1
+R0 S 0 1k
+
+
+.control
+dc V1 0 1 0.1
+save all
+plot V(G) V(S)
+.endc
+
+
+.model NMOS NMOS level=1

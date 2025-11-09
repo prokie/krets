@@ -1,6 +1,9 @@
 pub use crate::error::Error;
 pub type Result<T> = core::result::Result<T, Error>;
-
 pub use crate::config::SolverConfig;
 pub use crate::solver::convergence_check;
 pub use crate::solver::sum_triplets;
+pub use faer::c64;
+pub use faer::sparse::Triplet;
+pub use std::collections::HashMap;
+pub use std::f64::consts::PI;

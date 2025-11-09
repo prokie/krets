@@ -1,13 +1,10 @@
-use crate::prelude::*;
+use crate::{prelude::*, stampable::Stampable};
 use faer::{
     Mat,
     prelude::Solve,
     sparse::{SparseColMat, Triplet},
 };
-use krets_parser::{
-    circuit::Circuit,
-    elements::{Element, Stampable},
-};
+use krets_parser::{circuit::Circuit, elements::Element};
 use log::info;
 use std::collections::HashMap;
 

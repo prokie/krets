@@ -1,14 +1,5 @@
 use crate::{constants::THERMAL_VOLTAGE, models::diode::DiodeModel, prelude::*};
 
-use nom::{
-    IResult, Parser,
-    branch::alt,
-    bytes::complete::tag,
-    character::complete::space1,
-    combinator::{all_consuming, opt},
-    sequence::preceded,
-};
-
 #[derive(Debug, Clone)]
 /// Represents a diode in a circuit.
 pub struct Diode {
@@ -24,98 +15,9 @@ pub struct Diode {
     pub minus: String,
 }
 
-impl Identifiable for Diode {
-    fn identifier(&self) -> String {
+impl Diode {
+    pub fn identifier(&self) -> String {
         format!("D{}", self.name)
-    }
-}
-
-impl Stampable for Diode {
-    fn stamp_conductance_matrix_dc(
-        &self,
-        index_map: &HashMap<String, usize>,
-        solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-
-        // The linearized conductance of the diode for the current iteration.
-        let conductance = self.conductance(solution_map);
-
-        let mut triplets = Vec::with_capacity(4);
-
-        if let Some(&index_plus) = index_plus {
-            triplets.push(Triplet::new(index_plus, index_plus, conductance));
-        }
-        if let Some(&index_minus) = index_minus {
-            triplets.push(Triplet::new(index_minus, index_minus, conductance));
-        }
-        if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-            triplets.push(Triplet::new(index_plus, index_minus, -conductance));
-            triplets.push(Triplet::new(index_minus, index_plus, -conductance));
-        }
-        triplets
-    }
-
-    fn stamp_conductance_matrix_ac(
-        &self,
-        index_map: &HashMap<String, usize>,
-        solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, faer::c64>> {
-        // FIX: Implemented AC stamp. For a diode, the small-signal AC conductance
-        // at a given DC bias point is the same as its linearized DC conductance.
-        let conductance = self.conductance(solution_map);
-        let conductance_complex = c64::new(conductance, 0.0);
-
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-
-        let mut triplets = Vec::with_capacity(4);
-
-        if let Some(&index_plus) = index_plus {
-            triplets.push(Triplet::new(index_plus, index_plus, conductance_complex));
-        }
-        if let Some(&index_minus) = index_minus {
-            triplets.push(Triplet::new(index_minus, index_minus, conductance_complex));
-        }
-        if let (Some(&index_plus), Some(&index_minus)) = (index_plus, index_minus) {
-            triplets.push(Triplet::new(index_plus, index_minus, -conductance_complex));
-            triplets.push(Triplet::new(index_minus, index_plus, -conductance_complex));
-        }
-        triplets
-    }
-
-    fn stamp_excitation_vector_dc(
-        &self,
-        index_map: &HashMap<String, usize>,
-        solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-
-        let equivalent_current = self.equivalent_current(solution_map);
-
-        let mut triplets = Vec::with_capacity(2);
-
-        if let Some(&index_plus) = index_plus {
-            triplets.push(Triplet::new(index_plus, 0, -equivalent_current));
-        }
-        if let Some(&index_minus) = index_minus {
-            triplets.push(Triplet::new(index_minus, 0, equivalent_current));
-        }
-        triplets
-    }
-
-    fn stamp_excitation_vector_ac(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, faer::c64>> {
-        // A diode is a passive component and does not
-        // contribute to the excitation vector in small-signal AC analysis.
-        vec![]
     }
 }
 
@@ -137,7 +39,7 @@ impl Diode {
         self.v_plus(solution_map) - self.v_minus(solution_map)
     }
 
-    fn conductance(&self, solution_map: &HashMap<String, f64>) -> f64 {
+    pub fn conductance(&self, solution_map: &HashMap<String, f64>) -> f64 {
         let diode_voltage = self.limit_diode_voltage(self.v_d(solution_map));
         let n = self.model.emission_coefficient;
         let is = self.model.saturation_current;
@@ -145,7 +47,7 @@ impl Diode {
         (is / (n * THERMAL_VOLTAGE)) * f64::exp(diode_voltage / (n * THERMAL_VOLTAGE))
     }
 
-    fn current(&self, solution_map: &HashMap<String, f64>) -> f64 {
+    pub fn current(&self, solution_map: &HashMap<String, f64>) -> f64 {
         let diode_voltage = self.limit_diode_voltage(self.v_d(solution_map));
         let n = self.model.emission_coefficient;
         let is = self.model.saturation_current;
@@ -153,14 +55,14 @@ impl Diode {
         is * (f64::exp(diode_voltage / (n * THERMAL_VOLTAGE)) - 1.0)
     }
 
-    fn equivalent_current(&self, solution_map: &HashMap<String, f64>) -> f64 {
+    pub fn equivalent_current(&self, solution_map: &HashMap<String, f64>) -> f64 {
         let diode_voltage = self.v_d(solution_map);
         self.current(solution_map) - self.conductance(solution_map) * diode_voltage
     }
 
     // Voltage limiting function to prevent floating-point overflows
     // in the exponential function, which is a common issue in circuit simulators.
-    fn limit_diode_voltage(&self, vd: f64) -> f64 {
+    pub fn limit_diode_voltage(&self, vd: f64) -> f64 {
         let n = self.model.emission_coefficient;
         let is = self.model.saturation_current;
         let v_critical = n * THERMAL_VOLTAGE * f64::ln(f64::MAX * n * THERMAL_VOLTAGE / is);
@@ -170,7 +72,7 @@ impl Diode {
 
 // Updated nom parser function
 pub fn parse_diode(input: &str) -> IResult<&str, Diode> {
-    let (input, _) = alt((tag("D"), tag("d"))).parse(input)?;
+    let (input, _) = tag_no_case("D").parse(input)?;
     // Use map_res to parse the name directly into u32 and handle potential errors
     let (input, name) = alphanumeric_or_underscore1(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;

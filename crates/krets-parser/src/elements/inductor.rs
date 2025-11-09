@@ -1,12 +1,5 @@
 use crate::prelude::*;
 
-use nom::{
-    IResult, Parser, branch::alt, bytes::complete::tag, character::complete::space1,
-    combinator::all_consuming, sequence::preceded,
-};
-
-use std::f64::consts::PI;
-
 #[derive(Debug, Clone)]
 /// Represents an inductor in a circuit.
 pub struct Inductor {
@@ -20,156 +13,14 @@ pub struct Inductor {
     pub minus: String,
 }
 
-impl Identifiable for Inductor {
-    fn identifier(&self) -> String {
+impl Inductor {
+    pub fn identifier(&self) -> String {
         format!("L{}", self.name)
     }
 }
 
-impl Stampable for Inductor {
-    fn stamp_conductance_matrix_dc(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-        let index_current = index_map.get(&format!("I({})", self.identifier()));
-
-        let mut triplets = Vec::with_capacity(4);
-
-        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-            triplets.push(Triplet::new(index_plus, index_current, 1.0));
-        }
-
-        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-            triplets.push(Triplet::new(index_minus, index_current, -1.0));
-        }
-
-        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-            triplets.push(Triplet::new(index_current, index_plus, 1.0));
-        }
-        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-            triplets.push(Triplet::new(index_current, index_minus, -1.0));
-        }
-
-        triplets
-    }
-
-    fn stamp_conductance_matrix_ac(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        frequency: f64,
-    ) -> Vec<Triplet<usize, usize, c64>> {
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-        let index_current = index_map.get(&format!("I({})", self.identifier()));
-        let impedance = c64::new(0.0, 2.0 * PI * frequency * self.value);
-        let mut triplets = Vec::with_capacity(5);
-
-        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-            triplets.push(Triplet::new(index_plus, index_current, c64::new(1.0, 0.0)));
-        }
-
-        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-            triplets.push(Triplet::new(
-                index_minus,
-                index_current,
-                c64::new(-1.0, 0.0),
-            ));
-        }
-
-        if let (Some(&index_plus), Some(&index_current)) = (index_plus, index_current) {
-            triplets.push(Triplet::new(index_current, index_plus, c64::new(1.0, 0.0)));
-        }
-        if let (Some(&index_minus), Some(&index_current)) = (index_minus, index_current) {
-            triplets.push(Triplet::new(
-                index_current,
-                index_minus,
-                c64::new(-1.0, 0.0),
-            ));
-        }
-
-        if let Some(&index_current) = index_current {
-            triplets.push(Triplet::new(index_current, index_current, -impedance));
-        }
-
-        triplets
-    }
-
-    fn stamp_excitation_vector_dc(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        // An ideal inductor is passive and has no internal sources.
-        vec![]
-    }
-
-    fn stamp_excitation_vector_ac(
-        &self,
-        _index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _frequency: f64,
-    ) -> Vec<Triplet<usize, usize, c64>> {
-        // An ideal inductor is passive and has no internal sources.
-        vec![]
-    }
-
-    fn stamp_conductance_matrix_transient(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        _prev_solution: &HashMap<String, f64>,
-        h: f64,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let index_plus = index_map.get(&format!("V({})", self.plus));
-        let index_minus = index_map.get(&format!("V({})", self.minus));
-        let index_current = index_map.get(&format!("I({})", self.identifier()));
-
-        let mut triplets = Vec::with_capacity(5);
-
-        if let Some(&ic) = index_current {
-            triplets.push(Triplet::new(ic, ic, -self.value / h));
-        }
-
-        if let (Some(&ip), Some(&ic)) = (index_plus, index_current) {
-            triplets.push(Triplet::new(ip, ic, 1.0));
-            triplets.push(Triplet::new(ic, ip, 1.0));
-        }
-
-        if let (Some(&im), Some(&ic)) = (index_minus, index_current) {
-            triplets.push(Triplet::new(im, ic, -1.0));
-            triplets.push(Triplet::new(ic, im, -1.0));
-        }
-
-        triplets
-    }
-
-    fn stamp_excitation_vector_transient(
-        &self,
-        index_map: &HashMap<String, usize>,
-        _solution_map: &HashMap<String, f64>,
-        prev_solution: &HashMap<String, f64>,
-        h: f64,
-    ) -> Vec<Triplet<usize, usize, f64>> {
-        let index_current = index_map.get(&format!("I({})", self.identifier()));
-
-        let i_prev = prev_solution
-            .get(&format!("I({})", self.identifier()))
-            .copied()
-            .unwrap();
-
-        if let Some(&ic) = index_current {
-            vec![Triplet::new(ic, 0, -(self.value / h) * i_prev)]
-        } else {
-            vec![]
-        }
-    }
-}
 pub fn parse_inductor(input: &str) -> IResult<&str, Inductor> {
-    let (input, _) = alt((tag("L"), tag("l"))).parse(input)?;
+    let (input, _) = tag_no_case("L").parse(input)?;
     let (input, name) = alphanumeric_or_underscore1(input)?;
     let (input, plus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
     let (input, minus) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;

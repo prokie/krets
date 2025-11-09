@@ -1,0 +1,11 @@
+* Low Pass filter
+V1 in 0 1 AC 1
+R1 in out 1000
+C1 out 0 1u
+
+.control
+ac lin 10 0 1000
+save all
+print all
+plot v(out)
+.endc
