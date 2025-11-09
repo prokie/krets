@@ -1,6 +1,5 @@
 pub use crate::error::Error;
 pub type Result<T> = core::result::Result<T, Error>;
-
 pub use crate::elements::Element;
 pub use crate::elements::bjt::parse_bjt;
 pub use crate::elements::capacitor::parse_capacitor;

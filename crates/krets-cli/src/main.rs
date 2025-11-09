@@ -1,11 +1,11 @@
 use clap::Parser;
 use krets_gui::run_gui;
-use krets_parser::analyses::{AnalysisResult, AnalysisSpec};
+use krets_parser::analyses::AnalysisSpec;
 use krets_result::{
     write_ac_results_to_parquet, write_dc_results_to_parquet, write_op_results_to_parquet,
     write_tran_results_to_parquet,
 };
-use krets_solver::{config::SolverConfig, solver::Solver};
+use krets_solver::{AnalysisResult, config::SolverConfig, solver::Solver};
 use log::info;
 
 /// Krets is a SPICE-like circuit simulator written in Rust.

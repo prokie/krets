@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use krets_parser::analyses::AnalysisResult;
     use krets_parser::analyses::{Analysis, TransientAnalysis};
-    use krets_solver::{config::SolverConfig, solver::Solver};
+    use krets_solver::{AnalysisResult, config::SolverConfig, solver::Solver};
     use std::{env, path::Path};
     // Function to get the project root path at runtime
     fn manifest_dir() -> String {

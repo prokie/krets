@@ -3124,7 +3124,6 @@ dependencies = [
 name = "krets-parser"
 version = "0.1.2"
 dependencies = [
- "faer",
  "log",
  "nom",
  "serde",
