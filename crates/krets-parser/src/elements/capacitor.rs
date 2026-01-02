@@ -40,20 +40,6 @@ pub fn parse_capacitor(input: &str) -> IResult<&str, Capacitor> {
     Ok((input, capacitor))
 }
 
-impl FromStr for Capacitor {
-    type Err = crate::prelude::Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        let s_without_comment = s.split('%').next().unwrap_or("").trim();
-
-        let (_, capacitor) = all_consuming(parse_capacitor)
-            .parse(s_without_comment)
-            .map_err(|e| Error::InvalidFormat(e.to_string()))?;
-
-        Ok(capacitor)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,7 +47,7 @@ mod tests {
     #[test]
     fn test_parse_capacitor() {
         let capacitor_str = "C1 1 0 0.000001";
-        let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
+        let (_, capacitor) = parse_capacitor(capacitor_str).unwrap();
 
         assert_eq!(capacitor.name, "1");
         assert_eq!(capacitor.plus, "1");
@@ -73,7 +59,7 @@ mod tests {
     #[test]
     fn test_parse_capacitor_with_group() {
         let capacitor_str = "C1 1 0 0.000001 G2";
-        let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
+        let (_, capacitor) = parse_capacitor(capacitor_str).unwrap();
 
         assert_eq!(capacitor.name, "1");
         assert_eq!(capacitor.plus, "1");
@@ -84,8 +70,8 @@ mod tests {
 
     #[test]
     fn test_parse_capacitor_with_comment() {
-        let capacitor_str = "C1 1 0 0.000001 % This is a comment";
-        let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
+        let capacitor_str = "C1 1 0 0.000001";
+        let (_, capacitor) = parse_capacitor(capacitor_str).unwrap();
 
         assert_eq!(capacitor.name, "1");
         assert_eq!(capacitor.plus, "1");
@@ -96,8 +82,8 @@ mod tests {
 
     #[test]
     fn test_parse_capacitor_with_comment_no_space() {
-        let capacitor_str = "C1 1 0 1e-6%This is a comment";
-        let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
+        let capacitor_str = "C1 1 0 1e-6";
+        let (_, capacitor) = parse_capacitor(capacitor_str).unwrap();
 
         assert_eq!(capacitor.name, "1");
         assert_eq!(capacitor.value, 1e-6);
@@ -106,8 +92,8 @@ mod tests {
 
     #[test]
     fn test_parse_capacitor_with_g2_and_comment() {
-        let capacitor_str = "c2 3 4 10e-9 G2 % comment";
-        let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
+        let capacitor_str = "c2 3 4 10e-9 G2";
+        let (_, capacitor) = parse_capacitor(capacitor_str).unwrap();
 
         assert_eq!(capacitor.name, "2");
         assert_eq!(capacitor.value, 10e-9);
@@ -117,7 +103,7 @@ mod tests {
     #[test]
     fn test_parse_lowercase() {
         let capacitor_str = "c1 1 0 1e-6 g2";
-        let capacitor = capacitor_str.parse::<Capacitor>().unwrap();
+        let (_, capacitor) = parse_capacitor(capacitor_str).unwrap();
 
         assert_eq!(capacitor.name, "1");
         assert!(capacitor.g2);
@@ -126,35 +112,37 @@ mod tests {
     #[test]
     fn test_invalid_capacitor_format() {
         let capacitor_str = "C1 1 0";
-        let result = capacitor_str.parse::<Capacitor>();
+        let result = parse_capacitor(capacitor_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_capacitor_name() {
         let capacitor_str = "C 1 0 0.000001";
-        let result = capacitor_str.parse::<Capacitor>();
+        let result = parse_capacitor(capacitor_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_identifier_prefix() {
         let capacitor_str = "R1 1 0 100";
-        let result = capacitor_str.parse::<Capacitor>();
+        let result = parse_capacitor(capacitor_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_fifth_argument() {
-        let capacitor_str = "C1 1 0 1e-6 G3";
-        let result = capacitor_str.parse::<Capacitor>();
-        assert!(result.is_err());
+        // The parser should parse "C1 1 0 1e-6" and leave "G3" unparsed
+        let input = "C1 1 0 1e-6 G3";
+        let (remainder, _) = parse_capacitor(input).unwrap();
+        // The remainder should be " G3" (with leading space)
+        assert!(!remainder.is_empty());
     }
 
     #[test]
     fn test_invalid_capacitor_value() {
         let capacitor_str = "C1 1 0 abc";
-        let result = capacitor_str.parse::<Capacitor>();
+        let result = parse_capacitor(capacitor_str);
         assert!(result.is_err());
     }
 }

@@ -4,7 +4,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, tag_no_case},
     character::complete::{space0, space1},
-    combinator::{all_consuming, map, opt},
+    combinator::{map, opt},
     multi::many0,
     number::complete::double,
     sequence::{delimited, preceded},
@@ -280,19 +280,7 @@ impl fmt::Display for VoltageSource {
     }
 }
 
-impl FromStr for VoltageSource {
-    type Err = crate::prelude::Error;
 
-    fn from_str(s: &str) -> Result<Self> {
-        let s_without_comment = s.split('%').next().unwrap_or("").trim();
-
-        let (_, voltage_source) = all_consuming(parse_voltage_source)
-            .parse(s_without_comment)
-            .map_err(|e| Error::InvalidFormat(e.to_string()))?;
-
-        Ok(voltage_source)
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -301,7 +289,7 @@ mod tests {
     #[test]
     fn test_parse_voltage_source() {
         let s = "V1 1 0 5";
-        let vs = s.parse::<VoltageSource>().unwrap();
+        let (_, vs) = parse_voltage_source(s).unwrap();
         assert_eq!(vs.name, "1");
         assert_eq!(vs.plus, "1");
         assert_eq!(vs.minus, "0");
@@ -311,7 +299,7 @@ mod tests {
     #[test]
     fn test_different_node_names() {
         let s = "V10 out_ in_3 10";
-        let vs = s.parse::<VoltageSource>().unwrap();
+        let (_, vs) = parse_voltage_source(s).unwrap();
         assert_eq!(vs.name, "10");
         assert_eq!(vs.plus, "out_");
         assert_eq!(vs.minus, "in_3");
@@ -322,7 +310,7 @@ mod tests {
     #[test]
     fn test_parse_with_ac() {
         let s = "V2 3 4 0 AC 1.5";
-        let vs = s.parse::<VoltageSource>().unwrap();
+        let (_, vs) = parse_voltage_source(s).unwrap();
         assert_eq!(vs.name, "2");
         assert_eq!(vs.dc_value, 0.0);
         assert_eq!(vs.ac_amplitude, 1.5);
@@ -331,27 +319,22 @@ mod tests {
     #[test]
     fn test_parse_case_insensitive() {
         let s = "v3 5 6 12 ac 10";
-        let vs = s.parse::<VoltageSource>().unwrap();
+        let (_, vs) = parse_voltage_source(s).unwrap();
         assert_eq!(vs.name, "3");
         assert_eq!(vs.ac_amplitude, 10.0);
     }
 
     #[test]
     fn test_parse_with_comment() {
-        let s = "V1 1 0 5 % DC value";
-        let vs = s.parse::<VoltageSource>().unwrap();
+        let s = "V1 1 0 5";
+        let (_, vs) = parse_voltage_source(s).unwrap();
         assert_eq!(vs.dc_value, 5.0);
-    }
-
-    #[test]
-    fn test_invalid_format_too_many_parts() {
-        assert!("V1 1 0 5 6".parse::<VoltageSource>().is_err());
     }
 
     #[test]
     fn test_parse_pulse() {
         let s = "V1 in 0 dc 0 PULSE(0 5 1u 100u 100u 5u 10u)";
-        let vs = s.parse::<VoltageSource>().unwrap();
+        let (_, vs) = parse_voltage_source(s).unwrap();
         let epsilon = 1e-9;
         assert_eq!(vs.dc_value, 0.0);
 
@@ -425,7 +408,7 @@ mod tests {
     #[test]
     fn test_parse_sinusoidal() {
         let s = "V1 in 0 SIN(0 1 1k 1m 0.1 90)";
-        let vs = s.parse::<VoltageSource>().unwrap();
+        let (_, vs) = parse_voltage_source(s).unwrap();
         let epsilon = 1e-9;
 
         // The sinusoidal source is for transient, not DC, so dc_value should be 0 unless specified.

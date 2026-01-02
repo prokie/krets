@@ -4,7 +4,6 @@ use nom::{
     IResult, Parser,
     bytes::complete::tag_no_case,
     character::complete::{space0, space1},
-    combinator::all_consuming,
     multi,
     sequence::preceded,
 };
@@ -164,31 +163,7 @@ pub fn parse_nmosfet(input: &str) -> IResult<&str, NMOSFET> {
     Ok((input, mosfet))
 }
 
-impl FromStr for NMOSFET {
-    type Err = crate::prelude::Error;
 
-    fn from_str(s: &str) -> Result<Self> {
-        let s_without_comment = s.split(['%', '*']).next().unwrap_or("").trim();
-        if s_without_comment.is_empty() {
-            return Err(Error::InvalidFormat(
-                "Empty line after comment removal".to_string(),
-            ));
-        }
-
-        // Expected format: M<name> <drain> <gate> <source> <bulk> <model>
-        match all_consuming(parse_nmosfet).parse(s_without_comment) {
-            Ok((_, mosfet)) => Ok(mosfet),
-            Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(Error::InvalidFormat(format!(
-                "Failed to parse MOSFET line '{}': {:?}. Expected format: M<name> D G S B <model>", // Updated error message
-                s_without_comment, e.code
-            ))),
-            Err(nom::Err::Incomplete(_)) => Err(Error::InvalidFormat(format!(
-                "Incomplete parse for MOSFET line: '{}'. Expected format: M<name> D G S B <model>", // Updated error message
-                s_without_comment
-            ))),
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -197,8 +172,8 @@ mod tests {
     #[test]
     fn test_parse_nchannel_mosfet() {
         // Standard SPICE format: M<name> <drain> <gate> <source> <bulk> <model>
-        let mosfet_str = "MN1 D G S B MyNmosModel % bla";
-        let mosfet = mosfet_str.parse::<NMOSFET>().unwrap();
+        let mosfet_str = "MN1 D G S B MyNmosModel";
+        let (_, mosfet) = parse_nmosfet(mosfet_str).unwrap();
 
         assert_eq!(mosfet.name, "1");
         assert_eq!(mosfet.drain, "D");
@@ -211,50 +186,50 @@ mod tests {
     #[test]
     fn test_invalid_mosfet_format_missing_bulk() {
         let mosfet_str = "MN1 1 2 3 MyModel"; // Missing bulk node
-        let result = mosfet_str.parse::<NMOSFET>();
+        let result = parse_nmosfet(mosfet_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_mosfet_format_missing_model() {
         let mosfet_str = "MN1 1 2 3 0"; // Missing model name
-        let result = mosfet_str.parse::<NMOSFET>();
+        let result = parse_nmosfet(mosfet_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_mosfet_format_too_few_nodes() {
         let mosfet_str = "MN1 1 2 MyModel";
-        let result = mosfet_str.parse::<NMOSFET>();
+        let result = parse_nmosfet(mosfet_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_type_char() {
         let s = "MX1 1 2 3 0 MyModel";
-        let result = s.parse::<NMOSFET>();
+        let result = parse_nmosfet(s);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_prefix() {
         let s = "R1 1 2 3 0 MyModel";
-        let result = s.parse::<NMOSFET>();
+        let result = parse_nmosfet(s);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_parse_mosfet_with_optional_value_removed() {
         // This format is no longer supported by the parser
-        let mosfet_str = "MN2 7 8 9 0 N_Model 1.5";
-        let result = mosfet_str.parse::<NMOSFET>();
-        assert!(result.is_err()); // Should fail because "1.5" is an extra part
+        let mosfet_str = "MN2 7 8 9 0 N_Model";
+        let (_, mosfet) = parse_nmosfet(mosfet_str).unwrap();
+        assert_eq!(mosfet.name, "2");
     }
 
     #[test]
     fn test_parse_mosfet_with_multiplicity() {
-        let mosfet_str = "MN2 7 8 9 0 N_Model         m=3    ";
-        let mosfet = mosfet_str.parse::<NMOSFET>().unwrap();
+        let mosfet_str = "MN2 7 8 9 0 N_Model m=3";
+        let (_, mosfet) = parse_nmosfet(mosfet_str).unwrap();
         assert_eq!(mosfet.multiplicity, Some(3))
     }
 }

@@ -51,9 +51,7 @@ pub fn parse_bjt(input: &str) -> IResult<&str, BJT> {
     };
 
     // Parse the numeric name part
-    let (input, name) = alphanumeric1(input)?; // Allows QN123 etc.
-
-    dbg!(name);
+    let (input, name) = alphanumeric1(input)?;
 
     // Parse nodes: collector, base, emitter
     let (input, collector) = preceded(space1, alphanumeric_or_underscore1).parse(input)?;
@@ -79,35 +77,6 @@ pub fn parse_bjt(input: &str) -> IResult<&str, BJT> {
     Ok((input, bjt))
 }
 
-// Updated FromStr using the nom parser
-impl FromStr for BJT {
-    type Err = crate::prelude::Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        let s_without_comment = s.split(['%', '*']).next().unwrap_or("").trim();
-        if s_without_comment.is_empty() {
-            return Err(Error::InvalidFormat(
-                "Empty line after comment removal".to_string(),
-            ));
-        }
-
-        match all_consuming(parse_bjt).parse(s_without_comment) {
-            Ok((_, bjt)) => {
-                // Could add checks for node names == "0" if needed, etc.
-                Ok(bjt)
-            }
-            Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(Error::InvalidFormat(format!(
-                "Failed to parse BJT line '{}': {:?}",
-                s_without_comment, e.code
-            ))),
-            Err(nom::Err::Incomplete(_)) => Err(Error::InvalidFormat(format!(
-                "Incomplete parse for BJT line: '{}'",
-                s_without_comment
-            ))),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,7 +84,7 @@ mod tests {
     #[test]
     fn test_parse_npn_bjt_with_value() {
         let bjt_str = "QN1 1 2 0 0.7"; // Emitter to ground
-        let bjt = bjt_str.parse::<BJT>().unwrap();
+        let (_, bjt) = parse_bjt(bjt_str).unwrap();
 
         assert_eq!(bjt.name, "1");
         assert_eq!(bjt.collector, "1");
@@ -129,7 +98,7 @@ mod tests {
     #[test]
     fn test_parse_pnp_bjt_with_value() {
         let bjt_str = "QP1 4 5 6 0.8";
-        let bjt = bjt_str.parse::<BJT>().unwrap();
+        let (_, bjt) = parse_bjt(bjt_str).unwrap();
 
         assert_eq!(bjt.name, "1");
         assert_eq!(bjt.collector, "4");
@@ -143,7 +112,7 @@ mod tests {
     #[test]
     fn test_parse_bjt_without_value() {
         let bjt_str = "qN2 C B E"; // Case-insensitive, symbolic nodes
-        let bjt = bjt_str.parse::<BJT>().unwrap();
+        let (_, bjt) = parse_bjt(bjt_str).unwrap();
 
         assert_eq!(bjt.name, "2");
         assert_eq!(bjt.collector, "C");
@@ -156,8 +125,8 @@ mod tests {
 
     #[test]
     fn test_parse_with_comment() {
-        let s = "Qp10 coll base emit * My PNP";
-        let bjt = s.parse::<BJT>().unwrap();
+        let s = "Qp10 coll base emit";
+        let (_, bjt) = parse_bjt(s).unwrap();
         assert_eq!(bjt.name, "10");
         assert_eq!(bjt.bjt_type, BjtType::PNP);
         assert_eq!(bjt.value, None);
@@ -166,42 +135,43 @@ mod tests {
     #[test]
     fn test_invalid_bjt_format_parts() {
         let bjt_str = "QN1 1 2"; // Missing emitter node
-        let result = bjt_str.parse::<BJT>();
+        let result = parse_bjt(bjt_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_bjt_format_extra_parts() {
         let bjt_str = "QN1 1 2 0 0.7 Extra";
-        let result = bjt_str.parse::<BJT>();
-        assert!(result.is_err()); // Due to all_consuming
+        let (remainder, _) = parse_bjt(bjt_str).unwrap();
+        // The parser should leave "Extra" unparsed
+        assert!(!remainder.trim().is_empty());
     }
 
     #[test]
     fn test_invalid_bjt_type() {
         let bjt_str = "QX1 1 2 3"; // Invalid type 'X'
-        let result = bjt_str.parse::<BJT>();
+        let result = parse_bjt(bjt_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_malformed_identifier_no_type_or_name() {
         let bjt_str = "Q 1 2 3";
-        let result = bjt_str.parse::<BJT>();
+        let result = parse_bjt(bjt_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_malformed_identifier_no_name() {
         let bjt_str = "QN 1 2 3";
-        let result = bjt_str.parse::<BJT>();
+        let result = parse_bjt(bjt_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_prefix() {
         let s = "R1 1 2 3 100";
-        let result = s.parse::<BJT>();
+        let result = parse_bjt(s);
         assert!(result.is_err());
     }
 }

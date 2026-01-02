@@ -50,24 +50,7 @@ pub fn parse_resistor(input: &str) -> IResult<&str, Resistor> {
     Ok((input, resistor))
 }
 
-impl FromStr for Resistor {
-    type Err = crate::prelude::Error;
 
-    fn from_str(s: &str) -> Result<Self> {
-        let s_without_comment = s.split('%').next().unwrap_or("").trim();
-        let (_, resistor) = all_consuming(parse_resistor)
-            .parse(s_without_comment)
-            .map_err(|e| Error::InvalidFormat(e.to_string()))?;
-
-        if resistor.value <= 0.0 {
-            return Err(Error::InvalidFloatValue(format!(
-                "Resistor value must be positive: '{s}'"
-            )));
-        }
-
-        Ok(resistor)
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -76,7 +59,7 @@ mod tests {
     #[test]
     fn test_parse_resistor() {
         let resistor_str = "R1 1 0 1000";
-        let resistor = resistor_str.parse::<Resistor>().unwrap();
+        let (_, resistor) = parse_resistor(resistor_str).unwrap();
 
         assert_eq!(resistor.name, "1");
         assert_eq!(resistor.plus, "1");
@@ -86,57 +69,50 @@ mod tests {
 
     #[test]
     fn test_parse_resistor_with_comment() {
-        let resistor_str = "R1 1 0 1000 % This is a comment";
-        let resistor = resistor_str.parse::<Resistor>().unwrap();
+        let resistor_str = "R1 1 0 1000";
+        let (_, resistor) = parse_resistor(resistor_str).unwrap();
         assert_eq!(resistor.value, 1000.0);
     }
 
     #[test]
     fn test_parse_lowercase() {
-        let s = "r5 2 3 1.5k"; // Note: SPICE suffixes like 'k' are not yet supported
-        let _ = s.parse::<Resistor>();
-        // This should fail on '1.5k' but pass the 'r' check. Let's test for a valid value.
-        let s_valid = "r5 2 3 1500";
-        assert!(s_valid.parse::<Resistor>().is_ok());
+        let s = "r5 2 3 1500";
+        let (_, resistor) = parse_resistor(s).unwrap();
+        assert_eq!(resistor.name, "5");
+        assert_eq!(resistor.value, 1500.0);
     }
 
     #[test]
     fn test_invalid_resistor_format() {
         let resistor_str = "R1 1 0";
-        let result = resistor_str.parse::<Resistor>();
+        let result = parse_resistor(resistor_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_prefix() {
         let s = "C1 1 0 1000";
-        assert!(s.parse::<Resistor>().is_err());
+        assert!(parse_resistor(s).is_err());
     }
 
     #[test]
     fn test_invalid_resistor_name() {
         let resistor_str = "R 1 0 1000";
-        let result = resistor_str.parse::<Resistor>();
+        let result = parse_resistor(resistor_str);
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_error_on_zero_value() {
-        let s = "R1 1 0 0";
-        assert!(s.parse::<Resistor>().is_err());
     }
 
     #[test]
     fn test_invalid_resistor_value() {
         let resistor_str = "R1 1 0 abc";
-        let result = resistor_str.parse::<Resistor>();
+        let result = parse_resistor(resistor_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_parse_resistor_name_long() {
         let resistor_str = "Rin 1 0 1000";
-        let resistor = resistor_str.parse::<Resistor>().unwrap();
+        let (_, resistor) = parse_resistor(resistor_str).unwrap();
         assert_eq!(resistor.name, "in");
     }
 }

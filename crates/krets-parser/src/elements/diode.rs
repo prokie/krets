@@ -90,28 +90,7 @@ pub fn parse_diode(input: &str) -> IResult<&str, Diode> {
     Ok((input, diode))
 }
 
-// Updated FromStr implementation using the nom parser
-impl FromStr for Diode {
-    type Err = crate::prelude::Error;
 
-    fn from_str(s: &str) -> Result<Self> {
-        // Remove comments first
-        let s_without_comment = s.split(['%', '*']).next().unwrap_or("").trim();
-
-        // Use the nom parser with all_consuming to ensure the whole line is parsed
-        match all_consuming(parse_diode).parse(s_without_comment) {
-            Ok((_, diode)) => Ok(diode),
-            Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(Error::InvalidFormat(format!(
-                "Failed to parse diode line '{}': {:?}",
-                s_without_comment, e.code
-            ))),
-            Err(nom::Err::Incomplete(_)) => Err(Error::InvalidFormat(format!(
-                "Incomplete parse for diode line: '{}'",
-                s_without_comment
-            ))),
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -120,7 +99,7 @@ mod tests {
     #[test]
     fn test_parse_diode() {
         let diode_str = "D1 1 0";
-        let diode = diode_str.parse::<Diode>().unwrap();
+        let (_, diode) = parse_diode(diode_str).unwrap();
 
         assert_eq!(diode.name, "1");
         assert_eq!(diode.plus, "1");
@@ -131,7 +110,7 @@ mod tests {
     #[test]
     fn test_parse_diode_with_model() {
         let diode_str = "D1 1 0 1N4148";
-        let diode = diode_str.parse::<Diode>().unwrap();
+        let (_, diode) = parse_diode(diode_str).unwrap();
 
         assert_eq!(diode.name, "1");
         assert_eq!(diode.plus, "1");
@@ -142,7 +121,7 @@ mod tests {
     #[test]
     fn test_parse_diode_lowercase() {
         let diode_str = "d5 nodeA nodeB MyModel";
-        let diode = diode_str.parse::<Diode>().unwrap();
+        let (_, diode) = parse_diode(diode_str).unwrap();
 
         assert_eq!(diode.name, "5");
         assert_eq!(diode.plus, "nodeA");
@@ -152,19 +131,19 @@ mod tests {
 
     #[test]
     fn test_parse_diode_with_comment() {
-        let diode_str = "D1 1 0 % This is a comment";
-        let diode = diode_str.parse::<Diode>().unwrap();
+        let diode_str = "D1 1 0";
+        let (_, diode) = parse_diode(diode_str).unwrap();
 
         assert_eq!(diode.name, "1");
         assert_eq!(diode.plus, "1");
         assert_eq!(diode.minus, "0");
-        assert_eq!(diode.model_name, "default"); // Model name becomes default if none before comment
+        assert_eq!(diode.model_name, "default");
     }
 
     #[test]
     fn test_parse_diode_with_model_and_comment() {
-        let diode_str = "D1 1 0 DMOD % This is a comment";
-        let diode = diode_str.parse::<Diode>().unwrap();
+        let diode_str = "D1 1 0 DMOD";
+        let (_, diode) = parse_diode(diode_str).unwrap();
 
         assert_eq!(diode.name, "1");
         assert_eq!(diode.plus, "1");
@@ -174,8 +153,8 @@ mod tests {
 
     #[test]
     fn test_parse_diode_with_star_comment() {
-        let diode_str = "D2 out 0 Special * With star comment";
-        let diode = diode_str.parse::<Diode>().unwrap();
+        let diode_str = "D2 out 0 Special";
+        let (_, diode) = parse_diode(diode_str).unwrap();
         assert_eq!(diode.name, "2");
         assert_eq!(diode.model_name, "Special");
     }
@@ -183,29 +162,31 @@ mod tests {
     #[test]
     fn test_invalid_diode_format_missing_node() {
         let diode_str = "D1 1";
-        let result = diode_str.parse::<Diode>();
+        let result = parse_diode(diode_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_diode_format_extra_token() {
-        let diode_str = "D1 1 0 MyModel Extra";
-        let result = diode_str.parse::<Diode>();
-        assert!(result.is_err());
+        // The parser should parse "D1 1 0 MyModel" and leave "Extra" unparsed
+        let input = "D1 1 0 MyModel Extra";
+        let (remainder, _) = parse_diode(input).unwrap();
+        // The remainder should be " Extra" (with leading space)
+        assert!(!remainder.is_empty());
     }
 
     #[test]
     fn test_invalid_diode_name_char() {
         // The nom parser alphanumeric_or_underscore1 handles this
         let diode_str = "D! 1 0";
-        let result = diode_str.parse::<Diode>();
+        let result = parse_diode(diode_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_prefix() {
         let s = "R1 1 0 1N4148";
-        let result = s.parse::<Diode>();
+        let result = parse_diode(s);
         assert!(result.is_err());
     }
 }

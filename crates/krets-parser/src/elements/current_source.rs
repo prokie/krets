@@ -36,18 +36,7 @@ pub fn parse_current_source(input: &str) -> IResult<&str, CurrentSource> {
     Ok((input, current_source))
 }
 
-impl FromStr for CurrentSource {
-    type Err = crate::prelude::Error;
 
-    fn from_str(s: &str) -> Result<Self> {
-        let s_without_comment = s.split('%').next().unwrap_or("").trim();
-        let (_, current_source) = all_consuming(parse_current_source)
-            .parse(s_without_comment)
-            .map_err(|e| Error::InvalidFormat(e.to_string()))?;
-
-        Ok(current_source)
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -56,7 +45,7 @@ mod tests {
     #[test]
     fn test_parse_current_source() {
         let current_source_str = "I1 1 0 0.001";
-        let current_source = current_source_str.parse::<CurrentSource>().unwrap();
+        let (_, current_source) = parse_current_source(current_source_str).unwrap();
 
         assert_eq!(current_source.name, "1");
         assert_eq!(current_source.plus, "1");
@@ -66,8 +55,8 @@ mod tests {
 
     #[test]
     fn test_parse_with_comment() {
-        let s = "I2 5 3 1.5 % Amperes";
-        let source = s.parse::<CurrentSource>().unwrap();
+        let s = "I2 5 3 1.5";
+        let (_, source) = parse_current_source(s).unwrap();
         assert_eq!(source.name, "2");
         assert_eq!(source.value, 1.5);
     }
@@ -75,7 +64,7 @@ mod tests {
     #[test]
     fn test_parse_lowercase_identifier() {
         let s = "i5 vdd gnd 10";
-        let source = s.parse::<CurrentSource>().unwrap();
+        let (_, source) = parse_current_source(s).unwrap();
         assert_eq!(source.name, "5");
         assert_eq!(source.plus, "vdd");
     }
@@ -83,35 +72,37 @@ mod tests {
     #[test]
     fn test_invalid_current_source_format() {
         let current_source_str = "I1 1 0";
-        let result = current_source_str.parse::<CurrentSource>();
+        let result = parse_current_source(current_source_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_too_many_parts() {
-        let s = "I1 1 0 1.0 G2";
-        let result = s.parse::<CurrentSource>();
-        assert!(result.is_err());
+        // The parser should parse "I1 1 0 1.0" and leave "G2" unparsed
+        let input = "I1 1 0 1.0 G2";
+        let (remainder, _) = parse_current_source(input).unwrap();
+        // The remainder should be " G2" (with leading space)
+        assert!(!remainder.is_empty());
     }
 
     #[test]
     fn test_invalid_prefix() {
         let s = "V1 1 0 1.0";
-        let result = s.parse::<CurrentSource>();
+        let result = parse_current_source(s);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_current_source_name() {
         let current_source_str = "I 1 0 0.001";
-        let result = current_source_str.parse::<CurrentSource>();
+        let result = parse_current_source(current_source_str);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_current_source_value() {
         let current_source_str = "I1 1 0 abc";
-        let result = current_source_str.parse::<CurrentSource>();
+        let result = parse_current_source(current_source_str);
         assert!(result.is_err());
     }
 }

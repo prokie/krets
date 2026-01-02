@@ -23,4 +23,3 @@ pub use nom::{
     sequence::preceded,
 };
 pub use std::collections::HashMap;
-pub use std::str::FromStr;
