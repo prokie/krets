@@ -1,7 +1,7 @@
+pub use ahash::{HashMap, HashMapExt};
 use faer::c64;
 use log::info;
 use polars::prelude::*;
-use std::collections::HashMap;
 use std::f64::consts::PI;
 use std::fs::File;
 use std::path::Path;

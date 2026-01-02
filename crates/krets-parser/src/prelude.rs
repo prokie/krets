@@ -13,6 +13,7 @@ pub use crate::elements::subcircuit::parse_subckt_instance;
 pub use crate::elements::voltage_source::parse_voltage_source;
 pub use crate::utils::parse_value;
 pub use crate::utils::{alphanumeric_or_underscore1, parse_key_value, value_parser};
+pub use ahash::{HashMap, HashMapExt};
 pub use nom::combinator::map;
 pub use nom::{
     IResult, Parser,
@@ -22,4 +23,3 @@ pub use nom::{
     combinator::{all_consuming, opt},
     sequence::preceded,
 };
-pub use std::collections::HashMap;

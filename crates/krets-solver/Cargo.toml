@@ -9,6 +9,7 @@ krets-parser = { path = "../krets-parser" }
 faer = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
+ahash = { workspace = true }
 
 
 [lints]

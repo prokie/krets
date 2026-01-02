@@ -1,5 +1,4 @@
 use log::info;
-use std::collections::HashMap;
 
 use super::{convergence_check, sum_triplets};
 use crate::{config::SolverConfig, prelude::*, solver::op, stampable::Stampable};

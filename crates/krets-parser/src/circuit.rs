@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
 use crate::models::Model;
+use ahash::AHashMap;
 
 #[derive(Debug, Clone)]
 /// A structured representation of a circuit element.
@@ -9,22 +10,22 @@ pub struct Circuit {
     pub elements: Vec<Element>,
 
     /// A hashmap mapping nodes/elements to the MNA Matrix.
-    pub index_map: HashMap<String, usize>,
+    pub index_map: AHashMap<String, usize>,
 
     /// A list of nodes in the circuit.
     pub nodes: Vec<String>,
 
     /// A list of models in the circuit.
-    pub models: HashMap<String, Model>,
+    pub models: AHashMap<String, Model>,
 }
 
 impl Circuit {
     /// Create a new circuit
     pub fn new(
         elements: Vec<Element>,
-        index_map: HashMap<String, usize>,
+        index_map: AHashMap<String, usize>,
         nodes: Vec<String>,
-        models: HashMap<String, Model>,
+        models: AHashMap<String, Model>,
     ) -> Self {
         Circuit {
             elements,
@@ -37,9 +38,9 @@ impl Circuit {
     pub fn empty_circuit() -> Self {
         Circuit {
             elements: Vec::new(),
-            index_map: HashMap::new(),
+            index_map: AHashMap::new(),
             nodes: Vec::new(),
-            models: HashMap::new(),
+            models: AHashMap::new(),
         }
     }
 

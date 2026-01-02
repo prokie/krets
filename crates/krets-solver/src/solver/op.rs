@@ -6,7 +6,6 @@ use faer::{
 };
 use krets_parser::{circuit::Circuit, elements::Element};
 use log::info;
-use std::collections::HashMap;
 
 /// Solves for the DC operating point of the circuit.
 ///

@@ -8,7 +8,6 @@ use crate::prelude::*;
 use faer::sparse::Triplet;
 use krets_parser::analyses::Analysis;
 use krets_parser::circuit::Circuit;
-use std::collections::HashMap;
 use std::ops::AddAssign;
 
 // Declare the sub-modules for each analysis type.

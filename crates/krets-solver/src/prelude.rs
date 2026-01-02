@@ -4,7 +4,7 @@ pub use crate::AnalysisResult;
 pub use crate::config::SolverConfig;
 pub use crate::solver::convergence_check;
 pub use crate::solver::sum_triplets;
+pub use ahash::{HashMap, HashMapExt};
 pub use faer::c64;
 pub use faer::sparse::Triplet;
-pub use std::collections::HashMap;
 pub use std::f64::consts::PI;

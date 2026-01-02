@@ -5,7 +5,6 @@ use faer::{
     sparse::{SparseColMat, Triplet},
 };
 use krets_parser::{analyses::DcAnalysis, circuit::Circuit, elements::Element};
-use std::collections::HashMap;
 
 /// Solves for the DC response of a circuit while sweeping a source.
 ///

@@ -1,5 +1,4 @@
 use log::info;
-use std::collections::HashMap;
 
 use crate::{config::SolverConfig, prelude::*, solver::op, stampable::Stampable};
 use faer::{
